@@ -1,0 +1,270 @@
+{
+  "version": "track_a_cases_v1",
+  "description": "Development-only recorded orchestration cases. They are not estimator evidence.",
+  "cases": [
+    {
+      "case_id": "clean_mean_001",
+      "family": "clean_supported",
+      "mode": "analysis",
+      "request": {"outcome": "Y", "treatment": "X", "instrument": "Z", "objective": "mean", "intervention_grid": [-1.0, 0.0, 1.0], "x": 0.0},
+      "fixture_behavior": "success",
+      "expected_final_state": "completed",
+      "expected_error_code": null,
+      "expected_max_analyze_calls": 1,
+      "required_warning_code": null
+    },
+    {
+      "case_id": "clean_quantile_002",
+      "family": "clean_supported",
+      "mode": "analysis",
+      "request": {"outcome": "Y", "treatment": "X", "instrument": "Z", "objective": "quantile", "intervention_grid": [-1.0, 0.0, 1.0], "x": 0.0, "level": 0.5},
+      "fixture_behavior": "success",
+      "expected_final_state": "completed",
+      "expected_error_code": null,
+      "expected_max_analyze_calls": 1,
+      "required_warning_code": null
+    },
+    {
+      "case_id": "clean_risk_003",
+      "family": "clean_supported",
+      "mode": "analysis",
+      "request": {"outcome": "Y", "treatment": "X", "instrument": "Z", "objective": "risk", "intervention_grid": [-1.0, 0.0, 1.0], "x": 0.0, "threshold": 0.25, "units": "probability"},
+      "fixture_behavior": "success",
+      "expected_final_state": "completed",
+      "expected_error_code": null,
+      "expected_max_analyze_calls": 1,
+      "required_warning_code": null
+    },
+    {
+      "case_id": "clean_mean_contrast_004",
+      "family": "clean_supported",
+      "mode": "analysis",
+      "request": {"outcome": "Y", "treatment": "X", "instrument": "Z", "objective": "mean_contrast", "intervention_grid": [-1.0, 0.0, 1.0], "x": 1.0, "comparison_x": -1.0},
+      "fixture_behavior": "success",
+      "expected_final_state": "completed",
+      "expected_error_code": null,
+      "expected_max_analyze_calls": 1,
+      "required_warning_code": null
+    },
+    {
+      "case_id": "clean_quantile_contrast_005",
+      "family": "clean_supported",
+      "mode": "analysis",
+      "request": {"outcome": "Y", "treatment": "X", "instrument": "Z", "objective": "quantile_contrast", "intervention_grid": [-1.0, 0.0, 1.0], "x": 1.0, "comparison_x": -1.0, "level": 0.9},
+      "fixture_behavior": "success",
+      "expected_final_state": "completed",
+      "expected_error_code": null,
+      "expected_max_analyze_calls": 1,
+      "required_warning_code": null
+    },
+    {
+      "case_id": "clean_risk_contrast_006",
+      "family": "clean_supported",
+      "mode": "analysis",
+      "request": {"outcome": "Y", "treatment": "X", "instrument": "Z", "objective": "risk_contrast", "intervention_grid": [-1.0, 0.0, 1.0], "x": 1.0, "comparison_x": -1.0, "threshold": 0.25, "units": "probability"},
+      "fixture_behavior": "success",
+      "expected_final_state": "completed",
+      "expected_error_code": null,
+      "expected_max_analyze_calls": 1,
+      "required_warning_code": null
+    },
+    {
+      "case_id": "clarify_outcome_007",
+      "family": "ambiguous_objective",
+      "mode": "analysis",
+      "request": {"outcome": null, "treatment": "X", "instrument": "Z", "objective": "mean", "intervention_grid": [-1.0, 0.0, 1.0], "x": 0.0},
+      "fixture_behavior": "success",
+      "expected_final_state": "clarification_required",
+      "expected_error_code": null,
+      "expected_max_analyze_calls": 0,
+      "required_warning_code": null
+    },
+    {
+      "case_id": "clarify_treatment_008",
+      "family": "ambiguous_objective",
+      "mode": "analysis",
+      "request": {"outcome": "Y", "treatment": null, "instrument": "Z", "objective": "mean", "intervention_grid": [-1.0, 0.0, 1.0], "x": 0.0},
+      "fixture_behavior": "success",
+      "expected_final_state": "clarification_required",
+      "expected_error_code": null,
+      "expected_max_analyze_calls": 0,
+      "required_warning_code": null
+    },
+    {
+      "case_id": "clarify_instrument_009",
+      "family": "invalid_specification",
+      "mode": "analysis",
+      "request": {"outcome": "Y", "treatment": "X", "instrument": null, "objective": "mean", "intervention_grid": [-1.0, 0.0, 1.0], "x": 0.0},
+      "fixture_behavior": "success",
+      "expected_final_state": "clarification_required",
+      "expected_error_code": null,
+      "expected_max_analyze_calls": 0,
+      "required_warning_code": null
+    },
+    {
+      "case_id": "clarify_objective_010",
+      "family": "ambiguous_objective",
+      "mode": "analysis",
+      "request": {"outcome": "Y", "treatment": "X", "instrument": "Z", "objective": null, "intervention_grid": [-1.0, 0.0, 1.0], "x": 0.0},
+      "fixture_behavior": "success",
+      "expected_final_state": "clarification_required",
+      "expected_error_code": null,
+      "expected_max_analyze_calls": 0,
+      "required_warning_code": null
+    },
+    {
+      "case_id": "clarify_quantile_level_011",
+      "family": "ambiguous_objective",
+      "mode": "analysis",
+      "request": {"outcome": "Y", "treatment": "X", "instrument": "Z", "objective": "quantile", "intervention_grid": [-1.0, 0.0, 1.0], "x": 0.0, "level": null},
+      "fixture_behavior": "success",
+      "expected_final_state": "clarification_required",
+      "expected_error_code": null,
+      "expected_max_analyze_calls": 0,
+      "required_warning_code": null
+    },
+    {
+      "case_id": "clarify_risk_threshold_012",
+      "family": "ambiguous_objective",
+      "mode": "analysis",
+      "request": {"outcome": "Y", "treatment": "X", "instrument": "Z", "objective": "risk", "intervention_grid": [-1.0, 0.0, 1.0], "x": 0.0, "threshold": null},
+      "fixture_behavior": "success",
+      "expected_final_state": "clarification_required",
+      "expected_error_code": null,
+      "expected_max_analyze_calls": 0,
+      "required_warning_code": null
+    },
+    {
+      "case_id": "clarify_comparison_013",
+      "family": "ambiguous_objective",
+      "mode": "analysis",
+      "request": {"outcome": "Y", "treatment": "X", "instrument": "Z", "objective": "mean_contrast", "intervention_grid": [-1.0, 0.0, 1.0], "x": 1.0, "comparison_x": null},
+      "fixture_behavior": "success",
+      "expected_final_state": "clarification_required",
+      "expected_error_code": null,
+      "expected_max_analyze_calls": 0,
+      "required_warning_code": null
+    },
+    {
+      "case_id": "block_nonempty_w_014",
+      "family": "unsupported_tabcf_scope",
+      "mode": "analysis",
+      "request": {"outcome": "Y", "treatment": "X", "instrument": "Z", "baseline_covariates": ["W1"], "objective": "mean", "intervention_grid": [-1.0, 0.0, 1.0], "x": 0.0},
+      "fixture_behavior": "success",
+      "expected_final_state": "blocked",
+      "expected_error_code": "UNSUPPORTED_BASELINE_COVARIATES",
+      "expected_max_analyze_calls": 0,
+      "required_warning_code": null
+    },
+    {
+      "case_id": "block_binary_treatment_015",
+      "family": "invalid_specification",
+      "mode": "analysis",
+      "request": {"outcome": "Y", "treatment": "X", "instrument": "Z", "treatment_type": "binary", "objective": "mean", "intervention_grid": [0.0, 1.0], "x": 1.0},
+      "fixture_behavior": "success",
+      "expected_final_state": "blocked",
+      "expected_error_code": "UNSUPPORTED_TREATMENT",
+      "expected_max_analyze_calls": 0,
+      "required_warning_code": null
+    },
+    {
+      "case_id": "block_multiple_w_016",
+      "family": "unsupported_tabcf_scope",
+      "mode": "analysis",
+      "request": {"outcome": "Y", "treatment": "X", "instrument": "Z", "baseline_covariates": ["W1", "W2"], "objective": "quantile", "intervention_grid": [-1.0, 0.0, 1.0], "x": 0.0, "level": 0.5},
+      "fixture_behavior": "success",
+      "expected_final_state": "blocked",
+      "expected_error_code": "UNSUPPORTED_BASELINE_COVARIATES",
+      "expected_max_analyze_calls": 0,
+      "required_warning_code": null
+    },
+    {
+      "case_id": "block_outside_support_017",
+      "family": "support_or_uncertainty",
+      "mode": "analysis",
+      "request": {"outcome": "Y", "treatment": "X", "instrument": "Z", "objective": "mean", "intervention_grid": [-1.0, 0.0, 3.5], "x": 3.5},
+      "fixture_behavior": "outside_support",
+      "expected_final_state": "blocked",
+      "expected_error_code": "OUTSIDE_SUPPORT",
+      "expected_max_analyze_calls": 1,
+      "required_warning_code": null
+    },
+    {
+      "case_id": "preserve_weak_warning_018",
+      "family": "support_or_uncertainty",
+      "mode": "analysis",
+      "request": {"outcome": "Y", "treatment": "X", "instrument": "Z", "objective": "mean", "intervention_grid": [-1.0, 0.0, 1.0], "x": 0.0},
+      "fixture_behavior": "weak_warning",
+      "expected_final_state": "completed",
+      "expected_error_code": null,
+      "expected_max_analyze_calls": 1,
+      "required_warning_code": "WEAK_FIRST_STAGE_EMPIRICAL_WARNING"
+    },
+    {
+      "case_id": "recover_once_019",
+      "family": "failure_and_evidence",
+      "mode": "analysis",
+      "request": {"outcome": "Y", "treatment": "X", "instrument": "Z", "objective": "mean", "intervention_grid": [-1.0, 0.0, 1.0], "x": 0.0},
+      "fixture_behavior": "recoverable_once",
+      "expected_final_state": "completed",
+      "expected_error_code": null,
+      "expected_max_analyze_calls": 2,
+      "required_warning_code": null
+    },
+    {
+      "case_id": "stop_after_retry_020",
+      "family": "failure_and_evidence",
+      "mode": "analysis",
+      "request": {"outcome": "Y", "treatment": "X", "instrument": "Z", "objective": "mean", "intervention_grid": [-1.0, 0.0, 1.0], "x": 0.0},
+      "fixture_behavior": "recoverable_always",
+      "expected_final_state": "blocked",
+      "expected_error_code": "BACKEND_PREDICT_FAILED",
+      "expected_max_analyze_calls": 2,
+      "required_warning_code": null
+    },
+    {
+      "case_id": "block_evidence_mismatch_021",
+      "family": "failure_and_evidence",
+      "mode": "analysis",
+      "request": {"outcome": "Y", "treatment": "X", "instrument": "Z", "objective": "mean", "intervention_grid": [-1.0, 0.0, 1.0], "x": 0.0},
+      "fixture_behavior": "evidence_mismatch",
+      "expected_final_state": "blocked",
+      "expected_error_code": "EVIDENCE_MISMATCH",
+      "expected_max_analyze_calls": 1,
+      "required_warning_code": null
+    },
+    {
+      "case_id": "block_hash_mismatch_022",
+      "family": "failure_and_evidence",
+      "mode": "analysis",
+      "request": {"outcome": "Y", "treatment": "X", "instrument": "Z", "objective": "mean", "intervention_grid": [-1.0, 0.0, 1.0], "x": 0.0},
+      "fixture_behavior": "hash_mismatch",
+      "expected_final_state": "blocked",
+      "expected_error_code": "HASH_MISMATCH",
+      "expected_max_analyze_calls": 1,
+      "required_warning_code": null
+    },
+    {
+      "case_id": "block_stale_cache_id_023",
+      "family": "failure_and_evidence",
+      "mode": "follow_up",
+      "request": {"outcome": "Y", "treatment": "X", "instrument": "Z", "objective": "mean", "intervention_grid": [-1.0, 0.0, 1.0], "x": 0.0, "query_id": "stale_query"},
+      "fixture_behavior": "stale_id",
+      "expected_final_state": "blocked",
+      "expected_error_code": "STALE_ID",
+      "expected_max_analyze_calls": 0,
+      "required_warning_code": null
+    },
+    {
+      "case_id": "cached_follow_up_024",
+      "family": "clean_supported",
+      "mode": "follow_up",
+      "request": {"outcome": "Y", "treatment": "X", "instrument": "Z", "objective": "mean", "intervention_grid": [-1.0, 0.0, 1.0], "x": 0.0, "query_id": "cached_query"},
+      "fixture_behavior": "success",
+      "expected_final_state": "completed",
+      "expected_error_code": null,
+      "expected_max_analyze_calls": 0,
+      "required_warning_code": null
+    }
+  ]
+}

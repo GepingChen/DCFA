@@ -1,0 +1,120 @@
+"""Deployment wrapper for the bounded DCFA development workflow demo."""
+
+from __future__ import annotations
+
+import os
+from pathlib import Path
+from typing import Any
+
+from dcfa import __version__
+from dcfa_website_demo.app import DEFAULT_OUTPUT_ROOT, DEMO_CSS, build_app
+
+
+def output_root_from_environment() -> Path:
+    """Resolve the local artifact root without importing a statistical backend."""
+    return Path(os.environ.get("DCFA_OUTPUT_ROOT", str(DEFAULT_OUTPUT_ROOT)))
+
+
+def output_root_is_writable(output_root: Path) -> bool:
+    """Check the nearest existing parent without creating or deleting material."""
+    candidate = output_root.resolve()
+    while not candidate.exists() and candidate != candidate.parent:
+        candidate = candidate.parent
+    return candidate.is_dir() and os.access(candidate, os.W_OK)
+
+
+def build_service() -> Any:
+    """Build a health-checkable ASGI service with the Gradio demo mounted at root."""
+    try:
+        import gradio as gr
+        from fastapi import FastAPI
+        from fastapi.responses import JSONResponse
+    except ImportError as exc:
+        raise RuntimeError(
+            "Install the optional UI with: python -m pip install -r requirements-ui.lock"
+        ) from exc
+
+    service = FastAPI(
+        title="DCFA development workflow demo",
+        docs_url=None,
+        redoc_url=None,
+        openapi_url=None,
+    )
+
+    @service.get("/healthz", include_in_schema=False)
+    def healthz():
+        return JSONResponse(
+            {
+                "status": "ok",
+                "service": "dcfa-development-workflow-demo",
+                "version": __version__,
+                "evidence_status": "development_only",
+                "backend": "sklearn_quantile_fallback",
+            },
+            headers={"Cache-Control": "no-store"},
+        )
+
+    output_root = output_root_from_environment().resolve()
+
+    @service.get("/readyz", include_in_schema=False)
+    def readyz():
+        ready = output_root_is_writable(output_root)
+        return JSONResponse(
+            {
+                "status": "ready" if ready else "not_ready",
+                "output_root_writable": ready,
+                "evidence_status": "development_only",
+            },
+            status_code=200 if ready else 503,
+            headers={"Cache-Control": "no-store"},
+        )
+
+    @service.middleware("http")
+    async def security_headers(request: Any, call_next: Any) -> Any:
+        response = await call_next(request)
+        response.headers["X-Content-Type-Options"] = "nosniff"
+        response.headers["Referrer-Policy"] = "no-referrer"
+        response.headers["Permissions-Policy"] = "camera=(), microphone=(), geolocation=()"
+        return response
+
+    return gr.mount_gradio_app(
+        service,
+        build_app(output_root=output_root),
+        path="/",
+        footer_links=[],
+        allowed_paths=[str(output_root)],
+        show_error=False,
+        enable_monitoring=False,
+        max_file_size="1mb",
+        theme=gr.themes.Base(
+            primary_hue="green",
+            secondary_hue="green",
+            neutral_hue="stone",
+            radius_size="sm",
+            font=("Inter", "ui-sans-serif", "system-ui", "sans-serif"),
+            font_mono=("IBM Plex Mono", "ui-monospace", "monospace"),
+        ),
+        css=DEMO_CSS,
+    )
+
+
+def run_service() -> None:
+    """Run one process; Gradio serializes the bounded analysis queue."""
+    try:
+        import uvicorn
+    except ImportError as exc:
+        raise RuntimeError(
+            "Install the optional UI with: python -m pip install -r requirements-ui.lock"
+        ) from exc
+
+    host = os.environ.get("DCFA_SERVER_NAME", "127.0.0.1")
+    port = int(os.environ.get("PORT", "7860"))
+    if not 1 <= port <= 65535:
+        raise ValueError("PORT must be between 1 and 65535.")
+    uvicorn.run(
+        build_service(),
+        host=host,
+        port=port,
+        workers=1,
+        access_log=os.environ.get("DCFA_ACCESS_LOG", "0") == "1",
+    )

@@ -1,0 +1,16 @@
+{
+  "model_artifact_hash": "sha256:REQUIRED_MODEL_DIGEST",
+  "model_path": "REQUIRED_MODEL_PATH",
+  "package_versions": {
+    "numpy": "REQUIRED_EXACT_VERSION",
+    "scikit-learn": "REQUIRED_EXACT_VERSION",
+    "scipy": "REQUIRED_EXACT_VERSION",
+    "tabpfn": "REQUIRED_EXACT_VERSION",
+    "torch": "REQUIRED_EXACT_VERSION"
+  },
+  "protocol_version": "tabpfn_locked_runtime_v1",
+  "python_version": "REQUIRED_EXACT_VERSION",
+  "runtime_image_digest": "sha256:REQUIRED_IMAGE_DIGEST",
+  "source_checkout": "../../third_party/TabCF",
+  "upstream_source_commit": "76e0d3eb9e97cebca381d1540db0333c1ef1016e"
+}

@@ -73,8 +73,16 @@ def _repository_root() -> Path:
     return Path(__file__).resolve().parents[3]
 
 
-def _read_token_file(token_file: Path) -> str:
-    path = token_file.expanduser().resolve(strict=True)
+def read_managed_token_file(token_file: Path) -> str:
+    try:
+        path = token_file.expanduser().resolve(strict=True)
+    except OSError as exc:
+        raise DCFAError(
+            ErrorCode.DATA_ACCESS_BLOCKED,
+            "The managed TabPFN token file is unavailable.",
+            stage="managed_client.credentials",
+            context={"exception_type": type(exc).__name__},
+        ) from exc
     repository = _repository_root()
     if path == repository or repository in path.parents:
         raise DCFAError(
@@ -90,7 +98,15 @@ def _read_token_file(token_file: Path) -> str:
             stage="managed_client.credentials",
             context={"mode": oct(mode)},
         )
-    token = path.read_text(encoding="utf-8").strip()
+    try:
+        token = path.read_text(encoding="utf-8").strip()
+    except OSError as exc:
+        raise DCFAError(
+            ErrorCode.DATA_ACCESS_BLOCKED,
+            "The managed TabPFN token file could not be read.",
+            stage="managed_client.credentials",
+            context={"exception_type": type(exc).__name__},
+        ) from exc
     if not token.startswith("tabpfn_sk_") or len(token) < 24:
         raise DCFAError(
             ErrorCode.DATA_ACCESS_BLOCKED,
@@ -100,7 +116,7 @@ def _read_token_file(token_file: Path) -> str:
     return token
 
 
-def _load_client_module() -> Any:
+def load_managed_client_module() -> Any:
     try:
         version = importlib.metadata.version("tabpfn-client")
         module = importlib.import_module("tabpfn_client")
@@ -129,13 +145,13 @@ def run_managed_agent_smoke(
     client_version: str | None = None,
 ) -> ManagedAgentSmokeResult:
     """Run one typed-agent tool call over a fixed synthetic TabPFN-IV scenario."""
-    token = _read_token_file(token_file)
-    client = client_module or _load_client_module()
+    token = read_managed_token_file(token_file)
+    client = client_module or load_managed_client_module()
     observed_client_version = client_version or importlib.metadata.version("tabpfn-client")
     if observed_client_version != MANAGED_CLIENT_VERSION:
         raise DCFAError(
             ErrorCode.UNSUPPORTED_BACKEND_PROFILE,
-            "The managed smoke client version is not frozen correctly.",
+            "The managed client version is not frozen correctly.",
             stage="managed_client.version",
             context={
                 "expected": MANAGED_CLIENT_VERSION,

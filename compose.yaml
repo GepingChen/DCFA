@@ -6,6 +6,7 @@ services:
       DCFA_ACCESS_LOG: "0"
       DCFA_OUTPUT_ROOT: /app/artifacts/local/website-demo
       DCFA_SERVER_NAME: 0.0.0.0
+      DCFA_TABPFN_TOKEN_FILE: /run/secrets/tabpfn_api_key
       PORT: "7860"
     init: true
     ports:
@@ -17,6 +18,7 @@ services:
       - /tmp:size=256m,mode=1777
     volumes:
       - dcfa-demo-artifacts:/app/artifacts
+      - ${DCFA_TABPFN_TOKEN_FILE:?Set DCFA_TABPFN_TOKEN_FILE to the host token path}:/run/secrets/tabpfn_api_key:ro
 
 volumes:
   dcfa-demo-artifacts:

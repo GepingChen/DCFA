@@ -9,8 +9,8 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
 
 WORKDIR /app
 
-COPY requirements-ui.lock pyproject.toml README.md ./
-RUN python -m pip install --no-cache-dir -r requirements-ui.lock
+COPY requirements-website-demo.lock pyproject.toml README.md ./
+RUN python -m pip install --no-cache-dir -r requirements-website-demo.lock
 
 COPY src ./src
 RUN python -m pip install --no-cache-dir . --no-deps \

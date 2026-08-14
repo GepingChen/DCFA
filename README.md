@@ -23,9 +23,9 @@ verification, and these deterministic entry points:
 
 - a no-`W` TabCF IV vertical slice with an explicitly selected
   `sklearn_quantile_fallback`;
-- a bounded, development-only `tabpfn-client` adapter for one fixed synthetic
-  agent smoke, with exact client/model settings, service metadata, and no
-  arbitrary data-upload route;
+- a bounded, development-only `tabpfn-client` adapter for fixed synthetic agent
+  smoke and website-demo paths, with exact client/model settings, service
+  metadata, and no arbitrary data-upload route;
 - mean, CDF, quantile, threshold-risk, contrast, diagnostic, and strict-support
   tools derived from one validated result bundle;
 - strong-IV, weak-IV, unsupported-treatment, non-empty-`W`, and outside-support
@@ -80,12 +80,12 @@ service. It pins `tabpfn-client==0.3.3`, model `v2.5_default`, one estimator,
 and thinking mode off. Stage-2 intervention rows are batched, so one successful
 run makes three prediction API calls. It does not accept a CSV or user dataset.
 
-Verified UI environment:
+Managed TabPFN website-demo environment:
 
 ```bash
-.venv/bin/python -m pip install -r requirements-ui.lock
+.venv/bin/python -m pip install -r requirements-website-demo.lock
 .venv/bin/python -m pip install -e . --no-deps
-dcfa-ui
+chmod 600 ~/.config/dcfa/tabpfn_api_key
 ```
 
 Website-oriented guided demo (`development_only`; local service only):
@@ -94,11 +94,13 @@ Website-oriented guided demo (`development_only`; local service only):
 .venv/bin/dcfa-website-demo
 ```
 
-This presentation shell uses the real typed agent state machine, exposes only
-three frozen synthetic TabCF-IV paths, and projects answers from validated
-evidence records. See [`docs/WEBSITE_DEMO.md`](docs/WEBSITE_DEMO.md) for the
-health-checkable container workflow, static Astro embed boundary, and release
-prerequisites. Its `/healthz` response identifies the service, version, fallback
+This presentation shell uses the real typed agent state machine and the official
+managed TabPFN service, exposes only three frozen synthetic TabCF-IV paths, and
+projects answers from validated evidence records. It reads the token from
+`~/.config/dcfa/tabpfn_api_key` by default and never falls back to sklearn. See
+[`docs/WEBSITE_DEMO.md`](docs/WEBSITE_DEMO.md) for the health-checkable container
+workflow, cloud-data boundary, static Astro embed boundary, and release
+prerequisites. Its `/healthz` response identifies the service, model, managed
 backend, and `development_only` evidence status.
 
 ## Stable commands

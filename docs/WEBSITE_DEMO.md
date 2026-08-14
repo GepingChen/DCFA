@@ -10,7 +10,9 @@ workflow.
 Run the website-oriented shell locally:
 
 ```bash
+.venv/bin/python -m pip install -r requirements-website-demo.lock
 .venv/bin/python -m pip install -e . --no-deps
+chmod 600 ~/.config/dcfa/tabpfn_api_key
 .venv/bin/dcfa-website-demo
 ```
 
@@ -23,10 +25,18 @@ The demo provides three frozen synthetic paths:
 
 The visible state trace is produced by `CausalAgentRuntime`; it is not a
 decorative reconstruction. The answer table is projected from the validated
-`QueryResult` and never recomputed in the UI. Gradio remains a lazy optional
-dependency, and importing the demo does not import Hillstrom, Torch, or TabPFN.
-Every page and successful result visibly states that the data are synthetic and
-the selected sklearn backend is `development_only`, not TabCF.
+`QueryResult` and never recomputed in the UI. Gradio and `tabpfn-client` remain
+lazy optional dependencies, and importing the demo does not import Hillstrom,
+Torch, or the Client package. Every successful supported path uses the official
+managed TabPFN distribution output for both control-function stages. No Client
+failure can select sklearn.
+
+The presets contain generated synthetic `Y/X/Z` rows only. A supported run sends
+those rows and prediction grids to Prior Labs, consumes account usage credits,
+and records returned service metadata. The credential stays in the external
+token file and is never copied into an artifact. Managed results remain
+`local_development / tabpfn / development_only` because the service checkpoint
+and runtime-image hashes are not available to DCFA.
 
 ## Static-site architecture
 
@@ -76,6 +86,7 @@ Supported settings:
 | `DCFA_SERVER_NAME` | `127.0.0.1` | Bind address; use `0.0.0.0` only inside a reviewed container/service |
 | `PORT` | `7860` | TCP port, validated in the range 1–65535 |
 | `DCFA_OUTPUT_ROOT` | `artifacts/local/website-demo` | Ignored local directory for immutable result bundles |
+| `DCFA_TABPFN_TOKEN_FILE` | `~/.config/dcfa/tabpfn_api_key` | External mode-600 Prior Labs token file |
 | `DCFA_ACCESS_LOG` | `0` | Set to `1` only when request logs are operationally required |
 
 Build and run the checked-in non-root container:
@@ -84,6 +95,8 @@ Build and run the checked-in non-root container:
 docker build -t dcfa-development-demo:local .
 docker run --rm --init \
   -p 127.0.0.1:7860:7860 \
+  -e DCFA_TABPFN_TOKEN_FILE=/run/secrets/tabpfn_api_key \
+  -v "$HOME/.config/dcfa/tabpfn_api_key:/run/secrets/tabpfn_api_key:ro" \
   -v dcfa-demo-artifacts:/app/artifacts \
   dcfa-development-demo:local
 ```
@@ -91,6 +104,7 @@ docker run --rm --init \
 Or use the equivalent local Compose profile:
 
 ```bash
+export DCFA_TABPFN_TOKEN_FILE="$HOME/.config/dcfa/tabpfn_api_key"
 docker compose up --build
 docker compose ps
 curl --fail http://127.0.0.1:7860/healthz
@@ -105,9 +119,11 @@ service adds basic no-sniff, referrer, and device-permission headers. TLS, rate
 limiting, authentication, external retention, and reverse-proxy policy remain
 the responsibility of any later reviewed host.
 
-The demo accepts only the three built-in synthetic scenarios, 120–600 generated
+The demo accepts only the three built-in synthetic scenarios, 120–256 generated
 rows, and a bounded unsigned 32-bit seed. It has no upload surface, no Hillstrom
-route, no general causal-method router, and no automatic backend fallback.
+route, no general causal-method router, and no sklearn fallback. A supported run
+uses three managed predictions; the outside-support path stops after the Stage 1
+distribution and emits no Stage 2 result or numerical answer.
 
 ## Local acceptance checks
 
@@ -119,7 +135,8 @@ route, no general causal-method router, and no automatic backend fallback.
 docker inspect --format '{{.Config.User}}' dcfa-development-demo:local
 ```
 
-The website-specific tests execute all three real scenarios, preserve warnings,
+The website-specific tests execute all three paths against a contract-faithful
+fake managed service, preserve warnings,
 assert that outside-support execution emits no result directory or number,
 exercise concurrent directory reservation, reject invalid controls before fit,
 and validate `/healthz`, `/readyz`, and service headers. Before handoff, also
@@ -129,9 +146,9 @@ verify fresh strong/weak artifact directories with `dcfa verify-artifacts`.
 
 ## Publication gate
 
-The current local execution is explicitly
-`local_development / sklearn_quantile_fallback / development_only`. It is not a
-TabCF estimate and is not eligible for a Track T headline or finished public
+The current local execution is real managed TabPFN mechanics but explicitly
+`local_development / tabpfn / development_only`. It is not bitwise-reproducible
+Track T evidence and is not eligible for a Track T headline or finished public
 causal-demo claim. Before linking the personal website to a released TabCF demo:
 
 1. supply and validate the frozen real TabPFN runtime, checkpoint hash, and

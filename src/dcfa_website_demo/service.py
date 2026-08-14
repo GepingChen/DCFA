@@ -7,7 +7,14 @@ from pathlib import Path
 from typing import Any
 
 from dcfa import __version__
-from dcfa_website_demo.app import DEFAULT_OUTPUT_ROOT, DEMO_CSS, build_app
+from dcfa.errors import DCFAError
+from dcfa.tabcf_iv.managed_smoke import read_managed_token_file
+from dcfa_website_demo.app import (
+    DEFAULT_OUTPUT_ROOT,
+    DEMO_CSS,
+    build_app,
+    managed_token_file_from_environment,
+)
 
 
 def output_root_from_environment() -> Path:
@@ -31,7 +38,7 @@ def build_service() -> Any:
         from fastapi.responses import JSONResponse
     except ImportError as exc:
         raise RuntimeError(
-            "Install the optional UI with: python -m pip install -r requirements-ui.lock"
+            "Install the website demo with: python -m pip install -r requirements-website-demo.lock"
         ) from exc
 
     service = FastAPI(
@@ -49,7 +56,8 @@ def build_service() -> Any:
                 "service": "dcfa-development-workflow-demo",
                 "version": __version__,
                 "evidence_status": "development_only",
-                "backend": "sklearn_quantile_fallback",
+                "backend": "tabpfn_client_managed",
+                "model": "v2.5_default",
             },
             headers={"Cache-Control": "no-store"},
         )
@@ -58,11 +66,19 @@ def build_service() -> Any:
 
     @service.get("/readyz", include_in_schema=False)
     def readyz():
-        ready = output_root_is_writable(output_root)
+        output_ready = output_root_is_writable(output_root)
+        try:
+            credential = read_managed_token_file(managed_token_file_from_environment())
+            del credential
+            credential_ready = True
+        except (DCFAError, OSError, ValueError):
+            credential_ready = False
+        ready = output_ready and credential_ready
         return JSONResponse(
             {
                 "status": "ready" if ready else "not_ready",
-                "output_root_writable": ready,
+                "output_root_writable": output_ready,
+                "managed_credential_ready": credential_ready,
                 "evidence_status": "development_only",
             },
             status_code=200 if ready else 503,
@@ -104,7 +120,7 @@ def run_service() -> None:
         import uvicorn
     except ImportError as exc:
         raise RuntimeError(
-            "Install the optional UI with: python -m pip install -r requirements-ui.lock"
+            "Install the website demo with: python -m pip install -r requirements-website-demo.lock"
         ) from exc
 
     host = os.environ.get("DCFA_SERVER_NAME", "127.0.0.1")

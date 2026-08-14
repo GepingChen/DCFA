@@ -13,7 +13,7 @@ for current behavior.
 | `src/dcfa/schemas.py` | Immutable TabCF, policy, semi-synthetic, evidence, backend, and run contracts |
 | `src/dcfa/evidence.py` | Shared ledger validation and Track T/H release gates |
 | `src/dcfa/audit.py`, `cache.py`, `artifact_validation.py` | Typed audit, validated cache, and no-refit artifact verifier |
-| `src/dcfa/tabcf_iv/` | Isolated continuous-treatment IV adapter, local fallback, bounded managed-client smoke, diagnostics, estimands, real-file loader, and locked runtime validator |
+| `src/dcfa/tabcf_iv/` | Isolated continuous-treatment IV adapter, local fallback, bounded managed-client demo/smoke, diagnostics, estimands, real-file loader, and locked runtime validator |
 | `src/dcfa/hillstrom_policy/` | Isolated three-action RCT policy adapter, leakage gate, DR/IPW/direct estimators, policies, and four semi-synthetic DGPs |
 | `src/dcfa/agent/` | Explicit compiler/state/runtime and identical-recorded-tool Track A harness |
 | `src/dcfa/app.py` | Public TabCF-only lazy Gradio shell |
@@ -22,7 +22,7 @@ for current behavior.
 | `evaluation/configs/` | Fail-closed locked TabPFN runtime template |
 | `tests/` | Unit, leakage, statistical, agent-behavior, and integration gates |
 | `third_party/TabCF` | Authoritative upstream source pinned at `76e0d3eb9e97cebca381d1540db0333c1ef1016e` |
-| `requirements-dev.lock`, `requirements-ui.lock`, `requirements-managed-client.lock` | Verified macOS arm64 Python 3.11 core, UI, and managed-client environments |
+| `requirements-dev.lock`, `requirements-ui.lock`, `requirements-managed-client.lock`, `requirements-website-demo.lock` | Verified Python 3.11 core, UI, managed-client, and combined website-demo environments |
 | `Dockerfile`, `compose.yaml`, `.dockerignore` | Non-root, single-worker local deployment package for the development-only website demo |
 
 Generated outputs go under ignored `artifacts/local/`. Raw/private data,
@@ -53,8 +53,9 @@ backend lazily imports packages and fails with a typed error; locked execution
 also requires a hashed checkpoint and runtime image digest before import.
 
 `managed_client.py` is a separate development-only implementation of the same
-backend contract. `managed_smoke.py` exposes it only through one fixed 128-row
-synthetic fixture and the existing typed agent state machine. It requires exact
+backend contract. `managed_smoke.py` exposes one fixed 128-row synthetic fixture;
+`dcfa_website_demo` reuses the same profile for three bounded synthetic presets
+through the existing typed agent state machine. It requires exact
 client/model parameters, caps fit/prediction row counts, batches the Stage-2
 grid into two calls, derives CDFs from service borders/logits with a tested
 NumPy implementation of the service distribution contract, restores only the
@@ -129,13 +130,15 @@ not statistical quality or release readiness.
 
 The website demo is deliberately separate from `src/dcfa/`: presentation-only
 changes do not rewrite the evidence-bound statistical runtime. It accepts only
-frozen synthetic TabCF-IV scenarios, renders the actual agent state events and
-validated query records, and has no Hillstrom or arbitrary-upload route. The
-static personal site can only embed or link a separately hosted instance; it
-cannot execute this Python service on GitHub Pages.
+frozen synthetic TabCF-IV scenarios, uses the managed `tabpfn-client` profile,
+renders the actual agent state events and validated query records, and has no
+Hillstrom, arbitrary-upload, or sklearn fallback route. The static personal site
+can only embed or link a separately hosted instance; it cannot execute this
+Python service on GitHub Pages.
 
 `dcfa_website_demo.service` mounts the queued Gradio app on a single-worker
-FastAPI service and exposes `/healthz` plus output-path-aware `/readyz`. UI run
+FastAPI service and exposes `/healthz` plus output-path- and credential-aware
+`/readyz`. UI run
 directories are reserved atomically and never overwrite prior material. The container runs as UID 10001,
 stores generated artifacts under a dedicated volume, disables Gradio monitoring
 and public sharing, and remains a local deployment artifact rather than a public

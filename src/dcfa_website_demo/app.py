@@ -3,9 +3,11 @@
 from __future__ import annotations
 
 import html
+import importlib.metadata
 import json
+import os
 import threading
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from pathlib import Path
 from typing import Any
 
@@ -14,13 +16,25 @@ import numpy as np
 from dcfa.agent.compiler import CompilationRequest
 from dcfa.agent.runtime import AgentResponse, CausalAgentRuntime
 from dcfa.canonical import to_primitive
+from dcfa.constants import EstimatorBackend, EvidenceStatus, ExecutionProfile
+from dcfa.errors import DCFAError, ErrorCode
 from dcfa.schemas import AnalysisSpecification, DatasetManifest
 from dcfa.tabcf_iv.development_dgp import generate_development_iv
+from dcfa.tabcf_iv.managed_client import (
+    MANAGED_BACKEND_PARAMETERS,
+    MANAGED_CLIENT_VERSION,
+    TabPFNClientBackend,
+)
+from dcfa.tabcf_iv.managed_smoke import (
+    load_managed_client_module,
+    read_managed_token_file,
+)
 from dcfa.tabcf_iv.pipeline import AnalysisRun, TabCFAnalysisEngine
 
 DEFAULT_OUTPUT_ROOT = Path("artifacts/local/website-demo")
+DEFAULT_MANAGED_TOKEN_FILE = Path.home() / ".config" / "dcfa" / "tabpfn_api_key"
 MIN_DEMO_ROWS = 120
-MAX_DEMO_ROWS = 600
+MAX_DEMO_ROWS = 256
 MIN_DEMO_SEED = 0
 MAX_DEMO_SEED = 2**32 - 1
 DEVELOPMENT_BOUNDARY_WARNING_CODES = {
@@ -36,6 +50,7 @@ class DemoScenario:
     description: str
     question: str
     instrument_strength: float
+    intervention_quantiles: tuple[float, ...] = (0.1, 0.3, 0.5, 0.7, 0.9)
     violate_support: bool = False
 
 
@@ -65,6 +80,7 @@ SCENARIOS: dict[str, DemoScenario] = {
             "warnings attached to the answer."
         ),
         instrument_strength=0.02,
+        intervention_quantiles=(0.3, 0.4, 0.5, 0.6, 0.7),
     ),
     "support_violation": DemoScenario(
         label="Outside-support block",
@@ -382,9 +398,9 @@ body,
 class _WebsiteAnalysisTool:
     """Presentation-only adapter that preserves the runtime's tool contract."""
 
-    def __init__(self, output_dir: Path) -> None:
+    def __init__(self, output_dir: Path, engine: TabCFAnalysisEngine) -> None:
         self.output_dir = output_dir
-        self.engine = TabCFAnalysisEngine()
+        self.engine = engine
         self.last_run: AnalysisRun | None = None
 
     def analyze(
@@ -414,6 +430,11 @@ def scenario_question(scenario: str) -> str:
         return SCENARIOS[scenario].question
     except KeyError as exc:
         raise ValueError(f"Unknown demo scenario: {scenario}") from exc
+
+
+def managed_token_file_from_environment() -> Path:
+    """Resolve the repository-external managed-client credential file."""
+    return Path(os.environ.get("DCFA_TABPFN_TOKEN_FILE", str(DEFAULT_MANAGED_TOKEN_FILE)))
 
 
 def _reserve_output_directory(root: Path, scenario: str, seed: int) -> Path:
@@ -446,8 +467,11 @@ def execute_portfolio_scenario(
     seed: int,
     *,
     output_root: Path = DEFAULT_OUTPUT_ROOT,
+    token_file: Path | None = None,
+    client_module: Any | None = None,
+    client_version: str | None = None,
 ) -> PortfolioDemoResult:
-    """Execute one frozen guided scenario through the real typed agent runtime."""
+    """Execute one frozen guided scenario through managed TabPFN and the typed runtime."""
     if scenario not in SCENARIOS:
         raise ValueError(f"Unknown demo scenario: {scenario}")
     rows = int(rows)
@@ -457,45 +481,80 @@ def execute_portfolio_scenario(
     if not MIN_DEMO_SEED <= seed <= MAX_DEMO_SEED:
         raise ValueError(f"Demo seed must be between {MIN_DEMO_SEED} and {MAX_DEMO_SEED}.")
 
-    selected = SCENARIOS[scenario]
-    dataset = generate_development_iv(
-        n=rows,
-        seed=seed,
-        instrument_strength=selected.instrument_strength,
-    )
-    interventions = tuple(
-        float(value) for value in np.quantile(dataset.columns["X"], [0.1, 0.3, 0.5, 0.7, 0.9])
-    )
-    if selected.violate_support:
-        interventions = (
-            *interventions[:-1],
-            float(np.max(dataset.columns["X"]) + 5.0),
+    credential = read_managed_token_file(token_file or managed_token_file_from_environment())
+    client = client_module or load_managed_client_module()
+    observed_client_version = client_version or importlib.metadata.version("tabpfn-client")
+    if observed_client_version != MANAGED_CLIENT_VERSION:
+        raise DCFAError(
+            ErrorCode.UNSUPPORTED_BACKEND_PROFILE,
+            "The installed tabpfn-client version does not match the frozen website profile.",
+            stage="managed_client.version",
+            context={
+                "expected": MANAGED_CLIENT_VERSION,
+                "observed": observed_client_version,
+            },
         )
 
-    request = CompilationRequest(
-        dataset_hash=dataset.manifest.dataset_hash,
-        outcome="Y",
-        treatment="X",
-        instrument="Z",
-        objective="quantile_contrast",
-        intervention_grid=interventions,
-        x=interventions[-1],
-        comparison_x=interventions[0],
-        level=0.5,
-        units="Y_units",
-        seed=seed,
-    )
-    output_dir = _reserve_output_directory(Path(output_root), scenario, seed)
-    tool = _WebsiteAnalysisTool(output_dir)
     try:
+        client.set_access_token(credential)
+        del credential
+        selected = SCENARIOS[scenario]
+        dataset = generate_development_iv(
+            n=rows,
+            seed=seed,
+            instrument_strength=selected.instrument_strength,
+        )
+        manifest = replace(dataset.manifest, estimator_backend=EstimatorBackend.TABPFN)
+        interventions = tuple(
+            float(value)
+            for value in np.quantile(dataset.columns["X"], selected.intervention_quantiles)
+        )
+        if selected.violate_support:
+            interventions = (
+                *interventions[:-1],
+                float(np.max(dataset.columns["X"]) + 5.0),
+            )
+
+        request = CompilationRequest(
+            dataset_hash=manifest.dataset_hash,
+            outcome="Y",
+            treatment="X",
+            instrument="Z",
+            objective="quantile_contrast",
+            intervention_grid=interventions,
+            x=interventions[-1],
+            comparison_x=interventions[0],
+            level=0.5,
+            units="Y_units",
+            confirmed_by_user=True,
+            execution_profile=ExecutionProfile.LOCAL_DEVELOPMENT,
+            estimator_backend=EstimatorBackend.TABPFN,
+            evidence_status=EvidenceStatus.DEVELOPMENT_ONLY,
+            backend_parameters=MANAGED_BACKEND_PARAMETERS,
+            seed=seed,
+        )
+
+        def backend_factory(specification: AnalysisSpecification) -> TabPFNClientBackend:
+            return TabPFNClientBackend.from_specification(
+                specification,
+                regressor_class=client.TabPFNRegressor,
+                client_version=observed_client_version,
+            )
+
+        output_dir = _reserve_output_directory(Path(output_root), scenario, seed)
+        engine = TabCFAnalysisEngine(backend_factory=backend_factory)
+        tool = _WebsiteAnalysisTool(output_dir, engine)
         response = CausalAgentRuntime(analysis_tool=tool).execute(
             request,
             dataset.columns,
-            dataset.manifest,
+            manifest,
         )
     except Exception:
-        _remove_empty_reservation(output_dir)
+        if "output_dir" in locals():
+            _remove_empty_reservation(output_dir)
         raise
+    finally:
+        client.reset()
     if not any(output_dir.iterdir()):
         _remove_empty_reservation(output_dir)
     plot_path = output_dir / "interventional_summary.png"
@@ -526,13 +585,13 @@ def _status_html(result: PortfolioDemoResult) -> str:
             '<div class="demo-status demo-status--warning" role="status">'
             "<strong>Completed with empirical warnings</strong>"
             "The warnings remain attached to the answer and evidence record. This is a "
-            "development-only sklearn result, not a TabCF estimate.</div>"
+            "development-only managed TabPFN result, not locked Track T evidence.</div>"
         )
     return (
         '<div class="demo-status" role="status">'
         "<strong>Workflow completed and evidence validated</strong>"
         "The displayed value comes from the validated result bundle. This is a "
-        "development-only sklearn result, not a TabCF estimate.</div>"
+        "development-only managed TabPFN result, not locked Track T evidence.</div>"
     )
 
 
@@ -627,6 +686,22 @@ def _input_error_outputs(message: str) -> tuple[str, str, str, str, None, str]:
     )
 
 
+def _execution_error_outputs(error: DCFAError) -> tuple[str, str, str, str, None, str]:
+    message = html.escape(error.message)
+    code = html.escape(error.code.value)
+    return (
+        '<div class="demo-status demo-status--blocked" role="status">'
+        f"<strong>Execution blocked safely · {code}</strong>{message} "
+        "No numerical causal answer was returned.</div>",
+        '<div class="demo-status demo-status--idle">Execution stopped before a result.</div>',
+        "### No numerical answer\n\nThe managed backend failed closed; sklearn was not used.",
+        '<div class="demo-evidence-card demo-evidence-placeholder">'
+        "<h3>Evidence record</h3>No evidence record was emitted.</div>",
+        None,
+        json.dumps({"status": "blocked", "error": error.to_dict()}, indent=2),
+    )
+
+
 def _audit_json(result: PortfolioDemoResult) -> str:
     payload = {
         "scenario": result.scenario,
@@ -661,7 +736,7 @@ def build_app(*, output_root: Path = DEFAULT_OUTPUT_ROOT) -> Any:
         import gradio as gr
     except ImportError as exc:
         raise RuntimeError(
-            "Install the optional UI with: python -m pip install -r requirements-ui.lock"
+            "Install the website demo with: python -m pip install -r requirements-website-demo.lock"
         ) from exc
 
     scenario_choices = [(item.label, key) for key, item in SCENARIOS.items()]
@@ -685,9 +760,10 @@ def build_app(*, output_root: Path = DEFAULT_OUTPUT_ROOT) -> Any:
                 <span>Continuous outcome Y</span><span>No baseline covariates W</span>
               </div>
               <p class="demo-development-notice" role="note">
-                <strong>Synthetic and development-only.</strong> This local sklearn workflow
-                demonstrates contracts, blocking, and evidence plumbing. It is not a TabCF
-                estimate and cannot support a Track T or real-world causal claim.
+                <strong>Synthetic and development-only.</strong> This workflow uses the official
+                managed TabPFN service for the TabCF distributional stages. Inputs leave this
+                machine, and the opaque service runtime cannot support a locked Track T or
+                real-world causal claim.
               </p>
             </header>
             """
@@ -718,8 +794,8 @@ def build_app(*, output_root: Path = DEFAULT_OUTPUT_ROOT) -> Any:
                     rows = gr.Slider(
                         MIN_DEMO_ROWS,
                         MAX_DEMO_ROWS,
-                        value=240,
-                        step=20,
+                        value=128,
+                        step=8,
                         label="Synthetic rows",
                     )
                     seed = gr.Number(
@@ -782,8 +858,8 @@ def build_app(*, output_root: Path = DEFAULT_OUTPUT_ROOT) -> Any:
                   <span>Non-empty baseline covariates are rejected before fitting.</span></div>
                 <div class="demo-boundary-item"><strong>Hillstrom stays separate</strong>
                   <span>The randomized-policy track is not TabCF validation.</span></div>
-                <div class="demo-boundary-item"><strong>Development only</strong>
-                  <span>The local sklearn backend is not TabCF or release evidence.</span></div>
+                <div class="demo-boundary-item"><strong>Managed TabPFN</strong>
+                  <span>Service-traceable TabCF mechanics, not locked release evidence.</span></div>
               </div>
             </section>
             """
@@ -806,6 +882,8 @@ def build_app(*, output_root: Path = DEFAULT_OUTPUT_ROOT) -> Any:
                         output_root=output_root,
                     )
                 )
+            except DCFAError as exc:
+                formatted = _execution_error_outputs(exc)
             except (TypeError, ValueError) as exc:
                 formatted = _input_error_outputs(str(exc))
             status_value, state_value, answer_value, evidence_value, plot_value, audit_value = (

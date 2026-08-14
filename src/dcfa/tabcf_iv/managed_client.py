@@ -27,7 +27,7 @@ from dcfa.tabcf_iv.backend import (
     _distribution_eval_matrix,
 )
 
-MANAGED_CLIENT_PROTOCOL_VERSION = "tabpfn_client_managed_smoke_v1"
+MANAGED_CLIENT_PROTOCOL_VERSION = "tabpfn_client_managed_demo_v1"
 MANAGED_CLIENT_VERSION = "0.3.3"
 MANAGED_SERVICE_PACKAGE_VERSION = "8.0.8"
 MANAGED_MODEL_PATH = "v2.5_default"
@@ -217,7 +217,7 @@ class TabPFNClientBackend:
         if self.client_version != MANAGED_CLIENT_VERSION:
             raise BackendError(
                 ErrorCode.UNSUPPORTED_BACKEND_PROFILE,
-                "The managed smoke profile requires the frozen tabpfn-client version.",
+                "The managed development profile requires the frozen tabpfn-client version.",
                 stage="managed_client.version",
                 context={
                     "expected": MANAGED_CLIENT_VERSION,
@@ -294,7 +294,7 @@ class TabPFNClientBackend:
         if len(matrix) > MANAGED_MAX_TRAIN_ROWS:
             raise BackendError(
                 ErrorCode.UNSUPPORTED_BACKEND_PROFILE,
-                "Managed smoke training rows exceed the frozen development limit.",
+                "Managed TabPFN training rows exceed the frozen development limit.",
                 stage="managed_client.size_gate",
                 context={"maximum": MANAGED_MAX_TRAIN_ROWS, "observed": len(matrix)},
             )
@@ -304,7 +304,7 @@ class TabPFNClientBackend:
         if len(matrix) > MANAGED_MAX_PREDICT_ROWS:
             raise BackendError(
                 ErrorCode.UNSUPPORTED_BACKEND_PROFILE,
-                "Managed smoke prediction rows exceed the frozen development limit.",
+                "Managed TabPFN prediction rows exceed the frozen development limit.",
                 stage="managed_client.size_gate",
                 context={"maximum": MANAGED_MAX_PREDICT_ROWS, "observed": len(matrix)},
             )

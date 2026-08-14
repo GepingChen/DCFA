@@ -455,3 +455,26 @@ Do not rewrite an accepted entry when it changes; append a superseding entry.
   tests; atomic allocation and invalid-control tests; health and security-header
   checks; non-root container health; and desktop/mobile browser review.
 - Source: User-authorized continuation of the development workflow demo and D-021.
+
+## D-024 — Use managed TabPFN for the bounded local website demo
+
+- Date: 2026-08-13
+- Status: Accepted development integration; supersedes D-023's website-backend choice
+- Decision: Route the three fixed synthetic website scenarios through the
+  `tabpfn-client==0.3.3` managed TabPFN backend, pinned to `v2.5_default`, one
+  estimator, and thinking mode off. Cap website inputs at 256 rows, keep full
+  distribution predictions below the 400-row service limit, require an external
+  mode-600 token file, and fail closed without any sklearn substitution. Use a
+  combined website lock and make readiness depend on both artifact storage and
+  credential-file validity.
+- Rationale: The user requires actual TabPFN mechanics in the local demo. The
+  existing managed distribution adapter already satisfies the TabCF Stage 1/2
+  contract, while the sklearn presentation path no longer meets that goal.
+- Affected tracks: TabCF Analyst local presentation and development mechanics
+  only; no locked Track T, H, or A evidence changes.
+- Verification impact: Exercise all three website paths with a contract-faithful
+  fake service, assert managed backend identity and no-number blocking, validate
+  the combined dependency lock, then run one bounded authenticated synthetic
+  website scenario and independently verify its artifact.
+- Source: User request on 2026-08-13; inspected `tabpfn-client` 0.3.3 API and
+  Prior Labs regression/metering documentation.

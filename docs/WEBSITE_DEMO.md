@@ -23,6 +23,14 @@ The demo provides three frozen synthetic paths:
 - an outside-support path that stops before Stage 2 and emits no numerical
   causal answer.
 
+It also provides a local CSV tab for a bounded first-version workflow. The file
+must have exactly three numeric columns, 120–256 data rows, and explicit mappings
+for continuous outcome Y, continuous treatment X, and scalar instrument Z. Extra
+columns are rejected instead of being silently dropped as W. Before execution,
+the user must confirm both data authorization and that the selected rows will be
+sent to Prior Labs. Uploading the file into the local page alone does not call the
+managed service; checking the box and clicking **Run uploaded CSV** does.
+
 The visible state trace is produced by `CausalAgentRuntime`; it is not a
 decorative reconstruction. The answer table is projected from the validated
 `QueryResult` and never recomputed in the UI. Gradio and `tabpfn-client` remain
@@ -31,10 +39,11 @@ Torch, or the Client package. Every successful supported path uses the official
 managed TabPFN distribution output for both control-function stages. No Client
 failure can select sklearn.
 
-The presets contain generated synthetic `Y/X/Z` rows only. A supported run sends
-those rows and prediction grids to Prior Labs, consumes account usage credits,
-and records returned service metadata. The credential stays in the external
-token file and is never copied into an artifact. Managed results remain
+The presets contain generated synthetic `Y/X/Z` rows. The local CSV route sends
+only its selected Y/X/Z rows and prediction grids to Prior Labs after explicit
+confirmation. A supported run consumes account usage credits and records returned
+service metadata. The credential stays in the external token file and is never
+copied into an artifact. Managed results remain
 `local_development / tabpfn / development_only` because the service checkpoint
 and runtime-image hashes are not available to DCFA.
 
@@ -119,11 +128,13 @@ service adds basic no-sniff, referrer, and device-permission headers. TLS, rate
 limiting, authentication, external retention, and reverse-proxy policy remain
 the responsibility of any later reviewed host.
 
-The demo accepts only the three built-in synthetic scenarios, 120–256 generated
-rows, and a bounded unsigned 32-bit seed. It has no upload surface, no Hillstrom
-route, no general causal-method router, and no sklearn fallback. A supported run
-uses three managed predictions; the outside-support path stops after the Stage 1
-distribution and emits no Stage 2 result or numerical answer.
+The demo accepts the three built-in synthetic scenarios or one local CSV with
+exactly three selected numeric Y/X/Z columns and 120–256 rows, plus a bounded
+unsigned 32-bit seed. CSVs with extra columns, missing/non-finite values, or fewer
+than 20 distinct Y/X values are rejected before managed-client access. It has no
+Hillstrom route, no general causal-method router, and no sklearn fallback. A
+supported run uses three managed predictions; the outside-support path stops
+after the Stage 1 distribution and emits no Stage 2 result or numerical answer.
 
 ## Local acceptance checks
 
@@ -135,10 +146,11 @@ distribution and emits no Stage 2 result or numerical answer.
 docker inspect --format '{{.Config.User}}' dcfa-development-demo:local
 ```
 
-The website-specific tests execute all three paths against a contract-faithful
-fake managed service, preserve warnings,
+The website-specific tests execute all three guided paths and the standard CSV
+path against a contract-faithful fake managed service, preserve warnings,
 assert that outside-support execution emits no result directory or number,
-exercise concurrent directory reservation, reject invalid controls before fit,
+exercise concurrent directory reservation, reject invalid controls/CSV/consent
+before fit,
 and validate `/healthz`, `/readyz`, and service headers. Before handoff, also
 inspect the running page at a desktop viewport and at 390 px, execute all three
 paths, check for horizontal overflow and console errors, and independently

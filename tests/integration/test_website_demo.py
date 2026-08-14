@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import csv
 import json
 import subprocess
 import sys
@@ -20,8 +21,14 @@ from dcfa_website_demo.app import (
     MAX_DEMO_SEED,
     _input_error_outputs,
     _reserve_output_directory,
+    execute_csv_upload,
     execute_portfolio_scenario,
     format_portfolio_result,
+)
+from dcfa_website_demo.csv_upload import (
+    STANDARD_DEMO_ROWS,
+    export_standard_demo_csv,
+    load_authorized_csv,
 )
 from dcfa_website_demo.service import build_service
 
@@ -143,6 +150,87 @@ def test_supported_website_scenario_returns_real_state_trace_and_evidence(
     assert "DEVELOPMENT_TABPFN_NOT_RELEASE_ELIGIBLE" in evidence
     assert plot == str(result.plot_path)
     assert result.response.result_bundle_id in audit
+
+
+def test_authorized_csv_upload_runs_managed_tabpfn_and_binds_manifest(
+    tmp_path: Path,
+    managed_client: dict[str, Any],
+) -> None:
+    csv_path = export_standard_demo_csv(tmp_path / "standard-demo.csv")
+    FakeClientRegressor.prediction_calls = 0
+
+    result = execute_csv_upload(
+        csv_path,
+        "Y",
+        "X",
+        "Z",
+        True,
+        20260813,
+        output_root=tmp_path / "runs",
+        **managed_client,
+    )
+
+    assert result.scenario == "csv_upload"
+    assert result.response.status == "completed"
+    assert result.response.final_state is AgentState.COMPLETED
+    assert result.response.queries[0].evidence_id.startswith("evidence_")
+    assert result.output_dir is not None
+    assert result.output_dir.parent.parent.name.startswith("csv-upload-")
+    assert FakeClientRegressor.prediction_calls == 3
+    manifest = json.loads((result.output_dir / "dataset_manifest.json").read_text(encoding="utf-8"))
+    assert manifest["source_kind"] == "user_authorized_local_csv_upload"
+    assert manifest["columns"] == ["Z", "X", "Y"]
+    assert manifest["row_count"] == STANDARD_DEMO_ROWS
+    assert manifest["estimator_backend"] == "tabpfn"
+    assert manifest["evidence_status"] == "development_only"
+
+
+def test_csv_upload_requires_confirmation_before_client_or_output(tmp_path: Path) -> None:
+    csv_path = export_standard_demo_csv(tmp_path / "standard-demo.csv")
+
+    with pytest.raises(ValueError, match="Confirm authorization"):
+        execute_csv_upload(
+            csv_path,
+            "Y",
+            "X",
+            "Z",
+            False,
+            20260813,
+            output_root=tmp_path / "runs",
+            token_file=tmp_path / "missing-token",
+        )
+
+    assert not (tmp_path / "runs").exists()
+
+
+def test_csv_upload_rejects_extra_columns_and_discrete_treatment(tmp_path: Path) -> None:
+    extra_path = tmp_path / "extra.csv"
+    with extra_path.open("w", encoding="utf-8", newline="") as stream:
+        writer = csv.writer(stream)
+        writer.writerow(("Y", "X", "Z", "W"))
+        writer.writerows((index, index / 10, index / 20, 1.0) for index in range(120))
+    with pytest.raises(ValueError, match="exactly the three selected"):
+        load_authorized_csv(
+            extra_path,
+            outcome="Y",
+            treatment="X",
+            instrument="Z",
+            confirmed=True,
+        )
+
+    discrete_path = tmp_path / "discrete.csv"
+    with discrete_path.open("w", encoding="utf-8", newline="") as stream:
+        writer = csv.writer(stream)
+        writer.writerow(("Y", "X", "Z"))
+        writer.writerows((index / 7, index % 2, index / 20) for index in range(120))
+    with pytest.raises(ValueError, match="treatment X must have at least"):
+        load_authorized_csv(
+            discrete_path,
+            outcome="Y",
+            treatment="X",
+            instrument="Z",
+            confirmed=True,
+        )
 
 
 def test_weak_website_scenario_preserves_empirical_warnings(

@@ -1,6 +1,6 @@
 # DCFA codebase map
 
-Last verified: 2026-08-12
+Last verified: 2026-08-13
 
 This map describes checked-in executable behavior. The integrated plan remains
 the authority for intended research behavior; code and tests are the authority
@@ -17,7 +17,7 @@ for current behavior.
 | `src/dcfa/hillstrom_policy/` | Isolated three-action RCT policy adapter, leakage gate, DR/IPW/direct estimators, policies, and four semi-synthetic DGPs |
 | `src/dcfa/agent/` | Explicit compiler/state/runtime and identical-recorded-tool Track A harness |
 | `src/dcfa/app.py` | Public TabCF-only lazy Gradio shell |
-| `src/dcfa_website_demo/` | Portfolio presentation layer and health-checkable ASGI wrapper over the typed public runtime; outside the statistical source hash |
+| `src/dcfa_website_demo/` | Portfolio presentation layer, strict local CSV ingress, and health-checkable ASGI wrapper over the typed public runtime; outside the statistical source hash |
 | `evaluation/agent_benchmark/cases/` | Frozen 24-case Track A MVP fixture |
 | `evaluation/configs/` | Fail-closed locked TabPFN runtime template |
 | `tests/` | Unit, leakage, statistical, agent-behavior, and integration gates |
@@ -55,7 +55,10 @@ also requires a hashed checkpoint and runtime image digest before import.
 `managed_client.py` is a separate development-only implementation of the same
 backend contract. `managed_smoke.py` exposes one fixed 128-row synthetic fixture;
 `dcfa_website_demo` reuses the same profile for three bounded synthetic presets
-through the existing typed agent state machine. It requires exact
+and one explicitly confirmed local CSV route through the existing typed agent
+state machine. `csv_upload.py` accepts exactly three mapped numeric Y/X/Z
+columns, 120–256 rows, no extras/W, finite values, and continuous Y/X presentation
+checks before any Client call. The managed profile requires exact
 client/model parameters, caps fit/prediction row counts, batches the Stage-2
 grid into two calls, derives CDFs from service borders/logits with a tested
 NumPy implementation of the service distribution contract, restores only the
@@ -129,12 +132,13 @@ See the README for complete runnable examples. A smoke test proves mechanics,
 not statistical quality or release readiness.
 
 The website demo is deliberately separate from `src/dcfa/`: presentation-only
-changes do not rewrite the evidence-bound statistical runtime. It accepts only
-frozen synthetic TabCF-IV scenarios, uses the managed `tabpfn-client` profile,
-renders the actual agent state events and validated query records, and has no
-Hillstrom, arbitrary-upload, or sklearn fallback route. The static personal site
-can only embed or link a separately hosted instance; it cannot execute this
-Python service on GitHub Pages.
+changes do not rewrite the evidence-bound statistical runtime. It accepts frozen
+synthetic TabCF-IV scenarios plus a strictly bounded, locally selected Y/X/Z CSV,
+uses the managed `tabpfn-client` profile, renders the actual agent state events
+and validated query records, and has no Hillstrom, W, general-router, or sklearn
+fallback route. The CSV confirmation states that selected rows leave the machine.
+The static personal site can only embed or link a separately hosted instance; it
+cannot execute this Python service on GitHub Pages.
 
 `dcfa_website_demo.service` mounts the queued Gradio app on a single-worker
 FastAPI service and exposes `/healthz` plus output-path- and credential-aware

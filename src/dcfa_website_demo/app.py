@@ -30,6 +30,11 @@ from dcfa.tabcf_iv.managed_smoke import (
     read_managed_token_file,
 )
 from dcfa.tabcf_iv.pipeline import AnalysisRun, TabCFAnalysisEngine
+from dcfa_website_demo.csv_upload import (
+    MAX_UPLOAD_ROWS,
+    MIN_UPLOAD_ROWS,
+    load_authorized_csv,
+)
 
 DEFAULT_OUTPUT_ROOT = Path("artifacts/local/website-demo")
 DEFAULT_MANAGED_TOKEN_FILE = Path.home() / ".config" / "dcfa" / "tabpfn_api_key"
@@ -113,11 +118,20 @@ body,
 }
 
 .gradio-container {
+  width: 100% !important;
   max-width: 74rem !important;
+  min-width: 0 !important;
   margin-inline: auto !important;
   padding: clamp(1rem, 3vw, 2.5rem) !important;
+  box-sizing: border-box !important;
   font-family: Inter, ui-sans-serif, -apple-system, BlinkMacSystemFont,
     "Segoe UI", sans-serif !important;
+}
+
+.gradio-container > .main {
+  width: 100% !important;
+  min-width: 0 !important;
+  box-sizing: border-box !important;
 }
 
 .demo-hero {
@@ -203,7 +217,8 @@ body,
   margin-top: 1.4rem;
 }
 
-#run-demo-button {
+#run-demo-button,
+#run-csv-button {
   min-height: 3rem;
   border: 1px solid var(--demo-accent-deep) !important;
   border-radius: .3rem !important;
@@ -212,7 +227,8 @@ body,
   font-weight: 750 !important;
 }
 
-#run-demo-button:hover {
+#run-demo-button:hover,
+#run-csv-button:hover {
   background: var(--demo-accent) !important;
 }
 
@@ -481,6 +497,101 @@ def execute_portfolio_scenario(
     if not MIN_DEMO_SEED <= seed <= MAX_DEMO_SEED:
         raise ValueError(f"Demo seed must be between {MIN_DEMO_SEED} and {MAX_DEMO_SEED}.")
 
+    selected = SCENARIOS[scenario]
+    dataset = generate_development_iv(
+        n=rows,
+        seed=seed,
+        instrument_strength=selected.instrument_strength,
+    )
+    manifest = replace(dataset.manifest, estimator_backend=EstimatorBackend.TABPFN)
+    interventions = tuple(
+        float(value) for value in np.quantile(dataset.columns["X"], selected.intervention_quantiles)
+    )
+    if selected.violate_support:
+        interventions = (
+            *interventions[:-1],
+            float(np.max(dataset.columns["X"]) + 5.0),
+        )
+    return _execute_managed_dataset(
+        result_scenario=scenario,
+        output_scenario=scenario,
+        columns=dataset.columns,
+        manifest=manifest,
+        outcome="Y",
+        treatment="X",
+        instrument="Z",
+        interventions=interventions,
+        seed=seed,
+        output_root=output_root,
+        token_file=token_file,
+        client_module=client_module,
+        client_version=client_version,
+    )
+
+
+def execute_csv_upload(
+    csv_file: str | Path,
+    outcome: str,
+    treatment: str,
+    instrument: str,
+    confirmed: bool,
+    seed: int,
+    *,
+    output_root: Path = DEFAULT_OUTPUT_ROOT,
+    token_file: Path | None = None,
+    client_module: Any | None = None,
+    client_version: str | None = None,
+) -> PortfolioDemoResult:
+    """Execute a confirmed, strictly bounded local Y/X/Z CSV through managed TabPFN."""
+    seed = int(seed)
+    if not MIN_DEMO_SEED <= seed <= MAX_DEMO_SEED:
+        raise ValueError(f"Demo seed must be between {MIN_DEMO_SEED} and {MAX_DEMO_SEED}.")
+    dataset = load_authorized_csv(
+        csv_file,
+        outcome=outcome,
+        treatment=treatment,
+        instrument=instrument,
+        confirmed=bool(confirmed),
+    )
+    interventions = tuple(
+        float(value)
+        for value in np.quantile(dataset.columns[dataset.treatment], (0.1, 0.3, 0.5, 0.7, 0.9))
+    )
+    digest_suffix = dataset.manifest.dataset_hash.split(":", maxsplit=1)[1][:12]
+    return _execute_managed_dataset(
+        result_scenario="csv_upload",
+        output_scenario=f"csv-upload-{digest_suffix}",
+        columns=dataset.columns,
+        manifest=dataset.manifest,
+        outcome=dataset.outcome,
+        treatment=dataset.treatment,
+        instrument=dataset.instrument,
+        interventions=interventions,
+        seed=seed,
+        output_root=output_root,
+        token_file=token_file,
+        client_module=client_module,
+        client_version=client_version,
+    )
+
+
+def _execute_managed_dataset(
+    *,
+    result_scenario: str,
+    output_scenario: str,
+    columns: dict[str, np.ndarray],
+    manifest: DatasetManifest,
+    outcome: str,
+    treatment: str,
+    instrument: str,
+    interventions: tuple[float, ...],
+    seed: int,
+    output_root: Path,
+    token_file: Path | None,
+    client_module: Any | None,
+    client_version: str | None,
+) -> PortfolioDemoResult:
+    """Run one already-validated no-W dataset through the shared managed profile."""
     credential = read_managed_token_file(token_file or managed_token_file_from_environment())
     client = client_module or load_managed_client_module()
     observed_client_version = client_version or importlib.metadata.version("tabpfn-client")
@@ -498,34 +609,17 @@ def execute_portfolio_scenario(
     try:
         client.set_access_token(credential)
         del credential
-        selected = SCENARIOS[scenario]
-        dataset = generate_development_iv(
-            n=rows,
-            seed=seed,
-            instrument_strength=selected.instrument_strength,
-        )
-        manifest = replace(dataset.manifest, estimator_backend=EstimatorBackend.TABPFN)
-        interventions = tuple(
-            float(value)
-            for value in np.quantile(dataset.columns["X"], selected.intervention_quantiles)
-        )
-        if selected.violate_support:
-            interventions = (
-                *interventions[:-1],
-                float(np.max(dataset.columns["X"]) + 5.0),
-            )
-
         request = CompilationRequest(
             dataset_hash=manifest.dataset_hash,
-            outcome="Y",
-            treatment="X",
-            instrument="Z",
+            outcome=outcome,
+            treatment=treatment,
+            instrument=instrument,
             objective="quantile_contrast",
             intervention_grid=interventions,
             x=interventions[-1],
             comparison_x=interventions[0],
             level=0.5,
-            units="Y_units",
+            units=f"{outcome}_units",
             confirmed_by_user=True,
             execution_profile=ExecutionProfile.LOCAL_DEVELOPMENT,
             estimator_backend=EstimatorBackend.TABPFN,
@@ -541,12 +635,12 @@ def execute_portfolio_scenario(
                 client_version=observed_client_version,
             )
 
-        output_dir = _reserve_output_directory(Path(output_root), scenario, seed)
+        output_dir = _reserve_output_directory(Path(output_root), output_scenario, seed)
         engine = TabCFAnalysisEngine(backend_factory=backend_factory)
         tool = _WebsiteAnalysisTool(output_dir, engine)
         response = CausalAgentRuntime(analysis_tool=tool).execute(
             request,
-            dataset.columns,
+            columns,
             manifest,
         )
     except Exception:
@@ -559,7 +653,7 @@ def execute_portfolio_scenario(
         _remove_empty_reservation(output_dir)
     plot_path = output_dir / "interventional_summary.png"
     return PortfolioDemoResult(
-        scenario=scenario,
+        scenario=result_scenario,
         response=response,
         plot_path=plot_path if plot_path.is_file() else None,
         output_dir=output_dir if output_dir.is_dir() else None,
@@ -760,56 +854,90 @@ def build_app(*, output_root: Path = DEFAULT_OUTPUT_ROOT) -> Any:
                 <span>Continuous outcome Y</span><span>No baseline covariates W</span>
               </div>
               <p class="demo-development-notice" role="note">
-                <strong>Synthetic and development-only.</strong> This workflow uses the official
-                managed TabPFN service for the TabCF distributional stages. Inputs leave this
-                machine, and the opaque service runtime cannot support a locked Track T or
-                real-world causal claim.
+                <strong>Local and development-only.</strong> Built-in examples are synthetic;
+                uploaded Y/X/Z inputs use the official managed TabPFN service and leave this
+                machine after confirmation. The opaque service runtime cannot support a locked
+                Track T or automatic real-world causal claim.
               </p>
             </header>
             """
         )
         with gr.Row(elem_classes="demo-controls"):
             with gr.Column(scale=5, elem_classes="demo-panel"):
-                gr.Markdown(
-                    "### 1 · Choose a behavior",
-                    elem_classes="demo-section-heading",
-                )
-                gr.Markdown(
-                    "These are frozen, synthetic engineering scenarios—not uploaded data or "
-                    "a general causal-method router.",
-                    elem_classes="demo-section-copy",
-                )
-                scenario = gr.Radio(
-                    choices=scenario_choices,
-                    value="strong_iv",
-                    label="Guided path",
-                )
-                question = gr.Textbox(
-                    value=scenario_question("strong_iv"),
-                    label="Example question",
-                    lines=3,
-                    interactive=False,
-                )
-                with gr.Accordion("Reproducibility controls", open=False):
-                    rows = gr.Slider(
-                        MIN_DEMO_ROWS,
-                        MAX_DEMO_ROWS,
-                        value=128,
-                        step=8,
-                        label="Synthetic rows",
-                    )
-                    seed = gr.Number(
-                        value=20260810,
-                        precision=0,
-                        minimum=MIN_DEMO_SEED,
-                        maximum=MAX_DEMO_SEED,
-                        label="Seed",
-                    )
-                run_button = gr.Button(
-                    "Run the auditable workflow",
-                    variant="primary",
-                    elem_id="run-demo-button",
-                )
+                gr.Markdown("### 1 · Choose an input", elem_classes="demo-section-heading")
+                with gr.Tabs():
+                    with gr.Tab("Guided scenarios"):
+                        gr.Markdown(
+                            "Frozen synthetic engineering paths for a quick walkthrough.",
+                            elem_classes="demo-section-copy",
+                        )
+                        scenario = gr.Radio(
+                            choices=scenario_choices,
+                            value="strong_iv",
+                            label="Guided path",
+                        )
+                        question = gr.Textbox(
+                            value=scenario_question("strong_iv"),
+                            label="Example question",
+                            lines=3,
+                            interactive=False,
+                        )
+                        with gr.Accordion("Reproducibility controls", open=False):
+                            rows = gr.Slider(
+                                MIN_DEMO_ROWS,
+                                MAX_DEMO_ROWS,
+                                value=128,
+                                step=8,
+                                label="Synthetic rows",
+                            )
+                            seed = gr.Number(
+                                value=20260810,
+                                precision=0,
+                                minimum=MIN_DEMO_SEED,
+                                maximum=MAX_DEMO_SEED,
+                                label="Seed",
+                            )
+                        run_button = gr.Button(
+                            "Run the guided workflow",
+                            variant="primary",
+                            elem_id="run-demo-button",
+                        )
+                    with gr.Tab("Upload local CSV"):
+                        gr.Markdown(
+                            f"Upload exactly three numeric columns and {MIN_UPLOAD_ROWS}–"
+                            f"{MAX_UPLOAD_ROWS} rows. Extra columns are rejected rather than "
+                            "silently treated as W. The file stays local until you confirm and "
+                            "run.",
+                            elem_classes="demo-section-copy",
+                        )
+                        csv_file = gr.File(
+                            label="Local Y/X/Z CSV",
+                            file_types=[".csv"],
+                            type="filepath",
+                        )
+                        with gr.Row():
+                            csv_outcome = gr.Textbox(value="Y", label="Outcome Y column")
+                            csv_treatment = gr.Textbox(value="X", label="Treatment X column")
+                            csv_instrument = gr.Textbox(value="Z", label="Instrument Z column")
+                        csv_seed = gr.Number(
+                            value=20260813,
+                            precision=0,
+                            minimum=MIN_DEMO_SEED,
+                            maximum=MAX_DEMO_SEED,
+                            label="Analysis seed",
+                        )
+                        csv_confirmed = gr.Checkbox(
+                            value=False,
+                            label=(
+                                "I am authorized to use this data and confirm the selected Y/X/Z "
+                                "rows will be sent to Prior Labs for managed TabPFN inference."
+                            ),
+                        )
+                        csv_run_button = gr.Button(
+                            "Run uploaded CSV",
+                            variant="primary",
+                            elem_id="run-csv-button",
+                        )
             with gr.Column(scale=5, elem_classes="demo-panel"):
                 gr.Markdown(
                     "### 2 · Inspect the state trace",
@@ -901,6 +1029,57 @@ def build_app(*, output_root: Path = DEFAULT_OUTPUT_ROOT) -> Any:
         run_button.click(
             fn=handle_run,
             inputs=(scenario, rows, seed),
+            outputs=(status, state_graph, answer, evidence, plot, audit),
+        )
+
+        def handle_csv_run(
+            selected_file: str | None,
+            selected_outcome: str,
+            selected_treatment: str,
+            selected_instrument: str,
+            selected_confirmation: bool,
+            selected_seed: int,
+        ):
+            try:
+                if not selected_file:
+                    raise ValueError("Choose a local CSV file before running the workflow.")
+                formatted = format_portfolio_result(
+                    execute_csv_upload(
+                        selected_file,
+                        selected_outcome,
+                        selected_treatment,
+                        selected_instrument,
+                        selected_confirmation,
+                        selected_seed,
+                        output_root=output_root,
+                    )
+                )
+            except DCFAError as exc:
+                formatted = _execution_error_outputs(exc)
+            except (OSError, TypeError, ValueError) as exc:
+                formatted = _input_error_outputs(str(exc))
+            status_value, state_value, answer_value, evidence_value, plot_value, audit_value = (
+                formatted
+            )
+            return (
+                status_value,
+                state_value,
+                answer_value,
+                evidence_value,
+                gr.update(value=plot_value, visible=plot_value is not None),
+                audit_value,
+            )
+
+        csv_run_button.click(
+            fn=handle_csv_run,
+            inputs=(
+                csv_file,
+                csv_outcome,
+                csv_treatment,
+                csv_instrument,
+                csv_confirmed,
+                csv_seed,
+            ),
             outputs=(status, state_graph, answer, evidence, plot, audit),
         )
     return app.queue(max_size=8, default_concurrency_limit=1)

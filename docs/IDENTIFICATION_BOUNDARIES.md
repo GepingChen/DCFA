@@ -44,13 +44,16 @@ locked Track T results or public headline claims. A TabPFN load failure must
 remain a typed error rather than trigger an automatic fallback. Publishable
 Track T evidence requires a reproducible real TabPFN environment.
 
-The bounded managed-client profile may send only its frozen synthetic smoke
-fixture to the Prior Labs service. It is also `development_only`: the exact
-client/model settings and observed service package/trace metadata are recorded,
-but the service checkpoint hash and runtime image digest are not available to
-DCFA. Service traceability is not bitwise reproducibility, so this path tests
-agent/backend mechanics only and cannot enter locked Track T evidence. It must
-not become a general CSV upload path.
+The bounded managed-client profile may send its frozen synthetic fixtures or an
+explicitly authorized local website CSV to the Prior Labs service. The CSV route
+accepts exactly three user-mapped numeric Y/X/Z columns, 120–256 rows, no W or
+extra columns, and a continuous Y/X presentation preflight. It requires a visible
+transmission confirmation before client access. It is also `development_only`:
+the exact client/model settings and observed service package/trace metadata are
+recorded, but the service checkpoint hash and runtime image digest are not
+available to DCFA. Service traceability is not bitwise reproducibility, so this
+path tests agent/backend mechanics only and cannot enter locked Track T evidence
+or support an automatic real-data causal claim.
 
 ## Hillstrom RCT boundary
 

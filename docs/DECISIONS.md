@@ -478,3 +478,31 @@ Do not rewrite an accepted entry when it changes; append a superseding entry.
   website scenario and independently verify its artifact.
 - Source: User request on 2026-08-13; inspected `tabpfn-client` 0.3.3 API and
   Prior Labs regression/metering documentation.
+
+## D-025 — Permit a consent-gated local CSV route in the website demo
+
+- Date: 2026-08-13
+- Status: Accepted local presentation extension; not a general upload service
+- Decision: Add one local website route for a user-selected CSV with exactly
+  three explicitly mapped numeric columns: continuous outcome Y, continuous
+  treatment X, and scalar instrument Z. Accept 120–256 rows, reject extra
+  columns rather than silently dropping potential W, require finite values and
+  at least 20 distinct Y/X values, and require a visible authorization and
+  Prior Labs transmission confirmation before managed-client access. Send only
+  the three accepted role columns, bind them to the canonical dataset hash and
+  a development-only manifest, and retain the exact D-024 TabPFN profile with no
+  sklearn fallback.
+- Rationale: A bounded local CSV makes the first end-to-end agent demo concrete
+  while preserving the v1 no-W scope, data-transmission boundary, and typed
+  evidence flow. Strict rejection is preferable to silently interpreting extra
+  user fields or presenting this development service as a general real-data
+  causal analysis product.
+- Affected tracks: TabCF Analyst local presentation and development mechanics
+  only; no locked Track T, H, or A evidence changes.
+- Verification impact: Test the standard CSV through the full typed runtime,
+  reject missing consent, extra columns, and discrete treatment before Client
+  access, execute one authenticated browser upload, and independently verify the
+  resulting artifact. Keep all outputs `development_only` because the managed
+  checkpoint and runtime-image identities remain unavailable.
+- Source: User-authorized local CSV demonstration request on 2026-08-13 and the
+  existing TabCF v1 no-W, evidence, and managed-service boundaries.

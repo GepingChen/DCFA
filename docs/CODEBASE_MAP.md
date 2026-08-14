@@ -15,14 +15,14 @@ for current behavior.
 | `src/dcfa/audit.py`, `cache.py`, `artifact_validation.py` | Typed audit, validated cache, and no-refit artifact verifier |
 | `src/dcfa/tabcf_iv/` | Isolated continuous-treatment IV adapter, local fallback, bounded managed-client demo/smoke, diagnostics, estimands, real-file loader, and locked runtime validator |
 | `src/dcfa/hillstrom_policy/` | Isolated three-action RCT policy adapter, leakage gate, DR/IPW/direct estimators, policies, and four semi-synthetic DGPs |
-| `src/dcfa/agent/` | Explicit compiler/state/runtime and identical-recorded-tool Track A harness |
+| `src/dcfa/agent/` | Explicit compiler/state/runtime, identical-recorded-tool harness, and bounded Gemini live-smoke adapter |
 | `src/dcfa/app.py` | Public TabCF-only lazy Gradio shell |
 | `src/dcfa_website_demo/` | Portfolio presentation layer, strict local CSV ingress, and health-checkable ASGI wrapper over the typed public runtime; outside the statistical source hash |
 | `evaluation/agent_benchmark/cases/` | Frozen 24-case Track A MVP fixture |
-| `evaluation/configs/` | Fail-closed locked TabPFN runtime template |
+| `evaluation/configs/` | Fail-closed locked TabPFN runtime template and frozen Gemini smoke manifest |
 | `tests/` | Unit, leakage, statistical, agent-behavior, and integration gates |
 | `third_party/TabCF` | Authoritative upstream source pinned at `76e0d3eb9e97cebca381d1540db0333c1ef1016e` |
-| `requirements-dev.lock`, `requirements-ui.lock`, `requirements-managed-client.lock`, `requirements-website-demo.lock` | Verified Python 3.11 core, UI, managed-client, and combined website-demo environments |
+| `requirements-dev.lock`, `requirements-ui.lock`, `requirements-managed-client.lock`, `requirements-website-demo.lock`, `requirements-gemini.lock` | Verified Python 3.11 core, UI, managed-client, website-demo, and Gemini-smoke environments |
 | `Dockerfile`, `compose.yaml`, `.dockerignore` | Non-root, single-worker local deployment package for the development-only website demo |
 
 Generated outputs go under ignored `artifacts/local/`. Raw/private data,
@@ -116,6 +116,22 @@ Final local recorded-v4 runs use five repetitions nested within each of 24
 TabCF-only cases; case is the primary comparison unit. Live-model and Track H
 case metrics remain explicitly unevaluated.
 
+`agent/gemini_live.py` adds one separate Track A mechanics smoke. The frozen
+manifest binds `google-genai==2.18.1`, stable model `gemini-3.6-flash`, prompt,
+JSON schema, model settings, one-request limit, symbolic clean-case proposal,
+and list-price rates. The request contains no rows or actual intervention
+values. A schema-valid proposal must exactly match the frozen expected
+specification before the existing deterministic compiler/runtime can run. The
+saved trace records the prompt/model/source identities, API interaction ID,
+token usage, latency, list-price estimate, proposal, and evidence-linked query;
+its verifier rebinds the trace to the manifest and independently validates the
+underlying analysis directory without another model call or refit. This one
+clean smoke is not the paired 24-case live Track A comparison. The first
+authenticated request was rejected because the request included the removed
+top-level `response_mime_type`; the implementation now follows the unified
+`response_format` contract and passes offline SDK serialization, but that
+corrected request has not yet been sent.
+
 ## Verified commands
 
 ```bash
@@ -124,6 +140,8 @@ case metrics remain explicitly unevaluated.
 .venv/bin/python -m pytest
 .venv/bin/dcfa --help
 .venv-managed/bin/dcfa managed-agent-smoke --token-file <outside-repo-file> --output-dir <fresh-directory>
+.venv-gemini/bin/dcfa gemini-agent-smoke --api-key-file <outside-repo-file> --output-dir <fresh-directory>
+.venv/bin/dcfa verify-gemini-agent-smoke <run-directory>
 .venv/bin/dcfa verify-artifacts <run-directory>
 .venv/bin/dcfa verify-agent-benchmark <benchmark-json>
 ```
@@ -155,8 +173,8 @@ release authorization.
 - approved Fulton local data and usage/license note;
 - approved Hillstrom raw data, exact source/hash, and usage/license decision;
 - calibrated and frozen diagnostic thresholds for a locked Track T protocol;
-- a chosen/frozen LLM and prompt manifest for a live, rather than recorded,
-  end-to-end agent comparison.
+- a frozen paired live-LLM protocol for the full fixed-workflow versus agent
+  case suite; the current Gemini manifest covers one clean smoke only.
 
 These gaps block the corresponding release claims. They do not authorize a
 silent fallback, fabricated manifest, or reinterpretation of local synthetic

@@ -102,6 +102,14 @@ approval, recovery, caching, constraint handling, and evidence validation. It
 must not gain an advantage through a different estimator, test-data access, or
 hidden arithmetic.
 
+The Gemini live path is a one-request synthetic mechanics smoke, not the Track A
+comparison. It sends only a frozen user request, the Y/X/Z schema contract, and
+symbolic intervention labels; no data rows or actual intervention values leave
+the machine. Gemini may propose a typed specification but cannot calculate or
+rewrite a causal number. The deterministic runtime must independently validate
+the proposal, result bundle, warnings, and evidence IDs. API failure or a
+nonmatching proposal stops without retry, refit, or statistical fallback.
+
 ## Claim checklist
 
 Before publishing a number or sentence, verify:

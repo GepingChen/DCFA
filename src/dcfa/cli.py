@@ -17,6 +17,11 @@ from dcfa.agent.benchmark import (
     load_benchmark_cases,
     run_recorded_benchmark,
 )
+from dcfa.agent.gemini_live import (
+    DEFAULT_MANIFEST_PATH,
+    run_gemini_live_smoke,
+    verify_gemini_live_smoke,
+)
 from dcfa.artifact_validation import verify_agent_benchmark_file, verify_run_directory
 from dcfa.canonical import file_sha256, to_primitive
 from dcfa.errors import DCFAError
@@ -236,6 +241,42 @@ def _run_managed_agent_smoke(args: argparse.Namespace) -> int:
     return 0 if response.status == "completed" else 2
 
 
+def _run_gemini_agent_smoke(args: argparse.Namespace) -> int:
+    result = run_gemini_live_smoke(
+        api_key_file=args.api_key_file,
+        output_dir=args.output_dir,
+        manifest_path=args.manifest,
+    )
+    payload = {
+        "status": result.response.status,
+        "track": "agent_benchmark",
+        "data_label": "fixed_synthetic_gemini_live_smoke",
+        "trace_id": result.trace_id,
+        "interaction_id": result.interaction_id,
+        "model_request_count": 1,
+        "latency_ms": result.latency_ms,
+        "usage": to_primitive(result.usage),
+        "list_price_estimate_usd": result.list_price_estimate_usd,
+        "run_id": result.run.bundle.run_id,
+        "result_bundle_id": result.run.bundle.result_bundle_id,
+        "queries": [to_primitive(query) for query in result.response.queries],
+        "warnings": [to_primitive(warning) for warning in result.response.warnings],
+        "trace_path": str(result.trace_path),
+    }
+    print(json.dumps(payload, sort_keys=True))
+    return 0
+
+
+def _verify_gemini_agent_smoke(output_dir: Path, manifest_path: Path) -> int:
+    try:
+        result = verify_gemini_live_smoke(output_dir, manifest_path=manifest_path)
+    except DCFAError as exc:
+        print(json.dumps({"status": "invalid", "error": exc.to_dict()}, sort_keys=True))
+        return 4
+    print(json.dumps(to_primitive(result), sort_keys=True))
+    return 0
+
+
 def _run_hillstrom_demo(args: argparse.Namespace) -> int:
     dataset = generate_development_rct(n=args.rows, seed=args.seed)
     split = make_stratified_split(dataset, seed=args.seed)
@@ -430,6 +471,31 @@ def build_parser() -> argparse.ArgumentParser:
     )
     managed_smoke.add_argument("--output-dir", type=Path, required=True)
     managed_smoke.set_defaults(handler=_run_managed_agent_smoke)
+
+    gemini_smoke = subparsers.add_parser(
+        "gemini-agent-smoke",
+        help=(
+            "Run one Track A Gemini compile call over a fixed synthetic development-only analysis."
+        ),
+    )
+    gemini_smoke.add_argument(
+        "--api-key-file",
+        type=Path,
+        default=Path("~/.config/dcfa/gemini_api_key"),
+    )
+    gemini_smoke.add_argument("--manifest", type=Path, default=DEFAULT_MANIFEST_PATH)
+    gemini_smoke.add_argument("--output-dir", type=Path, required=True)
+    gemini_smoke.set_defaults(handler=_run_gemini_agent_smoke)
+
+    verify_gemini = subparsers.add_parser(
+        "verify-gemini-agent-smoke",
+        help="Verify a saved Gemini live smoke without another model or statistical call.",
+    )
+    verify_gemini.add_argument("output_dir", type=Path)
+    verify_gemini.add_argument("--manifest", type=Path, default=DEFAULT_MANIFEST_PATH)
+    verify_gemini.set_defaults(
+        handler=lambda args: _verify_gemini_agent_smoke(args.output_dir, args.manifest),
+    )
 
     verify = subparsers.add_parser(
         "verify-artifacts",

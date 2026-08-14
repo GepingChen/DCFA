@@ -44,6 +44,8 @@ verification, and these deterministic entry points:
   action-gap calibration metrics;
 - an explicit agent state machine and 24-case recorded Track A benchmark with
   five runs nested within each case;
+- a one-request Gemini Track A smoke that compiles one frozen synthetic prompt
+  into a typed proposal before the deterministic evidence-validated runtime;
 - a lazy Gradio shell that imports neither Hillstrom nor model backends until
   their own paths are explicitly requested.
 
@@ -79,6 +81,25 @@ The command sends one frozen 128-row synthetic IV fixture to the Prior Labs
 service. It pins `tabpfn-client==0.3.3`, model `v2.5_default`, one estimator,
 and thinking mode off. Stage-2 intervention rows are batched, so one successful
 run makes three prediction API calls. It does not accept a CSV or user dataset.
+
+Gemini live-agent smoke (one network request, with no data rows transmitted):
+
+```bash
+python3 -m venv .venv-gemini
+.venv-gemini/bin/python -m pip install -r requirements-gemini.lock
+.venv-gemini/bin/python -m pip install -e . --no-deps
+chmod 600 ~/.config/dcfa/gemini_api_key
+.venv-gemini/bin/dcfa gemini-agent-smoke \
+  --api-key-file ~/.config/dcfa/gemini_api_key \
+  --output-dir artifacts/local/gemini-live-smoke-v1
+```
+
+The Gemini key must remain outside the repository. The frozen
+`gemini-3.6-flash` request sends only the prompt, Y/X/Z schema contract, and
+symbolic intervention labels. Gemini never sees data rows or actual intervention
+values and makes no numerical causal calculation. The local deterministic tool
+produces the numerical result and evidence ID. API failure or unexpected output
+stops without retry or backend fallback.
 
 Managed TabPFN website-demo environment:
 
@@ -124,6 +145,12 @@ dcfa hillstrom-semisynthetic --replications 50 \
 # Recorded Track A: 24 cases x 5 nested runs x 2 systems.
 dcfa agent-benchmark --runs 5 \
   --output artifacts/local/agent-benchmark-recorded-v5.json
+
+# One-call live Gemini mechanics; not a comparative Track A benchmark.
+dcfa gemini-agent-smoke \
+  --api-key-file ~/.config/dcfa/gemini_api_key \
+  --output-dir artifacts/local/gemini-live-smoke-v1
+dcfa verify-gemini-agent-smoke artifacts/local/gemini-live-smoke-v1
 
 # Networked managed-client mechanics; fixed synthetic data, development-only.
 dcfa managed-agent-smoke \
@@ -182,9 +209,13 @@ The following are intentionally not represented as complete:
 5. Diagnostic warning/stop thresholds have not been calibrated on the frozen
    manuscript DGP suite. The current thresholds are development checks and have
    no locked Track T configuration ID.
-6. No live LLM/model/prompt manifest has been selected and frozen. Track A is a
-   deterministic recorded-tool orchestration benchmark; live latency, token,
-   cost, Hillstrom leakage, and policy-constraint metrics remain unevaluated.
+6. One Gemini model/prompt manifest is frozen for a single clean synthetic
+   smoke. The first authenticated request exposed a removed Interactions API
+   parameter and stopped before analysis; the corrected request has passed
+   offline SDK serialization but has not received a second network authorization.
+   This is not the paired 24-case fixed-workflow/full-agent evaluation; repeated
+   live reliability, Hillstrom leakage, policy constraints, and final production
+   cost/latency distributions remain unevaluated.
 
 Read [`AGENTS.md`](AGENTS.md), the
 [`integrated research plan`](plan/TabCF_Agent_Integrated_Research_Plan_ZH.md),

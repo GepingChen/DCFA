@@ -506,3 +506,38 @@ Do not rewrite an accepted entry when it changes; append a superseding entry.
   checkpoint and runtime-image identities remain unavailable.
 - Source: User-authorized local CSV demonstration request on 2026-08-13 and the
   existing TabCF v1 no-W, evidence, and managed-service boundaries.
+
+## D-026 — Add a one-request Gemini Track A mechanics smoke
+
+- Date: 2026-08-13
+- Status: Accepted development integration; corrected live request not yet verified
+- Decision: Add a separate one-request Gemini compiler smoke using
+  `google-genai==2.18.1`, stable model `gemini-3.6-flash`, the Interactions API,
+  medium thinking, structured JSON output, and a frozen clean synthetic prompt.
+  Send only the prompt, Y/X/Z role contract, and symbolic intervention labels;
+  do not send rows or actual intervention values. Require the proposal to match
+  the frozen expected specification before mapping labels to locally calculated
+  grid values and calling the existing deterministic state machine. Never retry
+  the Gemini request or fall back after an API or output-validation failure.
+- Rationale: One bounded live request verifies credential, SDK, prompt,
+  structured-output, model-metadata, token, latency, typed-routing, and evidence
+  mechanics without allowing the LLM to perform hidden numerical arithmetic or
+  claiming that one clean case establishes agent superiority.
+- Affected tracks: Track A development mechanics only. The underlying
+  statistical result remains `local_development / sklearn_quantile_fallback /
+  development_only` and is not Track T evidence.
+- Verification impact: Pin the complete Python environment; validate an
+  external mode-600 key file; test one-call/no-retry behavior, malformed output,
+  key permissions, lazy SDK import, evidence agreement, and trace tampering;
+  independently verify the saved trace and deterministic analysis without a
+  second model call. A paired fixed/full live benchmark remains blocked on a
+  separately frozen protocol.
+- Initial live result: The one authorized request on 2026-08-13 returned HTTP
+  400 before analysis because the implementation supplied the removed top-level
+  `response_mime_type`. Official May 2026 migration guidance confirmed that MIME
+  type belongs only inside unified `response_format`. The obsolete field was
+  removed and the corrected request passes offline SDK serialization; no second
+  network request was made without renewed authorization.
+- Source: User authorization on 2026-08-13; integrated plan sections 8.1, 8.6,
+  8.8, and 12.5; Google Gemini model, structured-output, usage, and pricing
+  documentation inspected on 2026-08-13.

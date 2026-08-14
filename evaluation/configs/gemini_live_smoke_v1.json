@@ -1,0 +1,115 @@
+{
+  "api_version": "v1beta",
+  "expected_proposal": {
+    "comparison_x_label": "low",
+    "decision": "analyze",
+    "instrument": "Z",
+    "level_label": "median",
+    "objective": "quantile_contrast",
+    "outcome": "Y",
+    "treatment": "X",
+    "treatment_type": "continuous",
+    "x_label": "high"
+  },
+  "fixture": {
+    "instrument_strength": 1.6,
+    "row_count": 160,
+    "seed": 20260813
+  },
+  "generation_config": {
+    "max_output_tokens": 256,
+    "seed": 20260813,
+    "thinking_level": "medium",
+    "thinking_summaries": "none"
+  },
+  "model": "gemini-3.6-flash",
+  "pricing": {
+    "input_usd_per_million_tokens": "1.50",
+    "output_and_thought_usd_per_million_tokens": "7.50",
+    "source": "https://ai.google.dev/gemini-api/docs/latest-model"
+  },
+  "provider": "google_gemini_developer_api",
+  "request_limit": 1,
+  "response_schema": {
+    "additionalProperties": false,
+    "properties": {
+      "comparison_x_label": {
+        "enum": [
+          "low",
+          "center",
+          "high"
+        ],
+        "type": "string"
+      },
+      "decision": {
+        "enum": [
+          "analyze",
+          "clarify",
+          "block"
+        ],
+        "type": "string"
+      },
+      "instrument": {
+        "type": "string"
+      },
+      "level_label": {
+        "enum": [
+          "median"
+        ],
+        "type": "string"
+      },
+      "objective": {
+        "enum": [
+          "mean",
+          "quantile",
+          "risk",
+          "mean_contrast",
+          "quantile_contrast",
+          "risk_contrast"
+        ],
+        "type": "string"
+      },
+      "outcome": {
+        "type": "string"
+      },
+      "treatment": {
+        "type": "string"
+      },
+      "treatment_type": {
+        "enum": [
+          "continuous",
+          "binary",
+          "categorical"
+        ],
+        "type": "string"
+      },
+      "x_label": {
+        "enum": [
+          "low",
+          "center",
+          "high"
+        ],
+        "type": "string"
+      }
+    },
+    "required": [
+      "decision",
+      "outcome",
+      "treatment",
+      "instrument",
+      "treatment_type",
+      "objective",
+      "x_label",
+      "comparison_x_label",
+      "level_label"
+    ],
+    "type": "object"
+  },
+  "sdk_package": "google-genai",
+  "sdk_version": "2.18.1",
+  "store": false,
+  "system_instruction": "You are the bounded specification compiler for DCFA Track A. Convert the user request into exactly one JSON proposal matching the supplied schema. Never calculate causal values, invent columns, change the statistical backend, add covariates, or claim instrument validity. Use only the declared Y/X/Z roles and symbolic intervention labels. If the request is outside the declared continuous-treatment no-W scope, choose block; if required information is missing, choose clarify.",
+  "timeout_seconds": 60,
+  "user_request": "Using Y as the continuous outcome, X as the continuous treatment, and Z as the scalar instrument, estimate the median outcome contrast at the high intervention versus the low intervention.",
+  "version": "track_a_gemini_live_smoke_v1"
+}

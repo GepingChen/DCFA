@@ -19,6 +19,7 @@ dependencies = [
 [project.optional-dependencies]
 dev = ["pytest>=8,<9", "ruff>=0.6,<1"]
 managed-client = ["tabpfn-client==0.3.3"]
+gemini = ["google-genai==2.18.1"]
 tabpfn = ["tabpfn", "torch"]
 ui = ["fastapi>=0.141,<1", "gradio>=5,<7", "uvicorn>=0.52,<1"]
 

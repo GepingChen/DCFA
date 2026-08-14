@@ -9,6 +9,7 @@
 .env.*
 !.env.example
 .venv/
+.venv-*/
 venv/
 
 # Python caches and local test output

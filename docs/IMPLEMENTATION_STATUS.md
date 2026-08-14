@@ -10,11 +10,15 @@ or fabricating a locked model/runtime is complete for the current scope. A
 bounded managed TabPFN Client path now exercises one fixed smoke request, three
 website-demo presets, and an explicitly confirmed local Y/X/Z CSV route through
 the typed agent runtime, but it is development mechanics rather than a locked
-Track T run. Publishable Track T, real-data Track T/H, and live-model Track A
-remain explicitly blocked on the external inputs listed below.
+Track T run. A separate Gemini profile implements one clean synthetic compile
+request before the deterministic runtime. Its first authenticated request was
+rejected before analysis by a removed API parameter; the corrected request has
+passed offline SDK serialization but has not been sent. Publishable Track T,
+real-data Track T/H, and the paired live-model Track A comparison remain
+explicitly blocked on the external inputs listed below.
 
 Current executable source identity:
-`sha256:c47d1a064b7db0c5bcf903b221d410f7ae8124c6ed2d3a0ccfccaea9b6f72269`.
+`sha256:779aca1c0efc6da134c90dc7a7f9d4215fcc19672c1385585fb9a6d88bdc5a0b`.
 This is the hash of relative paths and bytes for every `src/dcfa/**/*.py` file,
 independent of the outer Git commit identity.
 
@@ -27,7 +31,8 @@ Current protocols:
 - Track T fallback development evaluation:
   `track_t_development_evaluation_v5`;
 - recorded Track A: `track_a_recorded_v4` with case manifest
-  `track_a_cases_v1`.
+  `track_a_cases_v1`;
+- Gemini live smoke: `track_a_gemini_live_smoke_v1`.
 
 ## Requirement coverage
 
@@ -43,7 +48,7 @@ Current protocols:
 | Track H data/leakage | Exact raw-column hash, provenance/schema/missingness/action checks, real arm-stratified 60/20/20 verification, preprocessing-scope hashes, content-addressed split/policy, and matching-policy test gate | Current run uses generated RCT data, not Hillstrom |
 | Track H policy | Training-only fit, validation-only best-uniform/threshold selection, train+validation refit, immutable policy freeze before test access, DR primary plus IPW/direct sensitivity, paired contrasts, randomized-arm effects, costs/capacity/allocation, 95% influence-score intervals, warnings, assumptions, and release gate | No approved real file, final one-time test run, real held-out policy value, or individual oracle claim |
 | H semi-synthetic | Four prespecified DGPs, training-covariate resampling, same-constraint oracle, 50 replications per scenario, value/regret/accuracy/confusion/abstention/selective-regret/fallback/calibration/constraint metrics, and 84 evidence records | Covariates come from a development fixture, so the result is explicitly not Hillstrom-calibrated |
-| Track A | Explicit state machine/compiler/runtime, clarification/approval/block/retry-once/evidence/cache behavior, identical recorded tools for fixed workflow and full runtime, 24 cases, five nested runs, gold-aware safety grading, case-bound trace verification, per-case/worst-run/disagreement/failure taxonomy, and seeded case bootstrap | This is deterministic orchestration evidence, not a live LLM comparison; live latency/tokens/cost and Hillstrom policy cases are unevaluated |
+| Track A | Explicit state machine/compiler/runtime; 24-case recorded benchmark; bounded Gemini 3.6 Flash clean-case implementation; frozen prompt/model/schema; no-row symbolic input; token/latency/list-price trace contract; evidence agreement verifier | The first live request failed before analysis on a removed API field; corrected serialization is offline-only, and no paired live fixed/full comparison exists |
 | Public UI | Lazy Gradio Blocks app, guided scenarios plus confirmed local CSV, managed TabPFN-only execution, no Hillstrom/Torch/client import before a run, immutable run directories, bounded queue/controls, evidence-linked values/plot, mobile layout, readiness endpoints, non-root container/Compose | Development workflow demonstration only; selected inputs leave the machine; no public HTTPS deployment and not release-eligible |
 
 The independent artifact verifier now checks saved file hashes and also
@@ -54,10 +59,15 @@ uncertainty fields, warnings, assumptions, allocations, and balance diagnostics.
 For Track A it also rebinds every raw trace to the frozen case definition and
 recomputes the deterministic grader outcome. It never refits a model.
 
-## Current independently verified artifacts
+## Preserved independently verified artifacts
 
 All paths below are ignored local artifacts and were created in fresh locations;
-no earlier artifact was overwritten.
+no earlier artifact was overwritten. They were valid against the exact source
+snapshot recorded at creation, spanning source hashes `b401226d...`, `03c2b585...`,
+and `c47d1a06...`. They are preserved evidence, not current-source artifacts:
+the current verifier intentionally rejects them against `779aca1c...` rather
+than silently treating an older run as current. No Gemini live artifact exists
+because the authorized request stopped before deterministic analysis.
 
 | Artifact | Identity | Evidence/result size | Status |
 |---|---|---:|---|
@@ -80,7 +90,7 @@ or hash-locked runtime.
 
 ## Verification evidence
 
-Verified on macOS arm64 with Python 3.11.13:
+Prior snapshot checks on macOS with Python 3.11.13:
 
 ```text
 .venv/bin/ruff check src tests                         passed
@@ -104,7 +114,20 @@ Gradio development callbacks                           fresh strong/weak valid; 
 ASGI liveness/readiness                                200; output/token ready
 Docker image/container                                 rebuilt; non-root 10001:10001; healthy/ready
 container strong artifact                              completed; independent status=valid
-seven current artifact/benchmark verifier commands     all status=valid
+seven artifact/benchmark verifier commands             valid against recorded snapshots
+```
+
+Current Gemini-change checks:
+
+```text
+.venv/bin/ruff check src tests                         passed
+.venv/bin/ruff format --check src tests                68 files already formatted
+.venv/bin/python -m pytest                             98 passed in 42.22s
+core and Gemini environments pip check                 no broken requirements
+Gemini fake-client behavior tests                      7 passed; one-call/no-retry/tamper gates
+Gemini authenticated smoke                            HTTP 400; no retry; no analysis/artifact
+corrected Gemini request serialization                passed offline; not sent
+representative prior-artifact current-source check     HASH_MISMATCH, as required
 ```
 
 Final handoff checks after documentation edits:
@@ -116,7 +139,7 @@ private-key/AWS/GitHub/OpenAI credential-pattern scan no matches
 outer branch                                          main...origin/main
 nested third_party/TabCF branch                       clean main...origin/main
 nested TabCF commit                                   76e0d3eb9e97cebca381d1540db0333c1ef1016e
-final statistical source-tree hash                     sha256:c47d1a064b7db0c5bcf903b221d410f7ae8124c6ed2d3a0ccfccaea9b6f72269
+final statistical source-tree hash                     sha256:779aca1c0efc6da134c90dc7a7f9d4215fcc19672c1385585fb9a6d88bdc5a0b
 ```
 
 Repository policy now requires every completed, verified, in-scope change to be
@@ -142,9 +165,12 @@ rewrites, tags, PRs, releases, deployments, or publication.
    decision, then freeze the real split, policy protocol, and one-time locked
    test evaluation before claiming real policy value or Hillstrom-calibrated
    semi-synthetic evidence.
-5. **Live Track A:** select and freeze the LLM, prompt, model settings, grader
-   manifest, permissions, and cost/latency collection. The current case suite
-   intentionally reports live-model and policy-track metrics as unevaluated.
+5. **Live Track A:** first authorize one corrected authenticated smoke after the
+   documented HTTP 400 negative result. Then extend the one-case Gemini manifest
+   into a separately frozen fixed/full protocol with identical models, prompts,
+   permissions, tools, and cases; freeze the grader and production repetitions
+   before running. The recorded case suite still reports comparative live-model
+   and policy-track metrics as unevaluated.
 
 Smoke tests and generated fixtures do not establish estimator quality,
 coverage, identification, business lift, release readiness, or individual
@@ -152,8 +178,10 @@ optimal treatment. Negative, null, deferred, and blocked results remain visible.
 
 ## Next authorized step
 
-For one genuinely live AI-agent test, the next required decision is a selected
-LLM/API, prompt, model settings, permissions, and cost/latency manifest. For
-publishable estimator evidence, the highest-priority path remains the frozen
-TabPFN runtime plus manuscript DGP mapping. Repeating the current fixed managed
+For Gemini mechanics, the next required decision is whether to authorize one
+corrected authenticated request. For a comparative live Track A result, the next
+step after that is a frozen paired Gemini fixed-workflow/full-agent protocol and
+grader over the 24 cases.
+For publishable estimator evidence, the highest-priority path remains the frozen
+TabPFN runtime plus manuscript DGP mapping. Repeating either current one-case
 smoke under new names would add no research evidence.

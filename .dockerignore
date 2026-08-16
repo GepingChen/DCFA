@@ -15,6 +15,11 @@ checkpoints
 data
 docs
 evaluation
+!evaluation/
+evaluation/*
+!evaluation/configs/
+evaluation/configs/*
+!evaluation/configs/website_demo_gemini_v1.json
 logs
 models
 plan

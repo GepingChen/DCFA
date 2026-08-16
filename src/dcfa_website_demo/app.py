@@ -35,9 +35,15 @@ from dcfa_website_demo.csv_upload import (
     MIN_UPLOAD_ROWS,
     load_authorized_csv,
 )
+from dcfa_website_demo.gemini import (
+    GEMINI_MODEL,
+    compile_website_question,
+    write_compilation_trace,
+)
 
 DEFAULT_OUTPUT_ROOT = Path("artifacts/local/website-demo")
 DEFAULT_MANAGED_TOKEN_FILE = Path.home() / ".config" / "dcfa" / "tabpfn_api_key"
+DEFAULT_GEMINI_API_KEY_FILE = Path.home() / ".config" / "dcfa" / "gemini_api_key"
 MIN_DEMO_ROWS = 120
 MAX_DEMO_ROWS = 256
 MIN_DEMO_SEED = 0
@@ -65,6 +71,7 @@ class PortfolioDemoResult:
     response: AgentResponse
     plot_path: Path | None
     output_dir: Path | None
+    llm_trace: dict[str, Any]
 
 
 SCENARIOS: dict[str, DemoScenario] = {
@@ -453,6 +460,11 @@ def managed_token_file_from_environment() -> Path:
     return Path(os.environ.get("DCFA_TABPFN_TOKEN_FILE", str(DEFAULT_MANAGED_TOKEN_FILE)))
 
 
+def gemini_api_key_file_from_environment() -> Path:
+    """Resolve the repository-external Gemini credential file."""
+    return Path(os.environ.get("DCFA_GEMINI_API_KEY_FILE", str(DEFAULT_GEMINI_API_KEY_FILE)))
+
+
 def _reserve_output_directory(root: Path, scenario: str, seed: int) -> Path:
     """Atomically reserve a fresh immutable run directory for a UI request."""
     run_root = root / scenario / f"seed-{seed}"
@@ -482,10 +494,14 @@ def execute_portfolio_scenario(
     rows: int,
     seed: int,
     *,
+    question: str | None = None,
     output_root: Path = DEFAULT_OUTPUT_ROOT,
     token_file: Path | None = None,
     client_module: Any | None = None,
     client_version: str | None = None,
+    gemini_api_key_file: Path | None = None,
+    gemini_client: Any | None = None,
+    gemini_sdk_version: str | None = None,
 ) -> PortfolioDemoResult:
     """Execute one frozen guided scenario through managed TabPFN and the typed runtime."""
     if scenario not in SCENARIOS:
@@ -520,12 +536,16 @@ def execute_portfolio_scenario(
         outcome="Y",
         treatment="X",
         instrument="Z",
+        question=question or selected.question,
         interventions=interventions,
         seed=seed,
         output_root=output_root,
         token_file=token_file,
         client_module=client_module,
         client_version=client_version,
+        gemini_api_key_file=gemini_api_key_file,
+        gemini_client=gemini_client,
+        gemini_sdk_version=gemini_sdk_version,
     )
 
 
@@ -537,10 +557,14 @@ def execute_csv_upload(
     confirmed: bool,
     seed: int,
     *,
+    question: str | None = None,
     output_root: Path = DEFAULT_OUTPUT_ROOT,
     token_file: Path | None = None,
     client_module: Any | None = None,
     client_version: str | None = None,
+    gemini_api_key_file: Path | None = None,
+    gemini_client: Any | None = None,
+    gemini_sdk_version: str | None = None,
 ) -> PortfolioDemoResult:
     """Execute a confirmed, strictly bounded local Y/X/Z CSV through managed TabPFN."""
     seed = int(seed)
@@ -566,12 +590,19 @@ def execute_csv_upload(
         outcome=dataset.outcome,
         treatment=dataset.treatment,
         instrument=dataset.instrument,
+        question=(
+            question
+            or "Estimate the median outcome contrast at high treatment versus low treatment."
+        ),
         interventions=interventions,
         seed=seed,
         output_root=output_root,
         token_file=token_file,
         client_module=client_module,
         client_version=client_version,
+        gemini_api_key_file=gemini_api_key_file,
+        gemini_client=gemini_client,
+        gemini_sdk_version=gemini_sdk_version,
     )
 
 
@@ -584,12 +615,16 @@ def _execute_managed_dataset(
     outcome: str,
     treatment: str,
     instrument: str,
+    question: str,
     interventions: tuple[float, ...],
     seed: int,
     output_root: Path,
     token_file: Path | None,
     client_module: Any | None,
     client_version: str | None,
+    gemini_api_key_file: Path | None,
+    gemini_client: Any | None,
+    gemini_sdk_version: str | None,
 ) -> PortfolioDemoResult:
     """Run one already-validated no-W dataset through the shared managed profile."""
     credential = read_managed_token_file(token_file or managed_token_file_from_environment())
@@ -607,6 +642,17 @@ def _execute_managed_dataset(
         )
 
     try:
+        llm_compilation = compile_website_question(
+            question,
+            api_key_file=gemini_api_key_file or gemini_api_key_file_from_environment(),
+            client=gemini_client,
+            sdk_version=gemini_sdk_version,
+        )
+        label_values = {
+            "low": interventions[0],
+            "center": interventions[len(interventions) // 2],
+            "high": interventions[-1],
+        }
         client.set_access_token(credential)
         del credential
         request = CompilationRequest(
@@ -614,11 +660,15 @@ def _execute_managed_dataset(
             outcome=outcome,
             treatment=treatment,
             instrument=instrument,
-            objective="quantile_contrast",
+            objective=llm_compilation.objective,
             intervention_grid=interventions,
-            x=interventions[-1],
-            comparison_x=interventions[0],
-            level=0.5,
+            x=label_values[llm_compilation.x_label],
+            comparison_x=(
+                None
+                if llm_compilation.comparison_x_label is None
+                else label_values[llm_compilation.comparison_x_label]
+            ),
+            level=llm_compilation.level,
             units=f"{outcome}_units",
             confirmed_by_user=True,
             execution_profile=ExecutionProfile.LOCAL_DEVELOPMENT,
@@ -651,12 +701,15 @@ def _execute_managed_dataset(
         client.reset()
     if not any(output_dir.iterdir()):
         _remove_empty_reservation(output_dir)
+    elif response.status == "completed":
+        write_compilation_trace(output_dir, llm_compilation.trace)
     plot_path = output_dir / "interventional_summary.png"
     return PortfolioDemoResult(
         scenario=result_scenario,
         response=response,
         plot_path=plot_path if plot_path.is_file() else None,
         output_dir=output_dir if output_dir.is_dir() else None,
+        llm_trace=llm_compilation.trace,
     )
 
 
@@ -683,14 +736,18 @@ def _status_html(result: PortfolioDemoResult) -> str:
         )
     return (
         '<div class="demo-status" role="status">'
-        "<strong>Workflow completed and evidence validated</strong>"
+        "<strong>Gemini-compiled workflow completed and evidence validated</strong>"
         "The displayed value comes from the validated result bundle. This is a "
         "development-only managed TabPFN result, not locked Track T evidence.</div>"
     )
 
 
-def _state_graph_html(response: AgentResponse) -> str:
-    items = []
+def _state_graph_html(response: AgentResponse, llm_trace: dict[str, Any]) -> str:
+    items = [
+        '<li class="completed"><span>LLM Compilation</span>'
+        f'<span class="state-reason">{html.escape(str(llm_trace["model"]))} · '
+        "one structured request</span></li>"
+    ]
     for event in response.state_events:
         state = event.state.value
         label = state.replace("_", " ").title()
@@ -804,6 +861,7 @@ def _audit_json(result: PortfolioDemoResult) -> str:
         "result_bundle_id": result.response.result_bundle_id,
         "tool_calls": result.response.tool_calls,
         "retry_count": result.response.retry_count,
+        "llm_compilation": result.llm_trace,
         "state_events": result.response.state_events,
         "error": result.response.error,
     }
@@ -816,7 +874,7 @@ def format_portfolio_result(
     """Project a runtime response into display-only values without recomputing numbers."""
     return (
         _status_html(result),
-        _state_graph_html(result.response),
+        _state_graph_html(result.response, result.llm_trace),
         _answer_markdown(result.response),
         _evidence_card_html(result.response),
         None if result.plot_path is None else str(result.plot_path),
@@ -845,19 +903,21 @@ def build_app(*, output_root: Path = DEFAULT_OUTPUT_ROOT) -> Any:
               <p class="demo-eyebrow">DCFA · Local development workflow demo</p>
               <h1>Trace a causal workflow. See every gate.</h1>
               <p class="demo-hero-copy">
-                A narrow distributional-IV agent that compiles a typed request, calls a
-                deterministic tool, blocks unsupported claims, and links each answer to
-                reproducible evidence.
+                A narrow distributional-IV agent that uses Gemini to compile a natural-language
+                question, calls a deterministic tool, blocks unsupported claims, and links each
+                answer to reproducible evidence.
               </p>
               <div class="demo-badges" aria-label="Supported scope">
                 <span>Continuous treatment X</span><span>Scalar instrument Z</span>
-                <span>Continuous outcome Y</span><span>No baseline covariates W</span>
+                <span>Continuous outcome Y</span><span>Gemini-compiled request</span>
+                <span>No baseline covariates W</span>
               </div>
               <p class="demo-development-notice" role="note">
                 <strong>Local and development-only.</strong> Built-in examples are synthetic;
-                uploaded Y/X/Z inputs use the official managed TabPFN service and leave this
-                machine after confirmation. The opaque service runtime cannot support a locked
-                Track T or automatic real-world causal claim.
+                the question is sent to Google Gemini, but no data rows or actual intervention
+                values are. Uploaded Y/X/Z inputs use the official managed TabPFN service and
+                leave this machine after confirmation. Neither service may create an automatic
+                real-world causal claim.
               </p>
             </header>
             """
@@ -878,9 +938,13 @@ def build_app(*, output_root: Path = DEFAULT_OUTPUT_ROOT) -> Any:
                         )
                         question = gr.Textbox(
                             value=scenario_question("strong_iv"),
-                            label="Example question",
+                            label=f"Natural-language question · compiled by {GEMINI_MODEL}",
+                            info=(
+                                "Ask for a mean or median summary/contrast at low, center, or "
+                                "high treatment. Gemini receives the question, not data rows."
+                            ),
                             lines=3,
-                            interactive=False,
+                            interactive=True,
                         )
                         with gr.Accordion("Reproducibility controls", open=False):
                             rows = gr.Slider(
@@ -926,11 +990,24 @@ def build_app(*, output_root: Path = DEFAULT_OUTPUT_ROOT) -> Any:
                             maximum=MAX_DEMO_SEED,
                             label="Analysis seed",
                         )
+                        csv_question = gr.Textbox(
+                            value=(
+                                "Estimate the median outcome contrast at high treatment versus "
+                                "low treatment."
+                            ),
+                            label=f"Natural-language question · compiled by {GEMINI_MODEL}",
+                            info=(
+                                "Use Y, X, and Z as conceptual roles. Gemini receives this text, "
+                                "not the selected CSV rows or actual intervention values."
+                            ),
+                            lines=3,
+                        )
                         csv_confirmed = gr.Checkbox(
                             value=False,
                             label=(
-                                "I am authorized to use this data and confirm the selected Y/X/Z "
-                                "rows will be sent to Prior Labs for managed TabPFN inference."
+                                "I am authorized to use this data and confirm the question will "
+                                "be sent to Google Gemini while the selected Y/X/Z rows will be "
+                                "sent separately to Prior Labs for managed TabPFN inference."
                             ),
                         )
                         csv_run_button = gr.Button(
@@ -1000,13 +1077,19 @@ def build_app(*, output_root: Path = DEFAULT_OUTPUT_ROOT) -> Any:
             queue=False,
         )
 
-        def handle_run(selected_scenario: str, selected_rows: int, selected_seed: int):
+        def handle_run(
+            selected_scenario: str,
+            selected_question: str,
+            selected_rows: int,
+            selected_seed: int,
+        ):
             try:
                 formatted = format_portfolio_result(
                     execute_portfolio_scenario(
                         selected_scenario,
                         selected_rows,
                         selected_seed,
+                        question=selected_question,
                         output_root=output_root,
                     )
                 )
@@ -1028,7 +1111,7 @@ def build_app(*, output_root: Path = DEFAULT_OUTPUT_ROOT) -> Any:
 
         run_button.click(
             fn=handle_run,
-            inputs=(scenario, rows, seed),
+            inputs=(scenario, question, rows, seed),
             outputs=(status, state_graph, answer, evidence, plot, audit),
         )
 
@@ -1038,6 +1121,7 @@ def build_app(*, output_root: Path = DEFAULT_OUTPUT_ROOT) -> Any:
             selected_treatment: str,
             selected_instrument: str,
             selected_confirmation: bool,
+            selected_question: str,
             selected_seed: int,
         ):
             try:
@@ -1051,6 +1135,7 @@ def build_app(*, output_root: Path = DEFAULT_OUTPUT_ROOT) -> Any:
                         selected_instrument,
                         selected_confirmation,
                         selected_seed,
+                        question=selected_question,
                         output_root=output_root,
                     )
                 )
@@ -1078,6 +1163,7 @@ def build_app(*, output_root: Path = DEFAULT_OUTPUT_ROOT) -> Any:
                 csv_treatment,
                 csv_instrument,
                 csv_confirmed,
+                csv_question,
                 csv_seed,
             ),
             outputs=(status, state_graph, answer, evidence, plot, audit),

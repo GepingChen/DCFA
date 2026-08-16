@@ -13,8 +13,10 @@ import httpx
 import numpy as np
 import pytest
 
+from dcfa.agent.gemini_live import GOOGLE_GENAI_VERSION
 from dcfa.agent.state import AgentState
-from dcfa.errors import ErrorCode
+from dcfa.artifact_validation import verify_run_directory
+from dcfa.errors import DCFAError, ErrorCode
 from dcfa.tabcf_iv.managed_client import MANAGED_CLIENT_VERSION
 from dcfa_website_demo.app import (
     MAX_DEMO_ROWS,
@@ -83,15 +85,80 @@ class FakeClientModule:
         self.reset_called = True
 
 
+class FakeGeminiUsage:
+    total_input_tokens = 120
+    total_output_tokens = 48
+    total_thought_tokens = 32
+    total_tokens = 200
+
+
+class FakeGeminiInteraction:
+    status = "completed"
+    id = "interaction_website_test"
+    model = "gemini-3.6-flash"
+    usage = FakeGeminiUsage()
+
+    def __init__(self, output_text: str) -> None:
+        self.output_text = output_text
+
+
+class FakeGeminiInteractions:
+    def __init__(self, output_text: str, *, raises: bool = False) -> None:
+        self.output_text = output_text
+        self.raises = raises
+        self.calls: list[dict[str, Any]] = []
+
+    def create(self, **kwargs: Any) -> FakeGeminiInteraction:
+        self.calls.append(kwargs)
+        if self.raises:
+            raise RuntimeError("synthetic Gemini failure")
+        return FakeGeminiInteraction(self.output_text)
+
+
+class FakeGeminiClient:
+    def __init__(self, output_text: str | None = None, *, raises: bool = False) -> None:
+        self.interactions = FakeGeminiInteractions(
+            output_text or _valid_gemini_proposal(),
+            raises=raises,
+        )
+        self.closed = False
+
+    def close(self) -> None:
+        self.closed = True
+
+
+def _valid_gemini_proposal(**updates: str) -> str:
+    proposal = {
+        "decision": "analyze",
+        "reason": "Compile the requested median contrast.",
+        "outcome": "Y",
+        "treatment": "X",
+        "instrument": "Z",
+        "treatment_type": "continuous",
+        "objective": "quantile_contrast",
+        "x_label": "high",
+        "comparison_x_label": "low",
+        "level_label": "median",
+    }
+    proposal.update(updates)
+    return json.dumps(proposal)
+
+
 @pytest.fixture
 def managed_client(tmp_path: Path) -> dict[str, Any]:
     token_file = tmp_path / "tabpfn-token"
     token_file.write_text("tabpfn_sk_test_only_not_a_real_secret", encoding="utf-8")
     token_file.chmod(0o600)
+    gemini_key_file = tmp_path / "gemini-key"
+    gemini_key_file.write_text("test_gemini_key_that_is_not_a_real_secret", encoding="utf-8")
+    gemini_key_file.chmod(0o600)
     return {
         "token_file": token_file,
         "client_module": FakeClientModule(),
         "client_version": MANAGED_CLIENT_VERSION,
+        "gemini_api_key_file": gemini_key_file,
+        "gemini_client": FakeGeminiClient(),
+        "gemini_sdk_version": GOOGLE_GENAI_VERSION,
     }
 
 
@@ -102,6 +169,7 @@ def test_website_demo_import_is_lazy_and_keeps_hillstrom_isolated() -> None:
         "assert 'torch' not in sys.modules; "
         "assert 'tabpfn' not in sys.modules; "
         "assert 'tabpfn_client' not in sys.modules; "
+        "assert 'google.genai' not in sys.modules; "
         "assert not any(name.startswith('dcfa.hillstrom_policy') for name in sys.modules); "
         "assert callable(app.build_app); assert callable(app.execute_portfolio_scenario)"
     )
@@ -112,6 +180,19 @@ def test_website_demo_import_is_lazy_and_keeps_hillstrom_isolated() -> None:
         check=False,
     )
     assert completed.returncode == 0, completed.stderr
+
+
+def test_container_package_includes_gemini_profile_and_both_secrets() -> None:
+    dockerfile = Path("Dockerfile").read_text(encoding="utf-8")
+    dockerignore = Path(".dockerignore").read_text(encoding="utf-8")
+    compose = Path("compose.yaml").read_text(encoding="utf-8")
+
+    assert "COPY evaluation/configs/website_demo_gemini_v1.json" in dockerfile
+    assert "!evaluation/configs/website_demo_gemini_v1.json" in dockerignore
+    assert "DCFA_GEMINI_API_KEY_FILE=/run/secrets/gemini_api_key" in dockerfile
+    assert "DCFA_WEBSITE_GEMINI_CONFIG_FILE=/app/evaluation/configs/" in dockerfile
+    assert "/run/secrets/gemini_api_key:ro" in compose
+    assert "/run/secrets/tabpfn_api_key:ro" in compose
 
 
 def test_supported_website_scenario_returns_real_state_trace_and_evidence(
@@ -134,15 +215,35 @@ def test_supported_website_scenario_returns_real_state_trace_and_evidence(
     assert result.plot_path is not None and result.plot_path.is_file()
     assert FakeClientRegressor.prediction_calls == 3
     assert managed_client["client_module"].reset_called
+    assert len(managed_client["gemini_client"].interactions.calls) == 1
+    llm_call = managed_client["gemini_client"].interactions.calls[0]
+    assert llm_call["store"] is False
+    assert llm_call["response_format"]["mime_type"] == "application/json"
+    assert "response_mime_type" not in llm_call
+    model_input = json.loads(llm_call["input"])
+    assert set(model_input) == {
+        "available_roles",
+        "baseline_covariates",
+        "intervention_labels",
+        "supported_summaries",
+        "user_question",
+    }
+    assert "rows" not in llm_call["input"]
+    assert result.llm_trace["data_rows_sent_to_gemini"] == 0
+    assert result.llm_trace["actual_intervention_values_sent_to_gemini"] == 0
+    assert (result.output_dir / "gemini_compilation.json").is_file()
     numerical_core = json.loads(
         (result.output_dir / "numerical_core.json").read_text(encoding="utf-8")
     )
     assert numerical_core["estimator_backend"] == "tabpfn"
     assert numerical_core["evidence_status"] == "development_only"
+    assert verify_run_directory(result.output_dir)["status"] == "valid"
 
     status, states, answer, evidence, plot, audit = format_portfolio_result(result)
     assert "development-only" in status
     assert "managed TabPFN" in status
+    assert "Gemini-compiled" in status
+    assert "LLM Compilation" in states
     assert "Validating Evidence" in states
     assert result.response.queries[0].evidence_id in answer
     assert result.response.queries[0].evidence_id in evidence
@@ -174,6 +275,7 @@ def test_authorized_csv_upload_runs_managed_tabpfn_and_binds_manifest(
     assert result.response.status == "completed"
     assert result.response.final_state is AgentState.COMPLETED
     assert result.response.queries[0].evidence_id.startswith("evidence_")
+    assert result.llm_trace["proposal"]["objective"] == "quantile_contrast"
     assert result.output_dir is not None
     assert result.output_dir.parent.parent.name.startswith("csv-upload-")
     assert FakeClientRegressor.prediction_calls == 3
@@ -291,6 +393,9 @@ def test_managed_failure_never_falls_back_to_sklearn(tmp_path: Path) -> None:
     token_file = tmp_path / "tabpfn-token"
     token_file.write_text("tabpfn_sk_test_only_not_a_real_secret", encoding="utf-8")
     token_file.chmod(0o600)
+    gemini_key_file = tmp_path / "gemini-key"
+    gemini_key_file.write_text("test_gemini_key_that_is_not_a_real_secret", encoding="utf-8")
+    gemini_key_file.chmod(0o600)
     client = FakeClientModule()
     client.TabPFNRegressor = FailingRegressor
 
@@ -302,6 +407,9 @@ def test_managed_failure_never_falls_back_to_sklearn(tmp_path: Path) -> None:
         token_file=token_file,
         client_module=client,
         client_version=MANAGED_CLIENT_VERSION,
+        gemini_api_key_file=gemini_key_file,
+        gemini_client=FakeGeminiClient(),
+        gemini_sdk_version=GOOGLE_GENAI_VERSION,
     )
 
     assert result.response.status == "blocked"
@@ -318,6 +426,87 @@ def test_managed_failure_never_falls_back_to_sklearn(tmp_path: Path) -> None:
     assert "No numerical answer" in answer
     assert "No evidence record was emitted" in evidence
     assert plot is None
+
+
+def test_gemini_failure_stops_before_managed_fit_or_output(
+    tmp_path: Path,
+    managed_client: dict[str, Any],
+) -> None:
+    FakeClientRegressor.prediction_calls = 0
+    managed_client["gemini_client"] = FakeGeminiClient(raises=True)
+
+    with pytest.raises(DCFAError) as raised:
+        execute_portfolio_scenario(
+            "strong_iv",
+            128,
+            20260815,
+            output_root=tmp_path / "runs",
+            **managed_client,
+        )
+
+    assert raised.value.code == ErrorCode.LLM_API_FAILED
+    assert len(managed_client["gemini_client"].interactions.calls) == 1
+    assert FakeClientRegressor.prediction_calls == 0
+    assert managed_client["client_module"].reset_called
+    assert not (tmp_path / "runs").exists()
+
+
+def test_gemini_clarification_stops_without_exposing_model_reason(
+    tmp_path: Path,
+    managed_client: dict[str, Any],
+) -> None:
+    managed_client["gemini_client"] = FakeGeminiClient(
+        _valid_gemini_proposal(
+            decision="clarify",
+            reason="The requested summary is ambiguous.",
+        )
+    )
+
+    with pytest.raises(DCFAError) as raised:
+        execute_portfolio_scenario(
+            "strong_iv",
+            128,
+            20260815,
+            question="Tell me what happens.",
+            output_root=tmp_path / "runs",
+            **managed_client,
+        )
+
+    assert raised.value.code == ErrorCode.LLM_OUTPUT_INVALID
+    assert raised.value.stage == "website_demo.gemini_decision"
+    assert raised.value.context == {"decision": "clarify"}
+    assert "ambiguous" not in raised.value.message
+    assert FakeClientRegressor.prediction_calls == 0
+    assert not (tmp_path / "runs").exists()
+
+
+def test_gemini_proposal_selects_the_deterministic_query(
+    tmp_path: Path,
+    managed_client: dict[str, Any],
+) -> None:
+    managed_client["gemini_client"] = FakeGeminiClient(
+        _valid_gemini_proposal(
+            reason="Compile the mean at center treatment.",
+            objective="mean",
+            x_label="center",
+            comparison_x_label="none",
+            level_label="none",
+        )
+    )
+
+    result = execute_portfolio_scenario(
+        "strong_iv",
+        128,
+        20260815,
+        question="What is the mean outcome at the center treatment level?",
+        output_root=tmp_path / "runs",
+        **managed_client,
+    )
+
+    assert result.response.status == "completed"
+    assert result.response.queries[0].claim_type == "interventional_mean"
+    assert result.llm_trace["proposal"]["objective"] == "mean"
+    assert result.llm_trace["proposal"]["x_label"] == "center"
 
 
 def test_run_directories_are_reserved_atomically(tmp_path: Path) -> None:
@@ -368,6 +557,10 @@ def test_health_endpoint_identifies_development_service_and_security_headers(
     token_file.write_text("tabpfn_sk_test_only_not_a_real_secret", encoding="utf-8")
     token_file.chmod(0o600)
     monkeypatch.setenv("DCFA_TABPFN_TOKEN_FILE", str(token_file))
+    gemini_key_file = tmp_path / "gemini-key"
+    gemini_key_file.write_text("test_gemini_key_that_is_not_a_real_secret", encoding="utf-8")
+    gemini_key_file.chmod(0o600)
+    monkeypatch.setenv("DCFA_GEMINI_API_KEY_FILE", str(gemini_key_file))
 
     async def get(path: str) -> httpx.Response:
         transport = httpx.ASGITransport(app=build_service())
@@ -380,6 +573,7 @@ def test_health_endpoint_identifies_development_service_and_security_headers(
     assert response.json()["evidence_status"] == "development_only"
     assert response.json()["backend"] == "tabpfn_client_managed"
     assert response.json()["model"] == "v2.5_default"
+    assert response.json()["llm_model"] == "gemini-3.6-flash"
     assert response.headers["cache-control"] == "no-store"
     assert response.headers["x-content-type-options"] == "nosniff"
     assert response.headers["referrer-policy"] == "no-referrer"
@@ -390,6 +584,8 @@ def test_health_endpoint_identifies_development_service_and_security_headers(
     assert ready.json()["status"] == "ready"
     assert ready.json()["output_root_writable"] is True
     assert ready.json()["managed_credential_ready"] is True
+    assert ready.json()["gemini_credential_ready"] is True
+    assert ready.json()["gemini_config_ready"] is True
 
 
 def test_readiness_fails_when_output_root_has_no_directory_parent(
@@ -401,6 +597,10 @@ def test_readiness_fails_when_output_root_has_no_directory_parent(
     token_file.write_text("tabpfn_sk_test_only_not_a_real_secret", encoding="utf-8")
     token_file.chmod(0o600)
     monkeypatch.setenv("DCFA_TABPFN_TOKEN_FILE", str(token_file))
+    gemini_key_file = tmp_path / "gemini-key"
+    gemini_key_file.write_text("test_gemini_key_that_is_not_a_real_secret", encoding="utf-8")
+    gemini_key_file.chmod(0o600)
+    monkeypatch.setenv("DCFA_GEMINI_API_KEY_FILE", str(gemini_key_file))
 
     async def get_readiness() -> httpx.Response:
         transport = httpx.ASGITransport(app=build_service())
@@ -412,6 +612,7 @@ def test_readiness_fails_when_output_root_has_no_directory_parent(
     assert response.json()["status"] == "not_ready"
     assert response.json()["output_root_writable"] is False
     assert response.json()["managed_credential_ready"] is True
+    assert response.json()["gemini_credential_ready"] is True
 
 
 def test_readiness_fails_closed_without_managed_credential(
@@ -420,6 +621,10 @@ def test_readiness_fails_closed_without_managed_credential(
 ) -> None:
     monkeypatch.setenv("DCFA_OUTPUT_ROOT", str(tmp_path))
     monkeypatch.setenv("DCFA_TABPFN_TOKEN_FILE", str(tmp_path / "missing-token"))
+    gemini_key_file = tmp_path / "gemini-key"
+    gemini_key_file.write_text("test_gemini_key_that_is_not_a_real_secret", encoding="utf-8")
+    gemini_key_file.chmod(0o600)
+    monkeypatch.setenv("DCFA_GEMINI_API_KEY_FILE", str(gemini_key_file))
 
     async def get_readiness() -> httpx.Response:
         transport = httpx.ASGITransport(app=build_service())
@@ -431,3 +636,56 @@ def test_readiness_fails_closed_without_managed_credential(
     assert response.json()["status"] == "not_ready"
     assert response.json()["output_root_writable"] is True
     assert response.json()["managed_credential_ready"] is False
+    assert response.json()["gemini_credential_ready"] is True
+
+
+def test_readiness_fails_closed_without_gemini_credential(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    monkeypatch.setenv("DCFA_OUTPUT_ROOT", str(tmp_path))
+    token_file = tmp_path / "tabpfn-token"
+    token_file.write_text("tabpfn_sk_test_only_not_a_real_secret", encoding="utf-8")
+    token_file.chmod(0o600)
+    monkeypatch.setenv("DCFA_TABPFN_TOKEN_FILE", str(token_file))
+    monkeypatch.setenv("DCFA_GEMINI_API_KEY_FILE", str(tmp_path / "missing-gemini-key"))
+
+    async def get_readiness() -> httpx.Response:
+        transport = httpx.ASGITransport(app=build_service())
+        async with httpx.AsyncClient(transport=transport, base_url="http://test") as client:
+            return await client.get("/readyz")
+
+    response = asyncio.run(get_readiness())
+    assert response.status_code == 503
+    assert response.json()["managed_credential_ready"] is True
+    assert response.json()["gemini_credential_ready"] is False
+
+
+def test_readiness_fails_closed_without_gemini_profile(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    monkeypatch.setenv("DCFA_OUTPUT_ROOT", str(tmp_path))
+    token_file = tmp_path / "tabpfn-token"
+    token_file.write_text("tabpfn_sk_test_only_not_a_real_secret", encoding="utf-8")
+    token_file.chmod(0o600)
+    gemini_key_file = tmp_path / "gemini-key"
+    gemini_key_file.write_text("test_gemini_key_that_is_not_a_real_secret", encoding="utf-8")
+    gemini_key_file.chmod(0o600)
+    monkeypatch.setenv("DCFA_TABPFN_TOKEN_FILE", str(token_file))
+    monkeypatch.setenv("DCFA_GEMINI_API_KEY_FILE", str(gemini_key_file))
+    monkeypatch.setenv(
+        "DCFA_WEBSITE_GEMINI_CONFIG_FILE",
+        str(tmp_path / "missing-gemini-profile.json"),
+    )
+
+    async def get_readiness() -> httpx.Response:
+        transport = httpx.ASGITransport(app=build_service())
+        async with httpx.AsyncClient(transport=transport, base_url="http://test") as client:
+            return await client.get("/readyz")
+
+    response = asyncio.run(get_readiness())
+    assert response.status_code == 503
+    assert response.json()["managed_credential_ready"] is True
+    assert response.json()["gemini_credential_ready"] is True
+    assert response.json()["gemini_config_ready"] is False

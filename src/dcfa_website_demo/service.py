@@ -7,14 +7,17 @@ from pathlib import Path
 from typing import Any
 
 from dcfa import __version__
+from dcfa.agent.gemini_live import read_gemini_api_key
 from dcfa.errors import DCFAError
 from dcfa.tabcf_iv.managed_smoke import read_managed_token_file
 from dcfa_website_demo.app import (
     DEFAULT_OUTPUT_ROOT,
     DEMO_CSS,
     build_app,
+    gemini_api_key_file_from_environment,
     managed_token_file_from_environment,
 )
+from dcfa_website_demo.gemini import GEMINI_MODEL, validate_website_gemini_config
 
 
 def output_root_from_environment() -> Path:
@@ -58,6 +61,8 @@ def build_service() -> Any:
                 "evidence_status": "development_only",
                 "backend": "tabpfn_client_managed",
                 "model": "v2.5_default",
+                "llm_provider": "google_gemini_developer_api",
+                "llm_model": GEMINI_MODEL,
             },
             headers={"Cache-Control": "no-store"},
         )
@@ -70,15 +75,34 @@ def build_service() -> Any:
         try:
             credential = read_managed_token_file(managed_token_file_from_environment())
             del credential
-            credential_ready = True
         except (DCFAError, OSError, ValueError):
-            credential_ready = False
-        ready = output_ready and credential_ready
+            managed_credential_ready = False
+        else:
+            managed_credential_ready = True
+        try:
+            credential = read_gemini_api_key(gemini_api_key_file_from_environment())
+            del credential
+            gemini_credential_ready = True
+        except (DCFAError, OSError, ValueError):
+            gemini_credential_ready = False
+        try:
+            validate_website_gemini_config()
+            gemini_config_ready = True
+        except (DCFAError, OSError, ValueError):
+            gemini_config_ready = False
+        ready = (
+            output_ready
+            and managed_credential_ready
+            and gemini_credential_ready
+            and gemini_config_ready
+        )
         return JSONResponse(
             {
                 "status": "ready" if ready else "not_ready",
                 "output_root_writable": output_ready,
-                "managed_credential_ready": credential_ready,
+                "managed_credential_ready": managed_credential_ready,
+                "gemini_credential_ready": gemini_credential_ready,
+                "gemini_config_ready": gemini_config_ready,
                 "evidence_status": "development_only",
             },
             status_code=200 if ready else 503,

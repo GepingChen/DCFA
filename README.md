@@ -24,8 +24,9 @@ verification, and these deterministic entry points:
 - a no-`W` TabCF IV vertical slice with an explicitly selected
   `sklearn_quantile_fallback`;
 - a bounded, development-only `tabpfn-client` adapter for fixed synthetic agent
-  smoke and website-demo paths, plus an explicitly confirmed local CSV website
-  route with exact Y/X/Z roles, strict row/column gates, and service metadata;
+  smoke and website-demo paths, plus a default one-call Gemini compiler and an
+  explicitly confirmed local CSV website route with exact Y/X/Z roles, strict
+  row/column gates, and service metadata;
 - mean, CDF, quantile, threshold-risk, contrast, diagnostic, and strict-support
   tools derived from one validated result bundle;
 - strong-IV, weak-IV, unsupported-treatment, non-empty-`W`, and outside-support
@@ -107,6 +108,7 @@ Managed TabPFN website-demo environment:
 .venv/bin/python -m pip install -r requirements-website-demo.lock
 .venv/bin/python -m pip install -e . --no-deps
 chmod 600 ~/.config/dcfa/tabpfn_api_key
+chmod 600 ~/.config/dcfa/gemini_api_key
 ```
 
 Website-oriented guided demo (`development_only`; local service only):
@@ -115,16 +117,19 @@ Website-oriented guided demo (`development_only`; local service only):
 .venv/bin/dcfa-website-demo
 ```
 
-This presentation shell uses the real typed agent state machine and the official
-managed TabPFN service. It exposes three frozen synthetic TabCF-IV paths and a
-local CSV tab for exactly three numeric Y/X/Z columns and 120–256 rows. CSV runs
-require an authorization/transmission checkbox before the selected rows are sent
-to Prior Labs. It reads the token from `~/.config/dcfa/tabpfn_api_key` by default,
-projects answers from validated evidence records, and never falls back to
-sklearn. See [`docs/WEBSITE_DEMO.md`](docs/WEBSITE_DEMO.md) for the
-health-checkable container workflow, cloud-data boundary, static Astro embed
-boundary, and release prerequisites. Its `/healthz` response identifies the
-service, model, managed backend, and `development_only` evidence status.
+This presentation shell defaults to `gemini-3.6-flash` for one bounded structured
+compile call per run, then uses the real typed agent state machine and official
+managed TabPFN service. Gemini receives the natural-language question, Y/X/Z
+contract, and symbolic `low/center/high` labels; it receives no rows or actual
+intervention values and performs no numerical causal calculation. The page
+supports mean or median summaries and directed contrasts within that symbolic
+scope. It reads `~/.config/dcfa/gemini_api_key` and
+`~/.config/dcfa/tabpfn_api_key` by default. CSV runs require confirmation before
+the question goes to Google and selected rows go separately to Prior Labs. Any
+Gemini or Client failure blocks without retry, LLM bypass, or sklearn fallback.
+See [`docs/WEBSITE_DEMO.md`](docs/WEBSITE_DEMO.md) for the health-checkable
+container workflow, cloud-data boundary, static Astro embed boundary, and release
+prerequisites.
 
 ## Stable commands
 
@@ -209,13 +214,14 @@ The following are intentionally not represented as complete:
 5. Diagnostic warning/stop thresholds have not been calibrated on the frozen
    manuscript DGP suite. The current thresholds are development checks and have
    no locked Track T configuration ID.
-6. One Gemini model/prompt manifest is frozen for a single clean synthetic
-   smoke. The first authenticated request exposed a removed Interactions API
-   parameter and stopped before analysis; the corrected request has passed
-   offline SDK serialization but has not received a second network authorization.
-   This is not the paired 24-case fixed-workflow/full-agent evaluation; repeated
-   live reliability, Hillstrom leakage, policy constraints, and final production
-   cost/latency distributions remain unevaluated.
+6. One Gemini model/prompt manifest is frozen for a single clean synthetic smoke,
+   and a separate versioned Gemini profile now powers the local website compiler.
+   The first authenticated smoke request exposed a removed Interactions API
+   parameter and stopped before analysis; the corrected request shape and website
+   integration are offline-tested, but neither is a paired 24-case
+   fixed-workflow/full-agent evaluation. Repeated live reliability, Hillstrom
+   leakage, policy constraints, and final production cost/latency distributions
+   remain unevaluated.
 
 Read [`AGENTS.md`](AGENTS.md), the
 [`integrated research plan`](plan/TabCF_Agent_Integrated_Research_Plan_ZH.md),

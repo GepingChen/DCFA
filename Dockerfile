@@ -5,6 +5,8 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
     MPLCONFIGDIR=/tmp/matplotlib \
     DCFA_SERVER_NAME=0.0.0.0 \
     DCFA_OUTPUT_ROOT=/app/artifacts/local/website-demo \
+    DCFA_GEMINI_API_KEY_FILE=/run/secrets/gemini_api_key \
+    DCFA_WEBSITE_GEMINI_CONFIG_FILE=/app/evaluation/configs/website_demo_gemini_v1.json \
     PORT=7860
 
 WORKDIR /app
@@ -12,6 +14,7 @@ WORKDIR /app
 COPY requirements-website-demo.lock pyproject.toml README.md ./
 RUN python -m pip install --no-cache-dir -r requirements-website-demo.lock
 
+COPY evaluation/configs/website_demo_gemini_v1.json ./evaluation/configs/website_demo_gemini_v1.json
 COPY src ./src
 RUN python -m pip install --no-cache-dir . --no-deps \
     && useradd --create-home --uid 10001 dcfa \

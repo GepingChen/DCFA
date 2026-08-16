@@ -1,6 +1,6 @@
 # DCFA codebase map
 
-Last verified: 2026-08-13
+Last verified: 2026-08-15
 
 This map describes checked-in executable behavior. The integrated plan remains
 the authority for intended research behavior; code and tests are the authority
@@ -17,9 +17,9 @@ for current behavior.
 | `src/dcfa/hillstrom_policy/` | Isolated three-action RCT policy adapter, leakage gate, DR/IPW/direct estimators, policies, and four semi-synthetic DGPs |
 | `src/dcfa/agent/` | Explicit compiler/state/runtime, identical-recorded-tool harness, and bounded Gemini live-smoke adapter |
 | `src/dcfa/app.py` | Public TabCF-only lazy Gradio shell |
-| `src/dcfa_website_demo/` | Portfolio presentation layer, strict local CSV ingress, and health-checkable ASGI wrapper over the typed public runtime; outside the statistical source hash |
+| `src/dcfa_website_demo/` | Portfolio presentation layer, one-call Gemini compiler, strict local CSV ingress, and health-checkable ASGI wrapper over the typed public runtime; outside the statistical source hash |
 | `evaluation/agent_benchmark/cases/` | Frozen 24-case Track A MVP fixture |
-| `evaluation/configs/` | Fail-closed locked TabPFN runtime template and frozen Gemini smoke manifest |
+| `evaluation/configs/` | Fail-closed locked TabPFN runtime template, frozen Gemini smoke manifest, and versioned website Gemini profile |
 | `tests/` | Unit, leakage, statistical, agent-behavior, and integration gates |
 | `third_party/TabCF` | Authoritative upstream source pinned at `76e0d3eb9e97cebca381d1540db0333c1ef1016e` |
 | `requirements-dev.lock`, `requirements-ui.lock`, `requirements-managed-client.lock`, `requirements-website-demo.lock`, `requirements-gemini.lock` | Verified Python 3.11 core, UI, managed-client, website-demo, and Gemini-smoke environments |
@@ -149,18 +149,27 @@ corrected request has not yet been sent.
 See the README for complete runnable examples. A smoke test proves mechanics,
 not statistical quality or release readiness.
 
-The website demo is deliberately separate from `src/dcfa/`: presentation-only
-changes do not rewrite the evidence-bound statistical runtime. It accepts frozen
-synthetic TabCF-IV scenarios plus a strictly bounded, locally selected Y/X/Z CSV,
-uses the managed `tabpfn-client` profile, renders the actual agent state events
-and validated query records, and has no Hillstrom, W, general-router, or sklearn
-fallback route. The CSV confirmation states that selected rows leave the machine.
-The static personal site can only embed or link a separately hosted instance; it
-cannot execute this Python service on GitHub Pages.
+The website demo is deliberately separate from the evidence-bound statistical
+runtime. `dcfa_website_demo/gemini.py` makes one structured
+`gemini-3.6-flash` call per UI run using a versioned prompt/model/schema profile.
+It sends only the natural-language question, generic Y/X/Z contract, and
+symbolic intervention labels. The validated proposal selects a mean or median
+summary/contrast; local deterministic code maps labels to actual values, and
+Gemini never sees rows or calculates the result. Clarification, block, API,
+schema, or credential failures stop with no retry or non-LLM fallback.
+
+The demo accepts synthetic TabCF-IV scenarios plus a strictly bounded, locally
+selected Y/X/Z CSV, uses the managed `tabpfn-client` profile, renders the actual
+agent state events and validated query records, and has no Hillstrom, W,
+general-router, or sklearn fallback route. CSV confirmation distinguishes the
+question sent to Google from selected rows sent to Prior Labs. The static personal
+site can only embed or link a separately hosted instance; it cannot execute this
+Python service on GitHub Pages.
 
 `dcfa_website_demo.service` mounts the queued Gradio app on a single-worker
 FastAPI service and exposes `/healthz` plus output-path- and credential-aware
-`/readyz`. UI run
+`/readyz`; readiness requires the versioned Gemini profile and both external
+mode-600 service credential files. UI run
 directories are reserved atomically and never overwrite prior material. The container runs as UID 10001,
 stores generated artifacts under a dedicated volume, disables Gradio monitoring
 and public sharing, and remains a local deployment artifact rather than a public
@@ -174,7 +183,7 @@ release authorization.
 - approved Hillstrom raw data, exact source/hash, and usage/license decision;
 - calibrated and frozen diagnostic thresholds for a locked Track T protocol;
 - a frozen paired live-LLM protocol for the full fixed-workflow versus agent
-  case suite; the current Gemini manifest covers one clean smoke only.
+  case suite; the Gemini smoke and website profiles do not cover that comparison.
 
 These gaps block the corresponding release claims. They do not authorize a
 silent fallback, fabricated manifest, or reinterpretation of local synthetic

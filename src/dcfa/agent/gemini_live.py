@@ -103,7 +103,8 @@ def _blocked(message: str, *, stage: str, context: dict[str, Any] | None = None)
     )
 
 
-def _read_api_key(api_key_file: Path) -> str:
+def read_gemini_api_key(api_key_file: Path) -> str:
+    """Read one repository-external, owner-only Gemini API key file."""
     try:
         path = api_key_file.expanduser().resolve(strict=True)
     except OSError as exc:
@@ -215,7 +216,8 @@ def _model_input(manifest: dict[str, Any]) -> str:
     )
 
 
-def _load_client(api_key: str) -> tuple[Any, str]:
+def load_gemini_client(api_key: str) -> tuple[Any, str]:
+    """Load the pinned Gemini SDK lazily and construct an authenticated client."""
     try:
         version = importlib.metadata.version("google-genai")
         module = importlib.import_module("google.genai")
@@ -321,9 +323,9 @@ def run_gemini_live_smoke(
     """Run one bounded Gemini compile call, then one deterministic synthetic analysis."""
     require_fresh_output_directory(output_dir)
     manifest, resolved_manifest = _load_manifest(manifest_path)
-    api_key = _read_api_key(api_key_file)
+    api_key = read_gemini_api_key(api_key_file)
     if client is None:
-        client, observed_sdk_version = _load_client(api_key)
+        client, observed_sdk_version = load_gemini_client(api_key)
     else:
         observed_sdk_version = sdk_version or GOOGLE_GENAI_VERSION
     del api_key

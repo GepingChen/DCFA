@@ -541,3 +541,31 @@ Do not rewrite an accepted entry when it changes; append a superseding entry.
 - Source: User authorization on 2026-08-13; integrated plan sections 8.1, 8.6,
   8.8, and 12.5; Google Gemini model, structured-output, usage, and pricing
   documentation inspected on 2026-08-13.
+
+## D-027 — Make Gemini the default bounded compiler for the local website demo
+
+- Date: 2026-08-15
+- Status: Accepted development integration; live website request not yet verified
+- Decision: Before every guided or authorized CSV website run, make exactly one
+  structured `gemini-3.6-flash` request using the versioned
+  `website_demo_gemini_v1` profile. Send only the user question, generic Y/X/Z
+  role contract, and symbolic low/center/high labels. Permit mean and median
+  summaries or directed contrasts only. Map labels to actual interventions in
+  deterministic local code, then run the unchanged managed TabPFN and evidence
+  pipeline. Require separate repository-external mode-600 Gemini and Prior Labs
+  credentials; never retry or silently bypass either service.
+- Rationale: The local product demo should expose real LLM-based specification
+  compilation rather than present a preconstructed `CompilationRequest` as an
+  LLM agent. Keeping the LLM upstream of deterministic numerical tools preserves
+  numerical fidelity, support gates, evidence IDs, and the no-data-row Gemini
+  boundary.
+- Affected tracks: Local TabCF Analyst presentation and development mechanics
+  only. This is not the paired Track A evaluation and does not make managed
+  output eligible for locked Track T claims.
+- Verification impact: Test that the proposal changes the deterministic query,
+  requests use unified structured output once with `store=false`, no rows or
+  actual interventions enter the Gemini trace, API failures stop before managed
+  fitting, successful runs persist a non-secret compilation trace, and readiness
+  fails unless both external credentials are valid.
+- Source: User request on 2026-08-15 and integrated plan sections 3.2, 8.3,
+  8.6, 12.5, and 13.4.

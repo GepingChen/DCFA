@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import os
+import socket
 from pathlib import Path
 from typing import Any
 
@@ -31,6 +32,19 @@ def output_root_is_writable(output_root: Path) -> bool:
     while not candidate.exists() and candidate != candidate.parent:
         candidate = candidate.parent
     return candidate.is_dir() and os.access(candidate, os.W_OK)
+
+
+def require_available_port(host: str, port: int) -> None:
+    """Fail with an operator-readable message if an older service owns the port."""
+    family = socket.AF_INET6 if ":" in host else socket.AF_INET
+    with socket.socket(family, socket.SOCK_STREAM) as probe:
+        try:
+            probe.bind((host, port))
+        except OSError as exc:
+            raise RuntimeError(
+                f"Cannot start the DCFA local demo: {host}:{port} is already in use. "
+                "Stop the existing demo or choose a different PORT, then verify the page build ID."
+            ) from exc
 
 
 def build_service() -> Any:
@@ -151,6 +165,7 @@ def run_service() -> None:
     port = int(os.environ.get("PORT", "7860"))
     if not 1 <= port <= 65535:
         raise ValueError("PORT must be between 1 and 65535.")
+    require_available_port(host, port)
     uvicorn.run(
         build_service(),
         host=host,

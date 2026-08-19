@@ -1,5 +1,7 @@
 FROM python:3.11-slim@sha256:90744cff8f32887f075c47d747a173ff333e9e98801667af93c357fa9f5e28ff
 
+ARG DCFA_BUILD_REVISION=unknown
+
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
     MPLCONFIGDIR=/tmp/matplotlib \
@@ -7,6 +9,7 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
     DCFA_OUTPUT_ROOT=/app/artifacts/local/website-demo \
     DCFA_GEMINI_API_KEY_FILE=/run/secrets/gemini_api_key \
     DCFA_WEBSITE_GEMINI_CONFIG_FILE=/app/evaluation/configs/website_demo_gemini_v1.json \
+    DCFA_BUILD_REVISION=${DCFA_BUILD_REVISION} \
     PORT=7860
 
 WORKDIR /app

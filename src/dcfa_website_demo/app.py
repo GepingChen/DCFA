@@ -4,8 +4,9 @@ from __future__ import annotations
 
 import html
 import importlib.metadata
-import json
 import os
+import re
+import subprocess
 import threading
 from dataclasses import dataclass, replace
 from pathlib import Path
@@ -15,7 +16,6 @@ import numpy as np
 
 from dcfa.agent.compiler import CompilationRequest
 from dcfa.agent.runtime import AgentResponse, CausalAgentRuntime
-from dcfa.canonical import to_primitive
 from dcfa.constants import EstimatorBackend, EvidenceStatus, ExecutionProfile
 from dcfa.errors import DCFAError, ErrorCode
 from dcfa.schemas import AnalysisSpecification, DatasetManifest
@@ -40,6 +40,7 @@ from dcfa_website_demo.gemini import (
     compile_website_question,
     write_compilation_trace,
 )
+from dcfa_website_demo.presentation import present_error, present_query, render_visitor_plot
 
 DEFAULT_OUTPUT_ROOT = Path("artifacts/local/website-demo")
 DEFAULT_MANAGED_TOKEN_FILE = Path.home() / ".config" / "dcfa" / "tabpfn_api_key"
@@ -48,11 +49,8 @@ MIN_DEMO_ROWS = 120
 MAX_DEMO_ROWS = 256
 MIN_DEMO_SEED = 0
 MAX_DEMO_SEED = 2**32 - 1
-DEVELOPMENT_BOUNDARY_WARNING_CODES = {
-    "DEVELOPMENT_FALLBACK_NOT_TABCF",
-    "DEVELOPMENT_TABPFN_NOT_RELEASE_ELIGIBLE",
-}
 _OUTPUT_RESERVATION_LOCK = threading.Lock()
+_BUILD_REVISION_PATTERN = re.compile(r"^[0-9a-f]{7,12}$")
 
 
 @dataclass(frozen=True)
@@ -693,6 +691,16 @@ def _execute_managed_dataset(
             columns,
             manifest,
         )
+        visitor_plot_path = output_dir / "website_interventional_summary.png"
+        if response.status == "completed":
+            if tool.last_run is None:
+                raise DCFAError(
+                    ErrorCode.EVIDENCE_MISMATCH,
+                    "The completed website run has no validated result bundle.",
+                    stage="website.presentation",
+                )
+            if response.queries and present_query(response.queries[0]).allow_numeric:
+                render_visitor_plot(tool.last_run.bundle, tool.last_run.ledger, visitor_plot_path)
     except Exception:
         if "output_dir" in locals():
             _remove_empty_reservation(output_dir)
@@ -703,11 +711,10 @@ def _execute_managed_dataset(
         _remove_empty_reservation(output_dir)
     elif response.status == "completed":
         write_compilation_trace(output_dir, llm_compilation.trace)
-    plot_path = output_dir / "interventional_summary.png"
     return PortfolioDemoResult(
         scenario=result_scenario,
         response=response,
-        plot_path=plot_path if plot_path.is_file() else None,
+        plot_path=visitor_plot_path if visitor_plot_path.is_file() else None,
         output_dir=output_dir if output_dir.is_dir() else None,
         llm_trace=llm_compilation.trace,
     )
@@ -716,71 +723,77 @@ def _execute_managed_dataset(
 def _status_html(result: PortfolioDemoResult) -> str:
     response = result.response
     if response.status == "blocked":
-        error = response.error or {}
-        code = html.escape(str(error.get("code", "BLOCKED")))
-        message = html.escape(str(error.get("message", "The request was blocked.")))
+        presentation = present_error((response.error or {}).get("code"))
         return (
             '<div class="demo-status demo-status--blocked" role="status">'
-            f"<strong>Blocked safely · {code}</strong>{message} "
-            "No numerical causal answer was returned.</div>"
+            f"<strong>{html.escape(presentation.title)}</strong>"
+            f"{html.escape(presentation.explanation)} "
+            f"{html.escape(presentation.action)} No numerical result was returned.</div>"
         )
-    warning_codes = {warning.code for warning in response.warnings}
-    warning_codes.update(warning.code for query in response.queries for warning in query.warnings)
-    diagnostic_warning_codes = warning_codes - DEVELOPMENT_BOUNDARY_WARNING_CODES
-    if diagnostic_warning_codes:
+    if not response.queries or not present_query(response.queries[0]).allow_numeric:
+        presentation = present_error(ErrorCode.EVIDENCE_MISMATCH)
+        return (
+            '<div class="demo-status demo-status--blocked" role="status">'
+            f"<strong>{html.escape(presentation.title)}</strong>"
+            f"{html.escape(presentation.explanation)} No numerical result is displayed.</div>"
+        )
+    presented = present_query(response.queries[0])
+    if any(item.severity == "caution" for item in presented.warnings):
         return (
             '<div class="demo-status demo-status--warning" role="status">'
-            "<strong>Completed with empirical warnings</strong>"
-            "The warnings remain attached to the answer and evidence record. This is a "
-            "development-only managed TabPFN result, not locked Track T evidence.</div>"
+            "<strong>Completed with important limitations</strong>"
+            "The result passed evidence validation, but empirical warnings require caution. "
+            "This is a development-only demonstration result.</div>"
         )
     return (
         '<div class="demo-status" role="status">'
-        "<strong>Gemini-compiled workflow completed and evidence validated</strong>"
+        "<strong>Result verified</strong>"
         "The displayed value comes from the validated result bundle. This is a "
-        "development-only managed TabPFN result, not locked Track T evidence.</div>"
+        "development-only demonstration result.</div>"
     )
 
 
 def _state_graph_html(response: AgentResponse, llm_trace: dict[str, Any]) -> str:
-    items = [
-        '<li class="completed"><span>LLM Compilation</span>'
-        f'<span class="state-reason">{html.escape(str(llm_trace["model"]))} · '
-        "one structured request</span></li>"
-    ]
-    for event in response.state_events:
-        state = event.state.value
-        label = state.replace("_", " ").title()
-        reason = html.escape(event.reason.replace("_", " "))
-        css_class = "blocked" if state == "blocked" else "completed"
-        items.append(
-            f'<li class="{css_class}"><span>{html.escape(label)}</span>'
-            f'<span class="state-reason">{reason}</span></li>'
+    del llm_trace
+    visitor_result_allowed = (
+        response.status == "completed"
+        and bool(response.queries)
+        and present_query(response.queries[0]).allow_numeric
+    )
+    if visitor_result_allowed:
+        items = (
+            "Question interpreted",
+            "Scope and data support checked",
+            "Analysis completed",
+            "Result verified",
         )
-    return '<ol class="state-graph" aria-label="Agent state trace">' + "".join(items) + "</ol>"
+        css_class = "completed"
+    else:
+        items = ("Question interpreted", "Safety check stopped the workflow")
+        css_class = "blocked"
+    rendered = "".join(
+        f'<li class="{css_class}"><span>{html.escape(item)}</span></li>' for item in items
+    )
+    return '<ol class="state-graph" aria-label="Workflow progress">' + rendered + "</ol>"
 
 
 def _answer_markdown(response: AgentResponse) -> str:
     if not response.queries:
         return (
             "### No numerical answer\n\n"
-            "The workflow stopped at a typed gate. Review the status and state trace for the "
-            "exact reason."
+            "The workflow stopped at a safety check. Review the status above for the next step."
         )
-    query = response.queries[0]
-    warning_count = len(query.warnings)
-    warning_summary = (
-        "None"
-        if warning_count == 0
-        else f"{warning_count} attached — inspect the evidence record below"
-    )
+    presented = present_query(response.queries[0])
+    if not presented.allow_numeric:
+        return (
+            "### No numerical answer\n\n"
+            "The result could not be projected into an approved visitor-safe format."
+        )
     return (
-        "### Evidence-linked answer\n\n"
-        f"**{query.value_display} {query.units}**  \n"
-        f"Claim: `{query.claim_type}`  \n"
-        f"Evidence: `{query.evidence_id}`  \n"
-        f"Support: `{query.support_status.value}`  \n"
-        f"Warnings: {warning_summary}"
+        f"### {presented.claim.title}\n\n"
+        f"**{presented.claim.explanation} The estimate is "
+        f"{presented.value_display} {presented.units}.**\n\n"
+        f"{presented.claim.action}"
     )
 
 
@@ -788,101 +801,127 @@ def _evidence_card_html(response: AgentResponse) -> str:
     if not response.queries:
         return (
             '<div class="demo-evidence-card demo-evidence-placeholder">'
-            "<h3>Evidence record</h3>"
-            "No evidence record was emitted because the workflow returned no numerical answer."
+            "<h3>Result details</h3>"
+            "No result details are available because the workflow returned no numerical answer."
             "</div>"
         )
-    query = response.queries[0]
-    fields = (
-        ("Claim", query.claim_type),
-        ("Value", f"{query.value_display} {query.units}"),
-        ("Support", query.support_status.value),
-        ("Evidence ID", query.evidence_id),
+    presented = present_query(response.queries[0])
+    if not presented.allow_numeric:
+        return (
+            '<div class="demo-evidence-card demo-evidence-placeholder">'
+            "<h3>Result details</h3>"
+            "This result requires local artifact review and is not available for visitor display."
+            "</div>"
+        )
+    details = (
+        "<div><dt>Verification</dt><dd>Result verified</dd></div>"
+        f"<div><dt>Data support</dt><dd>{html.escape(presented.support.title)}</dd></div>"
+        f"<div><dt>What it means</dt><dd>{html.escape(presented.support.explanation)}</dd></div>"
+        f"<div><dt>Suggested action</dt><dd>{html.escape(presented.support.action)}</dd></div>"
     )
-    details = "".join(
-        f"<div><dt>{html.escape(label)}</dt><dd>{html.escape(value)}</dd></div>"
-        for label, value in fields
+    visible_warnings = tuple(
+        warning for warning in presented.warnings if warning.title != "Development result"
     )
-    if query.warnings:
+    if visible_warnings:
         warning_items = "".join(
             "<li>"
-            f"<strong>{html.escape(warning.message)}</strong><br>"
-            f"<code>{html.escape(warning.code)}</code>"
+            f"<strong>{html.escape(warning.title)}</strong><br>"
+            f"{html.escape(warning.explanation)} {html.escape(warning.action)}"
             "</li>"
-            for warning in query.warnings
+            for warning in visible_warnings
         )
         warning_html = (
-            '<div class="demo-evidence-warnings"><h4>Attached warnings</h4>'
+            '<div class="demo-evidence-warnings"><h4>Important limitations</h4>'
             f'<ul class="demo-warning-list">{warning_items}</ul></div>'
         )
     else:
-        warning_html = "<p>No warnings are attached to this query.</p>"
+        warning_html = "<p>No additional empirical warning was triggered.</p>"
     return (
-        '<div class="demo-evidence-card"><h3>Evidence record</h3>'
+        '<div class="demo-evidence-card"><h3>Result details</h3>'
         f"<dl>{details}</dl>{warning_html}</div>"
     )
 
 
-def _input_error_outputs(message: str) -> tuple[str, str, str, str, None, str]:
-    escaped = html.escape(message)
+def _input_error_outputs(message: str) -> tuple[str, str, str, str, None]:
+    del message
+    presentation = present_error(ErrorCode.INVALID_DATA)
     return (
         '<div class="demo-status demo-status--blocked" role="status">'
-        f"<strong>Input rejected safely</strong>{escaped} No workflow was run.</div>",
-        '<div class="demo-status demo-status--idle">No state trace was created.</div>',
-        "### No numerical answer\n\nCorrect the bounded demo controls and try again.",
+        f"<strong>{html.escape(presentation.title)}</strong>"
+        f"{html.escape(presentation.explanation)} {html.escape(presentation.action)} "
+        "No workflow was run.</div>",
+        '<div class="demo-status demo-status--idle">No workflow progress was created.</div>',
+        "### No numerical answer\n\nCorrect the bounded demo inputs and try again.",
         '<div class="demo-evidence-card demo-evidence-placeholder">'
-        "<h3>Evidence record</h3>No evidence record was emitted.</div>",
+        "<h3>Result details</h3>No numerical result was emitted.</div>",
         None,
-        json.dumps({"status": "input_rejected", "message": message}, indent=2),
     )
 
 
-def _execution_error_outputs(error: DCFAError) -> tuple[str, str, str, str, None, str]:
-    message = html.escape(error.message)
-    code = html.escape(error.code.value)
+def _execution_error_outputs(error: DCFAError) -> tuple[str, str, str, str, None]:
+    presentation = present_error(error.code)
     return (
         '<div class="demo-status demo-status--blocked" role="status">'
-        f"<strong>Execution blocked safely · {code}</strong>{message} "
-        "No numerical causal answer was returned.</div>",
-        '<div class="demo-status demo-status--idle">Execution stopped before a result.</div>',
-        "### No numerical answer\n\nThe managed backend failed closed; sklearn was not used.",
+        f"<strong>{html.escape(presentation.title)}</strong>"
+        f"{html.escape(presentation.explanation)} {html.escape(presentation.action)} "
+        "No numerical result was returned.</div>",
+        '<div class="demo-status demo-status--idle">The workflow stopped before a result.</div>',
+        "### No numerical answer\n\nThe workflow failed closed and did not use a fallback model.",
         '<div class="demo-evidence-card demo-evidence-placeholder">'
-        "<h3>Evidence record</h3>No evidence record was emitted.</div>",
+        "<h3>Result details</h3>No numerical result was emitted.</div>",
         None,
-        json.dumps({"status": "blocked", "error": error.to_dict()}, indent=2),
     )
-
-
-def _audit_json(result: PortfolioDemoResult) -> str:
-    payload = {
-        "scenario": result.scenario,
-        "status": result.response.status,
-        "specification_id": result.response.specification_id,
-        "result_bundle_id": result.response.result_bundle_id,
-        "tool_calls": result.response.tool_calls,
-        "retry_count": result.response.retry_count,
-        "llm_compilation": result.llm_trace,
-        "state_events": result.response.state_events,
-        "error": result.response.error,
-    }
-    return json.dumps(to_primitive(payload), indent=2, sort_keys=True)
 
 
 def format_portfolio_result(
     result: PortfolioDemoResult,
-) -> tuple[str, str, str, str, str | None, str]:
+) -> tuple[str, str, str, str, str | None]:
     """Project a runtime response into display-only values without recomputing numbers."""
+    presented = present_query(result.response.queries[0]) if result.response.queries else None
     return (
         _status_html(result),
         _state_graph_html(result.response, result.llm_trace),
         _answer_markdown(result.response),
         _evidence_card_html(result.response),
-        None if result.plot_path is None else str(result.plot_path),
-        _audit_json(result),
+        (
+            str(result.plot_path)
+            if result.plot_path is not None and presented is not None and presented.allow_numeric
+            else None
+        ),
     )
 
 
-def build_app(*, output_root: Path = DEFAULT_OUTPUT_ROOT) -> Any:
+def resolve_build_revision() -> str:
+    """Return a short local build identity without exposing a health payload."""
+    configured = os.environ.get("DCFA_BUILD_REVISION", "").strip().lower()
+    if _BUILD_REVISION_PATTERN.fullmatch(configured):
+        return configured
+    if configured == "unknown":
+        return configured
+    repository_root = Path(__file__).resolve().parents[2]
+    try:
+        completed = subprocess.run(
+            ["git", "rev-parse", "--short=8", "HEAD"],
+            cwd=repository_root,
+            check=False,
+            capture_output=True,
+            text=True,
+        )
+    except OSError:
+        return "unknown"
+    revision = completed.stdout.strip().lower()
+    return (
+        revision
+        if completed.returncode == 0 and _BUILD_REVISION_PATTERN.fullmatch(revision)
+        else "unknown"
+    )
+
+
+def build_app(
+    *,
+    output_root: Path = DEFAULT_OUTPUT_ROOT,
+    build_revision: str | None = None,
+) -> Any:
     """Build the optional website demo while keeping Gradio a lazy dependency."""
     try:
         import gradio as gr
@@ -892,15 +931,16 @@ def build_app(*, output_root: Path = DEFAULT_OUTPUT_ROOT) -> Any:
         ) from exc
 
     scenario_choices = [(item.label, key) for key, item in SCENARIOS.items()]
+    visible_revision = html.escape(build_revision or resolve_build_revision())
     with gr.Blocks(
         title="DCFA — auditable causal agent demo",
         analytics_enabled=False,
         fill_width=True,
     ) as app:
         gr.HTML(
-            """
+            f"""
             <header class="demo-hero">
-              <p class="demo-eyebrow">DCFA · Local development workflow demo</p>
+              <p class="demo-eyebrow">DCFA · Local demo · Build {visible_revision}</p>
               <h1>Trace a causal workflow. See every gate.</h1>
               <p class="demo-hero-copy">
                 A narrow distributional-IV agent that uses Gemini to compile a natural-language
@@ -1017,7 +1057,7 @@ def build_app(*, output_root: Path = DEFAULT_OUTPUT_ROOT) -> Any:
                         )
             with gr.Column(scale=5, elem_classes="demo-panel"):
                 gr.Markdown(
-                    "### 2 · Inspect the state trace",
+                    "### 2 · Follow the workflow",
                     elem_classes="demo-section-heading",
                 )
                 gr.Markdown(
@@ -1036,22 +1076,17 @@ def build_app(*, output_root: Path = DEFAULT_OUTPUT_ROOT) -> Any:
         )
         with gr.Row():
             with gr.Column(scale=4, elem_classes="demo-panel demo-answer"):
-                answer = gr.Markdown(
-                    "### Evidence-linked answer\n\nRun a scenario to populate this panel."
-                )
+                answer = gr.Markdown("### Answer\n\nRun a scenario to populate this panel.")
             with gr.Column(scale=6, elem_classes="demo-panel"):
                 evidence = gr.HTML(
                     '<div class="demo-evidence-card demo-evidence-placeholder">'
-                    "<h3>Evidence record</h3>Run a scenario to populate this panel.</div>"
+                    "<h3>Result details</h3>Run a scenario to populate this panel.</div>"
                 )
         plot = gr.Image(
             type="filepath",
-            label="Result-bundle distribution preview",
+            label="Estimated outcome distributions and summaries",
             visible=False,
         )
-        with gr.Accordion("Machine-readable state and identity", open=False):
-            audit = gr.Code(language="json", label="Agent trace", interactive=False)
-
         gr.HTML(
             """
             <section class="demo-boundary" aria-labelledby="boundary-title">
@@ -1097,22 +1132,19 @@ def build_app(*, output_root: Path = DEFAULT_OUTPUT_ROOT) -> Any:
                 formatted = _execution_error_outputs(exc)
             except (TypeError, ValueError) as exc:
                 formatted = _input_error_outputs(str(exc))
-            status_value, state_value, answer_value, evidence_value, plot_value, audit_value = (
-                formatted
-            )
+            status_value, state_value, answer_value, evidence_value, plot_value = formatted
             return (
                 status_value,
                 state_value,
                 answer_value,
                 evidence_value,
                 gr.update(value=plot_value, visible=plot_value is not None),
-                audit_value,
             )
 
         run_button.click(
             fn=handle_run,
             inputs=(scenario, question, rows, seed),
-            outputs=(status, state_graph, answer, evidence, plot, audit),
+            outputs=(status, state_graph, answer, evidence, plot),
         )
 
         def handle_csv_run(
@@ -1143,16 +1175,13 @@ def build_app(*, output_root: Path = DEFAULT_OUTPUT_ROOT) -> Any:
                 formatted = _execution_error_outputs(exc)
             except (OSError, TypeError, ValueError) as exc:
                 formatted = _input_error_outputs(str(exc))
-            status_value, state_value, answer_value, evidence_value, plot_value, audit_value = (
-                formatted
-            )
+            status_value, state_value, answer_value, evidence_value, plot_value = formatted
             return (
                 status_value,
                 state_value,
                 answer_value,
                 evidence_value,
                 gr.update(value=plot_value, visible=plot_value is not None),
-                audit_value,
             )
 
         csv_run_button.click(
@@ -1166,7 +1195,7 @@ def build_app(*, output_root: Path = DEFAULT_OUTPUT_ROOT) -> Any:
                 csv_question,
                 csv_seed,
             ),
-            outputs=(status, state_graph, answer, evidence, plot, audit),
+            outputs=(status, state_graph, answer, evidence, plot),
         )
     return app.queue(max_size=8, default_concurrency_limit=1)
 

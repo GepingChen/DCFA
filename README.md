@@ -127,6 +127,11 @@ scope. It reads `~/.config/dcfa/gemini_api_key` and
 `~/.config/dcfa/tabpfn_api_key` by default. CSV runs require confirmation before
 the question goes to Google and selected rows go separately to Prior Labs. Any
 Gemini or Client failure blocks without retry, LLM bypass, or sklearn fallback.
+The default visitor page shows only explicit human-readable claim, support,
+warning, and error projections plus a short build revision. Full IDs, traces,
+unrounded values, service metadata, and the identity-rich audit plot remain in
+the immutable run artifact and are checked through the independent verifier;
+they are not sent to the default visitor DOM.
 See [`docs/WEBSITE_DEMO.md`](docs/WEBSITE_DEMO.md) for the health-checkable
 container workflow, cloud-data boundary, static Astro embed boundary, and release
 prerequisites.

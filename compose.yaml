@@ -2,6 +2,8 @@ services:
   dcfa-development-demo:
     build:
       context: .
+      args:
+        DCFA_BUILD_REVISION: ${DCFA_BUILD_REVISION:-unknown}
     environment:
       DCFA_ACCESS_LOG: "0"
       DCFA_OUTPUT_ROOT: /app/artifacts/local/website-demo

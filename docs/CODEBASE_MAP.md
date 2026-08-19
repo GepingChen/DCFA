@@ -17,7 +17,7 @@ for current behavior.
 | `src/dcfa/hillstrom_policy/` | Isolated three-action RCT policy adapter, leakage gate, DR/IPW/direct estimators, policies, and four semi-synthetic DGPs |
 | `src/dcfa/agent/` | Explicit compiler/state/runtime, identical-recorded-tool harness, and bounded Gemini live-smoke adapter |
 | `src/dcfa/app.py` | Public TabCF-only lazy Gradio shell |
-| `src/dcfa_website_demo/` | Portfolio presentation layer, one-call Gemini compiler, strict local CSV ingress, and health-checkable ASGI wrapper over the typed public runtime; outside the statistical source hash |
+| `src/dcfa_website_demo/` | Visitor-safe presentation mappings/plot, one-call Gemini compiler, strict local CSV ingress, and health-checkable ASGI wrapper over the typed public runtime; outside the statistical source hash |
 | `evaluation/agent_benchmark/cases/` | Frozen 24-case Track A MVP fixture |
 | `evaluation/configs/` | Fail-closed locked TabPFN runtime template, frozen Gemini smoke manifest, and versioned website Gemini profile |
 | `tests/` | Unit, leakage, statistical, agent-behavior, and integration gates |
@@ -159,18 +159,24 @@ Gemini never sees rows or calculates the result. Clarification, block, API,
 schema, or credential failures stop with no retry or non-LLM fallback.
 
 The demo accepts synthetic TabCF-IV scenarios plus a strictly bounded, locally
-selected Y/X/Z CSV, uses the managed `tabpfn-client` profile, renders the actual
-agent state events and validated query records, and has no Hillstrom, W,
-general-router, or sklearn fallback route. CSV confirmation distinguishes the
-question sent to Google from selected rows sent to Prior Labs. The static personal
-site can only embed or link a separately hosted instance; it cannot execute this
-Python service on GitHub Pages.
+selected Y/X/Z CSV and uses the managed `tabpfn-client` profile. Its explicit
+presentation mappings project approved claim, support, warning, and error
+semantics from the validated query while unknown codes fail closed. The visitor
+plot is derived from the validated bundle; the original identity-rich report,
+plot, evidence ledger, and agent/LLM audit remain artifact-only. The default DOM
+receives no trace, specification/bundle/evidence IDs, backend error context, or
+service metadata. There is no Hillstrom, W, general-router, or sklearn fallback
+route. CSV confirmation distinguishes the question sent to Google from selected
+rows sent to Prior Labs. The static personal site can only embed or link a
+separately hosted instance; it cannot execute this Python service on GitHub Pages.
 
 `dcfa_website_demo.service` mounts the queued Gradio app on a single-worker
 FastAPI service and exposes `/healthz` plus output-path- and credential-aware
 `/readyz`; readiness requires the versioned Gemini profile and both external
-mode-600 service credential files. UI run
-directories are reserved atomically and never overwrite prior material. The container runs as UID 10001,
+mode-600 service credential files. Startup preflights the configured port so an
+older process cannot silently represent the current source, and the page shows a
+short Git/build revision for browser acceptance. UI run directories are reserved
+atomically and never overwrite prior material. The container runs as UID 10001,
 stores generated artifacts under a dedicated volume, disables Gradio monitoring
 and public sharing, and remains a local deployment artifact rather than a public
 release authorization.

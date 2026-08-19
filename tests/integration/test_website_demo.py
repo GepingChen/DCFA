@@ -6,6 +6,7 @@ import json
 import subprocess
 import sys
 from concurrent.futures import ThreadPoolExecutor
+from dataclasses import replace
 from pathlib import Path
 from typing import Any
 
@@ -21,18 +22,22 @@ from dcfa.tabcf_iv.managed_client import MANAGED_CLIENT_VERSION
 from dcfa_website_demo.app import (
     MAX_DEMO_ROWS,
     MAX_DEMO_SEED,
+    _execution_error_outputs,
     _input_error_outputs,
     _reserve_output_directory,
+    build_app,
     execute_csv_upload,
     execute_portfolio_scenario,
     format_portfolio_result,
+    resolve_build_revision,
 )
 from dcfa_website_demo.csv_upload import (
     STANDARD_DEMO_ROWS,
     export_standard_demo_csv,
     load_authorized_csv,
 )
-from dcfa_website_demo.service import build_service
+from dcfa_website_demo.presentation import display_value
+from dcfa_website_demo.service import build_service, require_available_port
 
 
 class FakeClientRegressor:
@@ -188,11 +193,14 @@ def test_container_package_includes_gemini_profile_and_both_secrets() -> None:
     compose = Path("compose.yaml").read_text(encoding="utf-8")
 
     assert "COPY evaluation/configs/website_demo_gemini_v1.json" in dockerfile
+    assert "ARG DCFA_BUILD_REVISION=unknown" in dockerfile
+    assert "DCFA_BUILD_REVISION=${DCFA_BUILD_REVISION}" in dockerfile
     assert "!evaluation/configs/website_demo_gemini_v1.json" in dockerignore
     assert "DCFA_GEMINI_API_KEY_FILE=/run/secrets/gemini_api_key" in dockerfile
     assert "DCFA_WEBSITE_GEMINI_CONFIG_FILE=/app/evaluation/configs/" in dockerfile
     assert "/run/secrets/gemini_api_key:ro" in compose
     assert "/run/secrets/tabpfn_api_key:ro" in compose
+    assert "DCFA_BUILD_REVISION: ${DCFA_BUILD_REVISION:-unknown}" in compose
 
 
 def test_supported_website_scenario_returns_real_state_trace_and_evidence(
@@ -242,18 +250,45 @@ def test_supported_website_scenario_returns_real_state_trace_and_evidence(
     assert numerical_core["evidence_status"] == "development_only"
     assert verify_run_directory(result.output_dir)["status"] == "valid"
 
-    status, states, answer, evidence, plot, audit = format_portfolio_result(result)
+    status, states, answer, evidence, plot = format_portfolio_result(result)
     assert "development-only" in status
-    assert "managed TabPFN" in status
-    assert "Gemini-compiled" in status
-    assert "LLM Compilation" in states
-    assert "Validating Evidence" in states
-    assert result.response.queries[0].evidence_id in answer
-    assert result.response.queries[0].evidence_id in evidence
-    assert "inspect the evidence record" in answer
-    assert "DEVELOPMENT_TABPFN_NOT_RELEASE_ELIGIBLE" in evidence
+    assert "Result verified" in status
+    assert "Question interpreted" in states
+    assert "Result verified" in states
+    query = result.response.queries[0]
+    assert display_value(query.value_raw) in answer
+    assert "outcome units" in answer
+    visitor_text = "\n".join((status, states, answer, evidence))
+    for internal_value in (
+        query.claim_type,
+        query.evidence_id,
+        query.support_status.value,
+        result.response.result_bundle_id,
+        result.response.specification_id,
+        *(warning.code for warning in query.warnings),
+    ):
+        assert internal_value not in visitor_text
     assert plot == str(result.plot_path)
-    assert result.response.result_bundle_id in audit
+    assert result.plot_path.name == "website_interventional_summary.png"
+    assert (result.output_dir / "interventional_summary.png").is_file()
+    ledger_record = json.loads(
+        (result.output_dir / "evidence_records.jsonl").read_text(encoding="utf-8").splitlines()[0]
+    )
+    assert ledger_record["value_raw"] == query.value_raw
+
+    unknown_query = replace(query, claim_type="future_internal_claim")
+    unknown_result = replace(
+        result,
+        response=replace(result.response, queries=(unknown_query,)),
+    )
+    unknown_status, unknown_states, unknown_answer, unknown_details, unknown_plot = (
+        format_portfolio_result(unknown_result)
+    )
+    assert "Result verification failed" in unknown_status
+    assert "Safety check stopped" in unknown_states
+    assert display_value(query.value_raw) not in unknown_answer
+    assert "local artifact review" in unknown_details
+    assert unknown_plot is None
 
 
 def test_authorized_csv_upload_runs_managed_tabpfn_and_binds_manifest(
@@ -353,11 +388,13 @@ def test_weak_website_scenario_preserves_empirical_warnings(
     assert result.response.status == "completed"
     assert "WEAK_FIRST_STAGE_EMPIRICAL_WARNING" in warning_codes
     assert "WEAK_INTERVENTION_SUPPORT" in warning_codes
-    status, _, answer, evidence, plot, _ = format_portfolio_result(result)
+    status, _, answer, evidence, plot = format_portfolio_result(result)
     assert "demo-status--warning" in status
-    assert "inspect the evidence record" in answer
-    assert "WEAK_FIRST_STAGE_EMPIRICAL_WARNING" in evidence
+    assert "Weak instrument signal" in evidence
+    assert "WEAK_FIRST_STAGE_EMPIRICAL_WARNING" not in evidence
+    assert "weak_support" not in "\n".join((status, answer, evidence))
     assert plot is not None
+    assert verify_run_directory(result.output_dir)["status"] == "valid"
 
 
 def test_outside_support_executes_real_gate_and_renders_without_number(
@@ -380,11 +417,12 @@ def test_outside_support_executes_real_gate_and_renders_without_number(
     assert result.output_dir is None
     assert not list(tmp_path.rglob("run-*"))
 
-    status, states, answer, evidence, plot, _ = format_portfolio_result(result)
-    assert ErrorCode.OUTSIDE_SUPPORT.value in status
-    assert "Blocked" in states
+    status, states, answer, evidence, plot = format_portfolio_result(result)
+    assert ErrorCode.OUTSIDE_SUPPORT.value not in status
+    assert "Outside observed data support" in status
+    assert "Safety check stopped" in states
     assert "No numerical answer" in answer
-    assert "No evidence record was emitted" in evidence
+    assert "No result details" in evidence
     assert plot is None
 
 
@@ -423,11 +461,12 @@ def test_managed_failure_never_falls_back_to_sklearn(tmp_path: Path) -> None:
     assert not list(tmp_path.rglob("numerical_core.json"))
     assert client.reset_called
 
-    status, states, answer, evidence, plot, _ = format_portfolio_result(result)
-    assert ErrorCode.BACKEND_FIT_FAILED.value in status
-    assert "Blocked" in states
+    status, states, answer, evidence, plot = format_portfolio_result(result)
+    assert ErrorCode.BACKEND_FIT_FAILED.value not in status
+    assert "temporarily unavailable" in status
+    assert "Safety check stopped" in states
     assert "No numerical answer" in answer
-    assert "No evidence record was emitted" in evidence
+    assert "No result details" in evidence
     assert plot is None
 
 
@@ -452,6 +491,13 @@ def test_gemini_failure_stops_before_managed_fit_or_output(
     assert FakeClientRegressor.prediction_calls == 0
     assert managed_client["client_module"].reset_called
     assert not (tmp_path / "runs").exists()
+
+    visitor_outputs = _execution_error_outputs(raised.value)
+    visitor_text = "\n".join(value for value in visitor_outputs if isinstance(value, str))
+    assert "Analysis service is temporarily unavailable" in visitor_text
+    assert ErrorCode.LLM_API_FAILED.value not in visitor_text
+    assert raised.value.stage not in visitor_text
+    assert "synthetic Gemini failure" not in visitor_text
 
 
 def test_gemini_clarification_stops_without_exposing_model_reason(
@@ -539,16 +585,50 @@ def test_bounded_controls_reject_invalid_values_before_allocating_output(
                 "strong_iv", rows, seed, output_root=tmp_path, **managed_client
             )
         except ValueError as exc:
-            status, states, answer, evidence, plot, audit = _input_error_outputs(str(exc))
+            raw_message = str(exc)
+            status, states, answer, evidence, plot = _input_error_outputs(raw_message)
         else:  # pragma: no cover - makes an unexpected fit an explicit test failure
             raise AssertionError("Invalid controls unexpectedly executed the workflow.")
-        assert "Input rejected safely" in status
-        assert "No state trace" in states
+        assert "Input needs attention" in status
+        assert raw_message not in status
+        assert "No workflow progress" in states
         assert "No numerical answer" in answer
-        assert "No evidence record" in evidence
+        assert "No numerical result" in evidence
         assert plot is None
-        assert '"status": "input_rejected"' in audit
     assert not list(tmp_path.rglob("run-*"))
+
+
+def test_default_app_config_omits_machine_audit_payload_and_shows_build() -> None:
+    app = build_app(build_revision="deadbee")
+    config = json.dumps(app.config, sort_keys=True)
+
+    assert "Build deadbee" in config
+    for forbidden in (
+        "Agent trace",
+        "Machine-readable state and identity",
+        "specification_id",
+        "result_bundle_id",
+        "token_usage",
+        "state_events",
+    ):
+        assert forbidden not in config
+
+
+def test_build_revision_accepts_short_commit_and_safe_container_fallback(monkeypatch) -> None:
+    monkeypatch.setenv("DCFA_BUILD_REVISION", "deadbee")
+    assert resolve_build_revision() == "deadbee"
+    monkeypatch.setenv("DCFA_BUILD_REVISION", "unknown")
+    assert resolve_build_revision() == "unknown"
+
+
+def test_port_preflight_reports_an_existing_local_instance() -> None:
+    import socket
+
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as occupied:
+        occupied.bind(("127.0.0.1", 0))
+        port = occupied.getsockname()[1]
+        with pytest.raises(RuntimeError, match=f"127.0.0.1:{port} is already in use"):
+            require_available_port("127.0.0.1", port)
 
 
 def test_health_endpoint_identifies_development_service_and_security_headers(

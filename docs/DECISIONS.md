@@ -631,3 +631,32 @@ Do not rewrite an accepted entry when it changes; append a superseding entry.
 - Source: User-requested CSV demonstration on 2026-08-19; authenticated Prior
   Labs metadata and source inspection of official `tabpfn` 8.0.8 and 8.3.0
   wheels.
+
+## D-030 — Separate the website visitor projection from machine audit artifacts
+
+- Date: 2026-08-19
+- Status: Accepted local presentation boundary; Phase 0 implemented
+- Decision: Keep the default website language English and remove the complete
+  agent/audit JSON plus evidence handles from the visitor page. Project every
+  allowed claim type, support state, warning, and blocked error through explicit
+  human-readable mappings; any unknown code suppresses the number and visitor
+  plot. Apply three-significant-digit rounding only in the visitor projection,
+  while preserving the evidence-bound raw and six-significant-digit values in
+  artifacts. Generate a separate visitor plot from the validated result bundle
+  and leave the original identity-rich audit plot unchanged. Show a short build
+  revision and fail clearly when the configured local port is already occupied.
+- Rationale: A closed accordion is not an information boundary, and formatting
+  internal enums cannot supply stable product language. Two projections from one
+  validated bundle let a visitor understand the result without weakening the
+  evidence ledger, warning semantics, support gate, or independent verifier.
+- Affected tracks: Local TabCF Analyst presentation only. No Track T, H, or A
+  evidence, statistical estimator, Gemini request, managed TabPFN request, or
+  release protocol changes.
+- Verification impact: Exhaustively test the presentation maps and unknown-code
+  behavior; scan strong, weak, blocked, input, and service-failure visitor output
+  plus the default Gradio config for internal codes/IDs/trace fields; verify
+  visitor-to-ledger value parity, both plot files, artifact validation, port
+  conflict reporting, page build identity, full pytest, Ruff, format, and browser
+  views at desktop and 390 px.
+- Source: User-requested Phase 0 implementation of
+  `plan/Website_Demo_UI_UX_Optimization_Plan_ZH.md` on 2026-08-19.

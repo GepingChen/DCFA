@@ -292,7 +292,6 @@ def compile_website_question(
                 "schema": config["response_schema"],
             },
             generation_config=config["generation_config"],
-            labels={"project": "dcfa", "protocol": PROTOCOL_VERSION},
             input=model_input,
             timeout=float(config["timeout_seconds"]),
         )
@@ -322,13 +321,10 @@ def compile_website_question(
             stage="website_demo.gemini_output",
             context={"status": str(getattr(interaction, "status", None))},
         )
-    interaction_id = str(getattr(interaction, "id", ""))
-    if not interaction_id:
-        raise DCFAError(
-            ErrorCode.LLM_OUTPUT_INVALID,
-            "Gemini did not return an interaction ID.",
-            stage="website_demo.gemini_output",
-        )
+    raw_interaction_id = getattr(interaction, "id", None)
+    interaction_id = (
+        raw_interaction_id if isinstance(raw_interaction_id, str) and raw_interaction_id else None
+    )
     proposal = _parse_proposal(getattr(interaction, "output_text", None))
     objective, x_label, comparison_label, level = _validate_proposal(proposal)
     trace_body = {

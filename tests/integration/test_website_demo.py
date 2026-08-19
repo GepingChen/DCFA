@@ -60,7 +60,7 @@ class FakeClientRegressor:
         matrix = np.asarray(features, dtype=float)
         means = np.column_stack([np.ones(len(matrix)), matrix]) @ self.coefficients
         type(self).prediction_calls += 1
-        self._last_meta = {"package_version": "8.0.8"}
+        self._last_meta = {"package_version": "8.3.0"}
         if output_type == "mean":
             return means
         assert output_type == "full"
@@ -94,12 +94,12 @@ class FakeGeminiUsage:
 
 class FakeGeminiInteraction:
     status = "completed"
-    id = "interaction_website_test"
     model = "gemini-3.6-flash"
     usage = FakeGeminiUsage()
 
     def __init__(self, output_text: str) -> None:
         self.output_text = output_text
+        self.id = ""
 
 
 class FakeGeminiInteractions:
@@ -219,7 +219,9 @@ def test_supported_website_scenario_returns_real_state_trace_and_evidence(
     llm_call = managed_client["gemini_client"].interactions.calls[0]
     assert llm_call["store"] is False
     assert llm_call["response_format"]["mime_type"] == "application/json"
+    assert llm_call["generation_config"]["max_output_tokens"] == 1024
     assert "response_mime_type" not in llm_call
+    assert "labels" not in llm_call
     model_input = json.loads(llm_call["input"])
     assert set(model_input) == {
         "available_roles",
@@ -231,6 +233,7 @@ def test_supported_website_scenario_returns_real_state_trace_and_evidence(
     assert "rows" not in llm_call["input"]
     assert result.llm_trace["data_rows_sent_to_gemini"] == 0
     assert result.llm_trace["actual_intervention_values_sent_to_gemini"] == 0
+    assert result.llm_trace["interaction_id"] is None
     assert (result.output_dir / "gemini_compilation.json").is_file()
     numerical_core = json.loads(
         (result.output_dir / "numerical_core.json").read_text(encoding="utf-8")

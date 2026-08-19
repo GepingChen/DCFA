@@ -569,3 +569,65 @@ Do not rewrite an accepted entry when it changes; append a superseding entry.
   fails unless both external credentials are valid.
 - Source: User request on 2026-08-15 and integrated plan sections 3.2, 8.3,
   8.6, 12.5, and 13.4.
+
+## D-028 — Repair the website Gemini request for the Developer API
+
+- Date: 2026-08-19
+- Status: Accepted compatibility repair; authenticated CSV rerun verified
+- Decision: Omit the optional `labels` request metadata because the Gemini
+  Developer API rejects it as Enterprise-only, and raise the bounded structured
+  output budget from 384 to 1024 tokens so medium thinking leaves enough room
+  for the required JSON object. Accept a completed stateless response without a
+  server interaction ID and record that field as null instead of weakening the
+  `store=false` privacy boundary; the local trace remains content-addressed.
+  Preserve the model, prompt, response schema, one-request limit, symbolic
+  intervention contract, and all deterministic numerical and evidence gates.
+  The profile's content hash records the repaired request exactly.
+- Rationale: An authenticated website CSV run failed before analysis on the
+  unsupported `labels` field. After removing it, a diagnostic request used 366
+  thought tokens and exhausted the former output budget, returning an incomplete
+  interaction after only 14 visible output tokens. Neither failure reached the
+  managed TabPFN service or emitted a numerical result.
+- Affected tracks: Local TabCF Analyst presentation and development mechanics
+  only; no locked Track T, H, or A protocol changes.
+- Verification impact: Assert the Developer API request has no `labels`, retains
+  unified structured output, uses the repaired token budget, and accepts the
+  observed completed stateless response without an ID; rerun the full website
+  integration test and one authenticated standard-CSV workflow, then independently
+  verify the resulting artifact.
+- Source: User-requested CSV plus language-prompt demo verification on
+  2026-08-19; current `google-genai==2.18.1` SDK behavior and authenticated
+  Gemini Developer API responses.
+
+## D-029 — Version the managed demo profile for TabPFN service 8.3.0
+
+- Date: 2026-08-19
+- Status: Accepted development-profile update; authenticated full rerun verified
+- Decision: Replace `tabpfn_client_managed_demo_v1`, which fails closed on the
+  retired service package 8.0.8, with `tabpfn_client_managed_demo_v2`, which
+  still pins `tabpfn-client==0.3.3`, model `v2.5_default`, one estimator,
+  thinking mode off, and now requires observed service package 8.3.0. Retain
+  the exact NumPy CDF implementation and all row, metadata, evidence, and
+  development-only gates.
+- Rationale: The managed service now reports package 8.3.0 and correctly caused
+  v1 to block before a numerical answer. The official PyPI wheels for 8.0.8 and
+  8.3.0 have SHA-256 values `b6c945c8bf23b86f595697fcfa4ce58d84105441baf7e1313edc7865d7d29658`
+  and `650f16b7bc8df2e3218d47a221216c93bc3b6aca7bb2aeb6ea1ab05405768ddc`.
+  Direct source comparison found the complete `FullSupportBarDistribution.cdf`
+  method byte-for-byte identical and confirmed that full regression output
+  retains the probability-to-logit and borders/logits contract used by DCFA.
+- Affected tracks: Local TabCF Analyst presentation and managed development
+  mechanics only. Prior v1 artifacts remain immutable and development-only; no
+  locked Track T, H, or A result is promoted or replaced.
+- Verification impact: Update fake-service metadata tests to 8.3.0, run unit
+  and integration suites for the managed adapter and website demo, then execute
+  and independently verify one fresh authenticated standard-CSV v2 artifact.
+- Authenticated result: The fixed 128-row standard CSV completed one Gemini
+  compile and three managed predictions with no retry. Independent artifact
+  verification returned `status=valid` for result bundle
+  `bundle_e4c5af51bae899cbcf213711` and evidence
+  `evidence_545dc49741f6e4c6b1d9223f`; the result remains development-only and
+  preserves its empirical warnings.
+- Source: User-requested CSV demonstration on 2026-08-19; authenticated Prior
+  Labs metadata and source inspection of official `tabpfn` 8.0.8 and 8.3.0
+  wheels.

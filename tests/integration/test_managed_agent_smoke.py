@@ -38,7 +38,7 @@ class FakeClientRegressor:
         means = design @ self.coefficients
         type(self).prediction_calls += 1
         self._last_meta = {
-            "package_version": "8.0.8",
+            "package_version": "8.3.0",
             "task": "regression",
             "test_set_num_rows": len(matrix),
             "test_set_num_cols": matrix.shape[1],
@@ -110,4 +110,4 @@ def test_fixed_managed_agent_smoke_is_evidence_linked_and_batched(tmp_path) -> N
     service_event = next(item for item in audit if item["event_type"] == "managed_service_observed")
     details = dict(service_event["details"])
     assert details["api_prediction_calls"] == "3"
-    assert details["request_1_service_package_version"] == "8.0.8"
+    assert details["request_1_service_package_version"] == "8.3.0"

@@ -27,9 +27,9 @@ from dcfa.tabcf_iv.backend import (
     _distribution_eval_matrix,
 )
 
-MANAGED_CLIENT_PROTOCOL_VERSION = "tabpfn_client_managed_demo_v1"
+MANAGED_CLIENT_PROTOCOL_VERSION = "tabpfn_client_managed_demo_v2"
 MANAGED_CLIENT_VERSION = "0.3.3"
-MANAGED_SERVICE_PACKAGE_VERSION = "8.0.8"
+MANAGED_SERVICE_PACKAGE_VERSION = "8.3.0"
 MANAGED_MODEL_PATH = "v2.5_default"
 MANAGED_N_ESTIMATORS = 1
 MANAGED_MAX_TRAIN_ROWS = 256
@@ -52,7 +52,7 @@ def _numpy_bar_distribution_cdf(
     logits: np.ndarray,
     evaluation_values: np.ndarray,
 ) -> np.ndarray:
-    """Match TabPFN 8.0.8 ``BarDistribution.cdf`` without importing Torch."""
+    """Match TabPFN 8.3.0 ``BarDistribution.cdf`` without importing Torch."""
     border_values = np.asarray(borders, dtype=float)
     transported_logits = np.asarray(logits, dtype=float)
     evaluation = np.asarray(evaluation_values, dtype=float)
@@ -67,7 +67,7 @@ def _numpy_bar_distribution_cdf(
     if np.any(np.isposinf(transported_logits)):
         raise ValueError("Managed TabPFN logits contain positive infinity.")
 
-    # TabPFN 8.0.8 returns log(probabilities), so exact zero probabilities are
+    # TabPFN 8.3.0 returns log(probabilities), so exact zero probabilities are
     # ``-inf``. The service JSON represents those values as null and client
     # 0.3.3 materializes null as NaN. Restore only that transport case, then
     # require at least one genuine finite logit in every row.
@@ -391,7 +391,7 @@ class TabPFNClientBackend:
             seed=self.seed,
             package_versions=(("tabpfn-client", self.client_version),),
             cdf_rule=(
-                "NumPy parity with TabPFN 8.0.8 BarDistribution.cdf over managed borders and "
+                "NumPy parity with TabPFN 8.3.0 BarDistribution.cdf over managed borders and "
                 "logits; client JSON null logits restore exact zero probability"
             ),
             quantile_monotonicity_rule=(

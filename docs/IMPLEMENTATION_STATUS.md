@@ -28,7 +28,7 @@ independent of the outer Git commit identity.
 Current protocols:
 
 - public TabCF specification: `tabcf_iv_v1`;
-- managed-client demo: `tabpfn_client_managed_demo_v1`;
+- managed-client demo: `tabpfn_client_managed_demo_v2`;
 - Hillstrom policy: `hillstrom_policy_v5`;
 - Hillstrom semi-synthetic: `hillstrom_semisynthetic_v6`;
 - Track T fallback development evaluation:

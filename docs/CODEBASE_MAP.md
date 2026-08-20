@@ -18,6 +18,10 @@ for current behavior.
 | `src/dcfa/agent/` | Explicit compiler/state/runtime, identical-recorded-tool harness, and bounded Gemini live-smoke adapter |
 | `src/dcfa/app.py` | Public TabCF-only lazy Gradio shell |
 | `src/dcfa_website_demo/` | Visitor-safe presentation mappings/plot, one-call Gemini compiler, strict local CSV ingress, and health-checkable ASGI wrapper over the typed public runtime; outside the statistical source hash |
+| `src/dcfa_showcase/` | Offline freeze/export/verifier for the hash-bound public prepared replay; outside the statistical source hash |
+| `src/dcfa_colab/` | Secret-scoped notebook adapter, local CSV preflight, verified archive export, and notebook static validator; outside the statistical source hash |
+| `showcase/prepared_demo_v1/` | Committed public-safe prompt, synthetic CSV, visitor projection, plot, and verification manifest |
+| `notebooks/DCFA_Custom_Analysis_Colab.ipynb` | Pinned user-owned Colab workflow with no saved outputs or public web-service path |
 | `evaluation/agent_benchmark/cases/` | Frozen 24-case Track A MVP fixture |
 | `evaluation/configs/` | Fail-closed locked TabPFN runtime template, frozen Gemini smoke manifest, and versioned website Gemini profile |
 | `tests/` | Unit, leakage, statistical, agent-behavior, and integration gates |
@@ -126,11 +130,11 @@ saved trace records the prompt/model/source identities, API interaction ID,
 token usage, latency, list-price estimate, proposal, and evidence-linked query;
 its verifier rebinds the trace to the manifest and independently validates the
 underlying analysis directory without another model call or refit. This one
-clean smoke is not the paired 24-case live Track A comparison. The first
-authenticated request was rejected because the request included the removed
+clean smoke is not the paired 24-case live Track A comparison. The original
+authenticated smoke request was rejected because it included the removed
 top-level `response_mime_type`; the implementation now follows the unified
-`response_format` contract and passes offline SDK serialization, but that
-corrected request has not yet been sent.
+`response_format` contract. The separately versioned website profile has since
+completed an authenticated standard-CSV compile and managed analysis.
 
 ## Verified commands
 
@@ -144,6 +148,7 @@ corrected request has not yet been sent.
 .venv/bin/dcfa verify-gemini-agent-smoke <run-directory>
 .venv/bin/dcfa verify-artifacts <run-directory>
 .venv/bin/dcfa verify-agent-benchmark <benchmark-json>
+python -m dcfa_showcase verify showcase/prepared_demo_v1
 ```
 
 See the README for complete runnable examples. A smoke test proves mechanics,
@@ -158,7 +163,7 @@ summary/contrast; local deterministic code maps labels to actual values, and
 Gemini never sees rows or calculates the result. Clarification, block, API,
 schema, or credential failures stop with no retry or non-LLM fallback.
 
-The demo accepts synthetic TabCF-IV scenarios plus a strictly bounded, locally
+The local demo accepts synthetic TabCF-IV scenarios plus a strictly bounded, locally
 selected Y/X/Z CSV and uses the managed `tabpfn-client` profile. Its explicit
 presentation mappings project approved claim, support, warning, and error
 semantics from the validated query while unknown codes fail closed. The visitor
@@ -167,8 +172,8 @@ plot, evidence ledger, and agent/LLM audit remain artifact-only. The default DOM
 receives no trace, specification/bundle/evidence IDs, backend error context, or
 service metadata. There is no Hillstrom, W, general-router, or sklearn fallback
 route. CSV confirmation distinguishes the question sent to Google from selected
-rows sent to Prior Labs. The static personal site can only embed or link a
-separately hosted instance; it cannot execute this Python service on GitHub Pages.
+rows sent to Prior Labs. The approved public architecture uses the stored replay
+and user-owned Colab workflow below rather than this local service.
 
 The website projection is result-first: an approved Gemini symbolic proposal is
 matched to the validated query to phrase a direction-aware answer without
@@ -190,6 +195,26 @@ atomically and never overwrite prior material. The container runs as UID 10001,
 stores generated artifacts under a dedicated volume, disables Gradio monitoring
 and public sharing, and remains a local deployment artifact rather than a public
 release authorization.
+
+The public portfolio path is a separate stored projection. `dcfa_showcase`
+freezes the exact prompt, redistributable synthetic CSV, profiles, source hash,
+and DCFA release commit before one live run. Export first invokes the independent
+full-artifact verifier, reconstructs the typed bundle and evidence ledger, renders
+the visitor plot from that validated pair, and writes only human-readable support,
+warning, answer, release, and asset-hash fields. Its offline verifier rejects
+source/profile drift, asset tampering, private paths, credential-like strings,
+machine audit identifiers, or visitor rounding that no longer matches the raw
+verified value.
+
+`dcfa_colab` reuses the strict CSV ingress and typed managed runtime without
+starting Gradio or any tunnel. It checks both user-owned secret values and two
+separate transfer confirmations before provider construction or output allocation,
+writes credentials only to owner-only temporary files, resets the managed client,
+independently verifies successful artifacts, scans them for both secret byte
+strings, and creates a path-safe downloadable ZIP. The committed notebook pins a
+full DCFA commit and source-tree hash, has no saved outputs, and documents runtime
+cleanup. These presentation paths remain `development_only` and add no evidence
+track.
 
 ## Unresolved inputs and decisions
 

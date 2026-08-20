@@ -691,3 +691,37 @@ Do not rewrite an accepted entry when it changes; append a superseding entry.
   weak/outside-support preservation, and desktop plus 390 px browser layouts.
 - Source: User-requested Phase 1 implementation of
   `plan/Website_Demo_UI_UX_Optimization_Plan_ZH.md` on 2026-08-19.
+
+## D-032 — Publish a static prepared replay and move custom execution to user-owned Colab
+
+- Date: 2026-08-19
+- Status: Accepted public presentation architecture; implementation release-bound
+- Decision: Supersede the unimplemented Hugging Face/public-service direction with
+  two explicit paths. GitHub Pages receives one hash-bound, precomputed synthetic
+  replay with no runtime, provider client, credential input, storage, or inference.
+  Custom CSV analysis runs only inside a visitor's own Colab notebook, which pins
+  the approved DCFA commit, uses the visitor's Colab Secrets, requires separate
+  Google-question and Prior-Labs-row transfer confirmations, and returns an
+  independently verified downloadable artifact. The local Gradio service remains
+  a local operator workflow and is not embedded or publicly hosted.
+- Rationale: A static replay is stable, zero-cost at replay time, and compatible
+  with GitHub Pages. User-owned notebook execution removes owner key/quota/storage
+  exposure without disguising Colab as a public application server or weakening
+  the existing typed runtime.
+- Affected tracks: TabCF Analyst public presentation only. Prepared and Colab
+  results remain `local_development / tabpfn / development_only`; no Track T, H,
+  or A evidence is created or promoted.
+- Verification impact: Freeze prompt/CSV/profile/source identity before the live
+  run; independently verify the full artifact; require raw-value, warning,
+  support, and plot projection parity; reject tampering and private content;
+  statically validate a full-commit-pinned, output-free notebook; test missing
+  secrets/consents before provider construction; and prove the static site has no
+  provider dependency or request path.
+- Platform review: Current official documentation still describes GitHub Pages as
+  static hosting, Colab as interactive notebook compute with unguaranteed limits
+  and restrictions on bypassing the notebook UI, Gemini keys as protected caller
+  credentials, and `tabpfn-client` as a cloud service that receives user data and
+  consumes request credits.
+- Source: Approved
+  `plan/GitHub_Pages_Colab_Public_Demo_Release_Plan_ZH.md` v2.0 and user request to
+  implement that plan on 2026-08-19.

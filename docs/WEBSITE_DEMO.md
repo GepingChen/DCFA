@@ -1,9 +1,15 @@
-# Development workflow demo
+# Local, static, and Colab demo paths
 
-The portfolio demo is implemented as a repeatable local service, but it is
-intentionally not a public TabCF deployment. It is a presentation layer over
-the existing typed agent runtime and deterministic TabCF Analyst development
-workflow.
+DCFA now has three deliberately different presentation paths:
+
+1. the repeatable local Gradio service for operator review;
+2. a precomputed, independently verified static replay for GitHub Pages;
+3. a pinned notebook for custom analysis in a visitor's own Colab runtime.
+
+Only the latter two are linked from the public portfolio. The static route makes
+no provider call. Colab custom execution uses the visitor's accounts, secrets,
+quota, ephemeral filesystem, and explicit transfer confirmations. None of the
+three paths is locked Track T evidence or a general causal-analysis service.
 
 ## What is ready
 
@@ -87,35 +93,51 @@ service metadata, and the Gemini trace remain available only in the local
 artifact and independent verifier. The default page shows “Result verified” and
 never includes the complete audit JSON, even in a closed accordion.
 
-## Static-site architecture
+## Static prepared-replay architecture
 
-The personal site is a static Astro build on GitHub Pages, so it cannot execute
-the Python agent itself. The intended boundary is:
+The personal site is a static Astro build on GitHub Pages. It receives only the
+committed public-safe projection:
 
 ```text
-Astro project page on GitHub Pages
-  -> iframe or direct demo link
-  -> separately hosted Gradio service
-  -> bounded Gemini specification compiler (question only)
-  -> typed DCFA agent runtime
-  -> deterministic TabCF IV adapter -> managed TabPFN (Y/X/Z rows)
+one frozen prompt + redistributable synthetic CSV
+  -> one independently verified live DCFA run before publication
+  -> hash-bound visitor result and plot
+  -> Astro build
+  -> GitHub Pages replay with zero provider calls
 ```
 
-An Astro component is prepared at
-`/Users/chgp/Dropbox/nova/website/src/components/DcfaDemoEmbed.astro`. It is not
-imported by any public page yet. After a reviewed HTTPS demo endpoint exists, a
-project page can use it as follows:
+The source bundle lives in `showcase/prepared_demo_v1/`. Freeze refuses to
+overwrite an existing directory, and export refuses to replace an existing
+visitor projection. Generate a new version rather than tuning or overwriting v1.
+Offline verification never imports Gemini or `tabpfn-client`:
 
-```astro
----
-import DcfaDemoEmbed from '../components/DcfaDemoEmbed.astro';
----
-
-<DcfaDemoEmbed demoUrl="https://reviewed-demo-host.example/" />
+```bash
+python -m dcfa_showcase verify showcase/prepared_demo_v1
 ```
 
-Use a direct-link fallback if the eventual host disallows framing. Do not point
-the component at a temporary share URL.
+The website copies the approved CSV, prompt, plot, and public verification
+summary byte-for-byte. Its build-time JSON binds the DCFA release commit and the
+hash of every copied asset. The page uses native static HTML disclosure rather
+than simulating a live request; the answer and limitations remain in the document
+without JavaScript.
+
+## User-owned Colab workflow
+
+`notebooks/DCFA_Custom_Analysis_Colab.ipynb` is the only custom-analysis link on
+the public page. It installs one exact release commit, checks the DCFA source-tree
+hash, reads `DCFA_GEMINI_API_KEY` and `DCFA_TABPFN_TOKEN` from Colab Secrets only
+when the readiness cell runs, preflights one bounded CSV locally, and requires
+separate confirmations before the two external transfers.
+
+The adapter creates owner-only temporary credential files only because the
+existing inspected provider boundaries accept files. They are deleted when the
+call returns or raises. A successful result is independently verified, scanned
+for both exact credential values, and archived for download. Missing secrets,
+missing consent, unsupported input, outside support, provider failure, or
+evidence failure returns no number and never selects sklearn. The notebook does
+not mount Google Drive, launch Gradio, create a tunnel, expose SSH, or promise a
+free or persistent runtime. After download, the user deletes the uploaded CSV and
+chooses **Runtime → Disconnect and delete runtime**.
 
 ## Service and container operation
 
@@ -220,23 +242,11 @@ verify fresh strong/weak artifact directories with `dcfa verify-artifacts`.
 
 ## Publication gate
 
-The current local execution is real managed TabPFN mechanics but explicitly
-`local_development / tabpfn / development_only`. It is not bitwise-reproducible
-Track T evidence and is not eligible for a Track T headline or finished public
-causal-demo claim. Before linking the personal website to a released TabCF demo:
-
-1. supply and validate the frozen real TabPFN runtime, checkpoint hash, and
-   image digest;
-2. rerun and independently verify the chosen public preset under that locked
-   backend;
-3. preserve evidence IDs, warning codes, and source-artifact links in the
-   operator artifact while keeping equivalent warnings and support blocking in
-   the hosted visitor view;
-4. review the final HTTPS origin, framing policy, latency, concurrency limit,
-   privacy text, and mobile layout;
-5. add the reviewed URL to the personal-site project page and run that site's
-   `npm run verify` gate before any authorized publication.
-
-Until those steps are complete, this code is suitable for local review,
-screenshots, and a clearly labeled engineering walkthrough—not a published
-TabCF result.
+Publishing the website tool does not publish a scientific result. Release requires
+the frozen current-source live artifact, public projection verification, notebook
+static validation, cross-repository asset hashes, no-secret/private-path scans,
+desktop/mobile/keyboard/reduced-motion/no-JavaScript review, both repository
+quality gates, verified pushes, and the reviewed live GitHub Pages route. Public
+copy must keep the replay precomputed and all prepared/Colab output
+`development_only`. A locked Track T headline remains blocked on a reproducible
+real TabPFN runtime, checkpoint hash, and image digest.

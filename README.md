@@ -138,8 +138,15 @@ visitor stages replace raw runtime events, and blocked runs identify the stopped
 stage and next action without exposing internal codes. Both submit buttons are
 disabled during a queued run, and the initial page renders no empty result cards.
 See [`docs/WEBSITE_DEMO.md`](docs/WEBSITE_DEMO.md) for the health-checkable
-container workflow, cloud-data boundary, static Astro embed boundary, and release
-prerequisites.
+container workflow, cloud-data boundary, static prepared-replay contract, and
+user-owned Colab workflow.
+
+The public portfolio route uses a different boundary from the local service. GitHub
+Pages serves only a hash-bound, precomputed replay with no Python runtime, provider
+client, credential input, or analysis request. Custom analysis runs only in a
+visitor's own Colab runtime with separately confirmed Google and Prior Labs
+transfers. Both paths remain synthetic or user-authorized `development_only`
+demonstrations and establish no new Track T, H, or A evidence.
 
 ## Stable commands
 
@@ -175,6 +182,9 @@ dcfa managed-agent-smoke \
 # Independent verification never refits.
 dcfa verify-artifacts artifacts/local/hillstrom-smoke-v6
 dcfa verify-agent-benchmark artifacts/local/agent-benchmark-recorded-v5.json
+
+# Prepared static replay and notebook release gates; verification is offline.
+python -m dcfa_showcase verify showcase/prepared_demo_v1
 
 # Quality gates.
 .venv/bin/ruff check src tests

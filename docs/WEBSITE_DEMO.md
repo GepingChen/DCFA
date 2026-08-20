@@ -6,10 +6,12 @@ DCFA now has three deliberately different presentation paths:
 2. a precomputed, independently verified static replay for GitHub Pages;
 3. a pinned notebook for custom analysis in a visitor's own Colab runtime.
 
-Only the latter two are linked from the public portfolio. The static route makes
-no provider call. Colab custom execution uses the visitor's accounts, secrets,
+The static route is linked from the public portfolio and makes no provider call.
+The Colab implementation uses the visitor's accounts, secrets,
 quota, ephemeral filesystem, and explicit transfer confirmations. None of the
 three paths is locked Track T evidence or a general causal-analysis service.
+Its public CTA remains withheld until the DCFA repository or an approved mirror
+is anonymously readable and a clean public runtime is verified.
 
 ## What is ready
 
@@ -123,8 +125,8 @@ without JavaScript.
 
 ## User-owned Colab workflow
 
-`notebooks/DCFA_Custom_Analysis_Colab.ipynb` is the only custom-analysis link on
-the public page. It installs one exact release commit, checks the DCFA source-tree
+`notebooks/DCFA_Custom_Analysis_Colab.ipynb` is the implemented custom-analysis
+source. It installs one exact release commit, checks the DCFA source-tree
 hash, reads `DCFA_GEMINI_API_KEY` and `DCFA_TABPFN_TOKEN` from Colab Secrets only
 when the readiness cell runs, preflights one bounded CSV locally, and requires
 separate confirmations before the two external transfers.
@@ -138,6 +140,13 @@ evidence failure returns no number and never selects sklearn. The notebook does
 not mount Google Drive, launch Gradio, create a tunnel, expose SSH, or promise a
 free or persistent runtime. After download, the user deletes the uploaded CSV and
 chooses **Runtime → Disconnect and delete runtime**.
+
+Anonymous access to the expected `GepingChen/DCFA` GitHub notebook path returned
+404 during publication QA. Colab can render its outer application URL without
+proving that the notebook source is retrievable. The public page therefore shows
+`Public Colab access pending` without a link. Changing repository visibility or
+creating a public mirror requires an explicit user decision; after that change,
+repeat a clean-runtime acceptance before restoring the CTA.
 
 ## Service and container operation
 

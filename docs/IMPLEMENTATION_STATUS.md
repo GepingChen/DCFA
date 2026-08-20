@@ -57,7 +57,7 @@ Current protocols:
 | Track H policy | Training-only fit, validation-only best-uniform/threshold selection, train+validation refit, immutable policy freeze before test access, DR primary plus IPW/direct sensitivity, paired contrasts, randomized-arm effects, costs/capacity/allocation, 95% influence-score intervals, warnings, assumptions, and release gate | No approved real file, final one-time test run, real held-out policy value, or individual oracle claim |
 | H semi-synthetic | Four prespecified DGPs, training-covariate resampling, same-constraint oracle, 50 replications per scenario, value/regret/accuracy/confusion/abstention/selective-regret/fallback/calibration/constraint metrics, and 84 evidence records | Covariates come from a development fixture, so the result is explicitly not Hillstrom-calibrated |
 | Track A | Explicit state machine/compiler/runtime; 24-case recorded benchmark; bounded Gemini 3.6 Flash clean-case implementation; frozen prompt/model/schema; no-row symbolic input; token/latency/list-price trace contract; evidence agreement verifier | The first live request failed before analysis on a removed API field; corrected serialization is offline-only, and no paired live fixed/full comparison exists |
-| Public UI | Local Gradio operator shell plus a hash-bound static prepared replay and pinned user-owned Colab notebook; the static path has no provider/runtime/storage code, while Colab preserves one-call/no-fallback, consent, evidence, and secret-scan gates | Prepared and Colab results remain `development_only`; production Pages deployment and one manual clean Colab runtime remain release QA rather than scientific evidence |
+| Public UI | Local Gradio operator shell plus a released hash-bound static prepared replay and pinned user-owned Colab notebook; the static path has no provider/runtime/storage code, while Colab preserves one-call/no-fallback, consent, evidence, and secret-scan gates | Static Pages replay is live; public Colab/GitHub CTAs are withheld because anonymous notebook-source access returns 404. Changing repository visibility or using a public mirror needs explicit authorization, then a clean Colab runtime QA |
 
 The independent artifact verifier now checks saved file hashes and also
 recomputes protocol versions, marker contracts, source identity,
@@ -199,9 +199,11 @@ optimal treatment. Negative, null, deferred, and blocked results remain visible.
 
 ## Next authorized step
 
-For the public website tool, the remaining external check is one clean Google
-Colab runtime walkthrough with the user's own Secrets followed by production
-GitHub Pages revision verification. For a comparative live Track A result, the
+For the public website tool, the next decision is explicit authorization either
+to make `GepingChen/DCFA` anonymously readable or to use a versioned public
+mirror. After that, run one clean Google Colab walkthrough with the user's own
+Secrets before restoring the CTA. The static GitHub Pages replay is already
+deployed and hash-verified. For a comparative live Track A result, the
 next step remains a frozen paired Gemini
 fixed-workflow/full-agent protocol and grader over the 24 cases.
 For publishable estimator evidence, the highest-priority path remains the frozen

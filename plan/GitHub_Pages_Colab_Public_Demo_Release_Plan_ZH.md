@@ -2,7 +2,7 @@
 title: "DCFA GitHub Pages + Colab 正式展示版发布计划"
 language: "zh-CN"
 version: "2.0"
-status: "Approved; implementation not started"
+status: "Static replay released; public Colab entry blocked on anonymous repository access"
 approved_on: "2026-08-19"
 supersedes: "Hugging_Face_Space_Public_Demo_Release_Plan_ZH.md at commit cea25b0"
 ui_dependencies: "Phase 0 b4d3e7d and Phase 1 76ca4bc are complete"
@@ -11,6 +11,7 @@ affected_repositories:
   - "/Users/chgp/Dropbox/nova/website"
 affected_surface: "Static portfolio replay on GitHub Pages and user-owned Colab execution"
 affected_evidence_tracks: "None; no new Track T, H, or A evidence"
+implementation_updated_on: "2026-08-19"
 ---
 
 # DCFA GitHub Pages + Colab 正式展示版发布计划
@@ -535,3 +536,26 @@ These platform behaviors may change. Recheck on implementation and release day�
 
 If official behavior conflicts with this plan, append a new architecture decision and version this plan before
 implementation. Do not introduce an undocumented fallback or a free-runtime policy workaround。
+
+## 13. 2026-08-19 实施记录
+
+- GC0：完成。追加 D-032，冻结 `prepared_demo_v1`、公开 projection schema、两个 provider
+  profile、DCFA source hash 与 release commit。
+- GC1：完成。唯一一次 live run 使用 1 次 Gemini compile 与 3 次 managed TabPFN
+  predictions；完整 artifact 和公开 projection 均独立验证为 valid。公开 release hash 为
+  `sha256:4b686a1ee94b52ef573e84c3d0f71233bba11802604a4787bbbcd2c7d35c50af`。
+- GC2：代码、fake-provider integration、notebook static validation、secret/consent/archive gates
+  完成；真实 clean Colab runtime 尚未人工执行。
+- GC3：完成。个人站 `/projects/dcfa/`、prepared replay、hash-bound assets、项目卡和 release
+  validator 已实现；旧 iframe component 已删除。
+- GC4：静态页面的 1280 px/390 px、focus、heading/landmark、plot alt、reduced-motion、无
+  overflow、零 iframe/零脚本/零 console error 与 production asset hash 已验证。Clean Colab
+  runtime 未验证。
+- GC5：两个仓库均已普通 commit/push 并核对 remote ref；GitHub Pages Actions 成功部署静态
+  replay。匿名访问 `https://github.com/GepingChen/DCFA/...ipynb` 返回 404，因此 Colab 虽能
+  打开外壳，不能为公众取得 notebook source。按 hard gate，公开 Colab/GitHub CTA 已撤下，
+  未把双入口计划报告为完成。
+
+解除剩余阻塞需要用户明确选择并授权以下之一：将 `GepingChen/DCFA` 改为 public，或批准一个
+新的公开 mirror/source path 并相应 version 本计划。仓库可匿名读取后仍需完成一次 clean Colab
+runtime 验收；不得仅凭本地 fake-provider tests 恢复公开 CTA。

@@ -1,0 +1,57 @@
+{
+  "dcfa_release_commit": "87b2b750d1c9a83497f5b16a7b0597758214d20a",
+  "dcfa_source_tree_hash": "sha256:e1c86e9e7bd470f6f6e5c9d5ef9beaad8161e653355002d4ca47555484879791",
+  "gemini_profile": {
+    "actual_intervention_values_sent": 0,
+    "data_rows_sent": 0,
+    "model": "gemini-3.6-flash",
+    "profile_id": "website_demo_gemini_v1",
+    "profile_sha256": "sha256:906282df0e0ac4135a88b05eb974d93e377c3dce56090e4b8eb2dcf25b066fa1",
+    "request_limit": 1
+  },
+  "input": {
+    "baseline_covariates": [],
+    "csv_file": "prepared_demo.csv",
+    "csv_sha256": "sha256:8916a6a7e3699514ba4f5d37f32bc1f46a0ec60cfcd8ef85c206de82a16187cb",
+    "intervention_labels": [
+      "low",
+      "center",
+      "high"
+    ],
+    "prompt_file": "prepared_prompt.txt",
+    "prompt_sha256": "sha256:27e339011fd8e6833dc70745c1b91060c2b411aec3e317e986aa0a65153145c9",
+    "roles": {
+      "instrument": "Z",
+      "outcome": "Y",
+      "treatment": "X"
+    },
+    "row_count": 128,
+    "seed": 20260813,
+    "treatment_type": "continuous"
+  },
+  "managed_tabpfn_profile": {
+    "client_version": "0.3.3",
+    "expected_service_package_version": "8.3.0",
+    "fallback": null,
+    "model": "v2.5_default",
+    "profile_id": "tabpfn_client_managed_demo_v2",
+    "profile_sha256": "sha256:6854e0162d8a5a03aabdd04eaebc87383f1dff3e98e96146cb851e33aa3e9f5a",
+    "thinking_mode": false
+  },
+  "prepared_demo_id": "prepared_demo_v1",
+  "public_projection": {
+    "numeric_source": "validated_result_bundle_only",
+    "required_disclosure": "This replays a previously executed and independently verified workflow. No API call is made.",
+    "required_stage_count": 4,
+    "schema_version": "dcfa_prepared_visitor_v1",
+    "unknown_content_behavior": "suppress_numeric_result"
+  },
+  "required_run_behavior": {
+    "development_boundary_preserved": true,
+    "no_prompt_csv_or_seed_tuning_after_run": true,
+    "query_count": 1,
+    "status": "completed",
+    "warning_preservation_required": true
+  },
+  "schema_version": "dcfa_prepared_demo_manifest_v1"
+}

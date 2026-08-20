@@ -1,0 +1,94 @@
+{
+  "data": {
+    "preview": [
+      {
+        "X": 1.1983791944311608,
+        "Y": 1.693719637563866,
+        "Z": 0.9240368178997145
+      },
+      {
+        "X": -2.755520675095431,
+        "Y": -2.910121961122634,
+        "Z": -0.2764599866017101
+      },
+      {
+        "X": -0.6446037437857568,
+        "Y": -0.5550527426215259,
+        "Z": -0.5918375382011527
+      },
+      {
+        "X": 0.4470337517099662,
+        "Y": 1.1038710949793584,
+        "Z": 0.4619907448571252
+      },
+      {
+        "X": 0.26934392908044524,
+        "Y": 1.1260445530393872,
+        "Z": 0.765594472329074
+      }
+    ],
+    "roles": {
+      "X": "Continuous treatment",
+      "Y": "Continuous outcome",
+      "Z": "Scalar instrument"
+    },
+    "row_count": 128,
+    "source": "Redistributable synthetic continuous-treatment IV example"
+  },
+  "development_boundary": "Synthetic, local-development demonstration using managed TabPFN. It is not locked Track T evidence, proof of IV validity, or production causal advice.",
+  "disclosure": "This replays a previously executed and independently verified workflow. No API call is made.",
+  "plot": {
+    "alt": "Two-panel verified synthetic result: estimated outcome distributions and mean and quantile summaries across supported treatment levels.",
+    "file": "visitor_plot.png"
+  },
+  "prepared_demo_id": "prepared_demo_v1",
+  "question": "How does the median outcome change between a low and a high supported treatment intervention?",
+  "release": {
+    "dcfa_commit": "87b2b750d1c9a83497f5b16a7b0597758214d20a",
+    "dcfa_source_sha256": "sha256:e1c86e9e7bd470f6f6e5c9d5ef9beaad8161e653355002d4ca47555484879791"
+  },
+  "result": {
+    "answer": "From the low to the high treatment level, the estimated median outcome increases by 4.47 outcome units.",
+    "claim_title": "Estimated outcome quantile difference",
+    "support": {
+      "explanation": "The requested treatment levels passed the demo's empirical support checks.",
+      "title": "Supported by the observed data"
+    },
+    "units": "outcome units",
+    "value_display": "4.47",
+    "value_raw": 4.46969806321701,
+    "warnings": [
+      {
+        "action": "Do not use it as a published or production causal claim.",
+        "explanation": "This managed-service result is for local demonstration and is not release-ready evidence.",
+        "severity": "info",
+        "title": "Development result"
+      },
+      {
+        "action": "Treat the estimate cautiously; this check does not establish instrument validity.",
+        "explanation": "An empirical residual-dependence diagnostic remains elevated.",
+        "severity": "caution",
+        "title": "Residual dependence remains"
+      }
+    ]
+  },
+  "schema_version": "dcfa_prepared_visitor_v1",
+  "stages": [
+    {
+      "label": "Understand the question",
+      "status": "Completed"
+    },
+    {
+      "label": "Check the data",
+      "status": "Completed"
+    },
+    {
+      "label": "Run the analysis",
+      "status": "Completed"
+    },
+    {
+      "label": "Verify the result",
+      "status": "Completed"
+    }
+  ]
+}

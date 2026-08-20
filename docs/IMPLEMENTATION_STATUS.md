@@ -1,6 +1,6 @@
 # DCFA implementation status
 
-Last updated: 2026-08-15
+Last updated: 2026-08-19
 
 ## Overall status
 
@@ -14,14 +14,15 @@ Track T run. A frozen Gemini profile implements one clean synthetic compile
 smoke, while a separate versioned Gemini profile now compiles every local
 website-demo question into a bounded mean or median summary/contrast before the
 deterministic managed TabPFN runtime. The original authenticated smoke was
-rejected before analysis by a removed API parameter; the corrected request and
-new website integration pass offline behavior checks, but no new live Gemini
-request was sent. Publishable Track T,
+rejected before analysis by a removed API parameter; the corrected website
+profile has since completed authenticated analysis. A hash-bound prepared replay
+and a user-owned Colab workflow are implemented outside the statistical source
+boundary. Publishable Track T,
 real-data Track T/H, and the paired live-model Track A comparison remain
 explicitly blocked on the external inputs listed below.
 
 Current executable source identity:
-`sha256:ad101cd8dacfdad36d1872423b25661f3996de7a29762a77142ff38f5d51a7ca`.
+`sha256:e1c86e9e7bd470f6f6e5c9d5ef9beaad8161e653355002d4ca47555484879791`.
 This is the hash of relative paths and bytes for every `src/dcfa/**/*.py` file,
 independent of the outer Git commit identity.
 
@@ -37,6 +38,9 @@ Current protocols:
   `track_a_cases_v1`;
 - Gemini live smoke: `track_a_gemini_live_smoke_v1`.
 - website Gemini compiler: `website_demo_gemini_v1`.
+- prepared public replay: `prepared_demo_v1` / `dcfa_prepared_visitor_v1`;
+- Colab custom workflow: DCFA release commit
+  `87b2b750d1c9a83497f5b16a7b0597758214d20a`.
 
 ## Requirement coverage
 
@@ -53,7 +57,7 @@ Current protocols:
 | Track H policy | Training-only fit, validation-only best-uniform/threshold selection, train+validation refit, immutable policy freeze before test access, DR primary plus IPW/direct sensitivity, paired contrasts, randomized-arm effects, costs/capacity/allocation, 95% influence-score intervals, warnings, assumptions, and release gate | No approved real file, final one-time test run, real held-out policy value, or individual oracle claim |
 | H semi-synthetic | Four prespecified DGPs, training-covariate resampling, same-constraint oracle, 50 replications per scenario, value/regret/accuracy/confusion/abstention/selective-regret/fallback/calibration/constraint metrics, and 84 evidence records | Covariates come from a development fixture, so the result is explicitly not Hillstrom-calibrated |
 | Track A | Explicit state machine/compiler/runtime; 24-case recorded benchmark; bounded Gemini 3.6 Flash clean-case implementation; frozen prompt/model/schema; no-row symbolic input; token/latency/list-price trace contract; evidence agreement verifier | The first live request failed before analysis on a removed API field; corrected serialization is offline-only, and no paired live fixed/full comparison exists |
-| Public UI | Lazy Gradio Blocks app, editable natural-language questions, guided scenarios plus confirmed local CSV, one-call Gemini compilation, managed TabPFN-only execution, no Hillstrom/Torch/service-SDK import before a run, immutable run directories, bounded queue/controls, evidence-linked values/plot, mobile layout, and profile-plus-dual-credential readiness | Development workflow demonstration only; question text and selected inputs leave the machine for separate services; the changed container package is not currently rebuilt; no public HTTPS deployment and not release-eligible |
+| Public UI | Local Gradio operator shell plus a hash-bound static prepared replay and pinned user-owned Colab notebook; the static path has no provider/runtime/storage code, while Colab preserves one-call/no-fallback, consent, evidence, and secret-scan gates | Prepared and Colab results remain `development_only`; production Pages deployment and one manual clean Colab runtime remain release QA rather than scientific evidence |
 
 The independent artifact verifier now checks saved file hashes and also
 recomputes protocol versions, marker contracts, source identity,
@@ -69,9 +73,10 @@ All paths below are ignored local artifacts and were created in fresh locations;
 no earlier artifact was overwritten. They were valid against the exact source
 snapshot recorded at creation, spanning source hashes `b401226d...`, `03c2b585...`,
 and `c47d1a06...`. They are preserved evidence, not current-source artifacts:
-the current verifier intentionally rejects them against `ad101cd8...` rather
-than silently treating an older run as current. No Gemini live artifact exists
-because the authorized request stopped before deterministic analysis.
+the current verifier intentionally rejects them against `e1c86e9e...` rather
+than silently treating an older run as current. No corrected Track A Gemini
+smoke artifact exists because that authorized request stopped before analysis;
+the separate prepared website run below did complete.
 
 | Artifact | Identity | Evidence/result size | Status |
 |---|---|---:|---|
@@ -85,6 +90,7 @@ because the authorized request stopped before deterministic analysis.
 | `artifacts/local/managed-agent-smoke-v1` | `run_9c4e6fcde2e09f931fa70e89` / `bundle_9357d0fa4628082b83048c47` | 1 evidence record; 3 service predictions | valid; fixed synthetic managed TabPFN mechanics only |
 | `artifacts/local/website-demo-managed-live-v1/strong_iv/seed-20260813/run-0002` | `run_bb8a5a565c7b6d38caf297d2` / `bundle_eae050d60c35ecf11135d565` | 1 evidence record; 3 service predictions | valid; live managed TabPFN website path, development-only |
 | `artifacts/local/website-demo-csv-browser-v1/csv-upload-4ba1adb3e0d8/seed-20260813/run-0001` | `run_bb8a5a565c7b6d38caf297d2` / `bundle_eae050d60c35ecf11135d565` | 1 evidence record; 3 service predictions | valid; browser-uploaded standard CSV, same canonical fixture/specification, development-only |
+| `artifacts/local/prepared-demo-v1-release-87b2b750/strong_iv/seed-20260813/run-0001` | `run_4e08cc245c27a61264c1edd6` / `bundle_e4c5af51bae899cbcf213711` | 1 evidence record; 1 Gemini compile; 3 service predictions | valid; source for static `prepared_demo_v1`, development-only |
 
 The bounded local-installation TabPFN probe remains
 `artifacts/local/tabpfn-probe-20260808.json`. It recorded
@@ -125,8 +131,8 @@ Current website Gemini integration checks:
 
 ```text
 .venv/bin/ruff check src tests                         passed
-.venv/bin/ruff format --check src tests                69 files already formatted
-.venv/bin/python -m pytest                             104 passed in 41.65s
+.venv/bin/ruff format --check src tests                80 files already formatted
+.venv/bin/python -m pytest                             119 passed in 45.17s
 website and Gemini behavior tests                      26 passed
 combined website lock install + pip check              no broken requirements
 default external credentials                          both present, mode 0600
@@ -139,7 +145,10 @@ Gemini proposal routing                               mean proposal changed dete
 website artifact after Gemini trace                   independent status=valid
 Gemini fake-client behavior tests                      7 passed; one-call/no-retry/tamper gates
 Gemini authenticated smoke                            HTTP 400; no retry; no analysis/artifact
-new authenticated website run                         not sent
+prepared authenticated website run                    completed; 1 Gemini + 3 predictions; 0 retries
+prepared full artifact verification                   status=valid
+prepared public projection verification               status=valid; release sha256:4b686a1e...
+Colab notebook static validation                       output-free; exact release/source pin
 Docker/Compose after dual-secret change                not verified; Docker CLI unavailable
 ```
 
@@ -152,7 +161,7 @@ private-key/AWS/GitHub/OpenAI credential-pattern scan no matches
 outer branch                                          main...origin/main
 nested third_party/TabCF branch                       clean main...origin/main
 nested TabCF commit                                   76e0d3eb9e97cebca381d1540db0333c1ef1016e
-final statistical source-tree hash                     sha256:ad101cd8dacfdad36d1872423b25661f3996de7a29762a77142ff38f5d51a7ca
+final statistical source-tree hash                     sha256:e1c86e9e7bd470f6f6e5c9d5ef9beaad8161e653355002d4ca47555484879791
 ```
 
 Repository policy now requires every completed, verified, in-scope change to be
@@ -178,12 +187,11 @@ rewrites, tags, PRs, releases, deployments, or publication.
    decision, then freeze the real split, policy protocol, and one-time locked
    test evaluation before claiming real policy value or Hillstrom-calibrated
    semi-synthetic evidence.
-5. **Live Track A:** first authorize one corrected authenticated smoke after the
-   documented HTTP 400 negative result. Then extend the one-case Gemini manifest
-   into a separately frozen fixed/full protocol with identical models, prompts,
-   permissions, tools, and cases; freeze the grader and production repetitions
-   before running. The recorded case suite still reports comparative live-model
-   and policy-track metrics as unevaluated.
+5. **Live Track A:** extend the one-case Gemini mechanics profile into a separately
+   frozen fixed/full protocol with identical models, prompts, permissions, tools,
+   and cases; freeze the grader and production repetitions before running. The
+   prepared website run is not this comparison, and the recorded case suite still
+   reports comparative live-model and policy-track metrics as unevaluated.
 
 Smoke tests and generated fixtures do not establish estimator quality,
 coverage, identification, business lift, release readiness, or individual
@@ -191,10 +199,10 @@ optimal treatment. Negative, null, deferred, and blocked results remain visible.
 
 ## Next authorized step
 
-For local website mechanics, the next optional verification is one authenticated
-guided run through the new Gemini-plus-managed path; it would consume both
-services and was not performed in this implementation turn. For a comparative
-live Track A result, the next step remains a frozen paired Gemini
+For the public website tool, the remaining external check is one clean Google
+Colab runtime walkthrough with the user's own Secrets followed by production
+GitHub Pages revision verification. For a comparative live Track A result, the
+next step remains a frozen paired Gemini
 fixed-workflow/full-agent protocol and grader over the 24 cases.
 For publishable estimator evidence, the highest-priority path remains the frozen
 TabPFN runtime plus manuscript DGP mapping. Repeating either current one-case

@@ -104,7 +104,7 @@ def test_colab_happy_path_verifies_archives_and_excludes_secrets(tmp_path: Path)
 def test_committed_colab_notebook_is_pinned_output_free_and_not_a_web_service() -> None:
     result = validate_colab_notebook(
         Path("notebooks/DCFA_Custom_Analysis_Colab.ipynb"),
-        release_commit="0" * 40,
+        release_commit="87b2b750d1c9a83497f5b16a7b0597758214d20a",
     )
     assert result["status"] == "valid"
     assert result["code_cell_count"] == 6

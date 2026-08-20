@@ -132,6 +132,11 @@ warning, and error projections plus a short build revision. Full IDs, traces,
 unrounded values, service metadata, and the identity-rich audit plot remain in
 the immutable run artifact and are checked through the independent verifier;
 they are not sent to the default visitor DOM.
+The result view leads with a direction-aware plain-language answer, followed by
+data support, important warnings, and the development-only boundary. Four
+visitor stages replace raw runtime events, and blocked runs identify the stopped
+stage and next action without exposing internal codes. Both submit buttons are
+disabled during a queued run, and the initial page renders no empty result cards.
 See [`docs/WEBSITE_DEMO.md`](docs/WEBSITE_DEMO.md) for the health-checkable
 container workflow, cloud-data boundary, static Astro embed boundary, and release
 prerequisites.

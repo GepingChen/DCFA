@@ -35,14 +35,27 @@ It also provides a local CSV tab for a bounded first-version workflow. The file
 must have exactly three numeric columns, 120–256 data rows, and explicit mappings
 for continuous outcome Y, continuous treatment X, and scalar instrument Z. Extra
 columns are rejected instead of being silently dropped as W. Before execution,
-the user must confirm data authorization and the two separate transfers: question
-text to Google Gemini, and selected rows to Prior Labs. Uploading the file into
-the local page alone calls neither service; checking the box and clicking
+the user sees separate transfer summaries and must confirm data authorization:
+question text goes to Google Gemini, and selected rows go to Prior Labs. The
+guided question field likewise states before submission that its text goes to
+Gemini and warns against private or sensitive information. Uploading the file
+into the local page alone calls neither service; checking the box and clicking
 **Run uploaded CSV** does.
 
-The visitor progress summary is an explicit projection of the runtime outcome;
-raw state events and reasons are not sent to the default browser DOM. The answer
-and support details are projected from the validated `QueryResult`, and display
+The visitor progress summary is an explicit four-stage projection: understand
+the question, check the data, run the analysis, and verify the result. Completed,
+current, pending, and blocked states do not imply work that has not happened;
+blocked runs identify the stopped visitor stage and a safe next action. Raw state
+events, reasons, and tool counts are not sent to the default browser DOM. During
+a run, the current stage is shown without a percentage and both submit buttons
+are disabled.
+
+The result view begins with a direction-aware natural-language answer projected
+from the validated `QueryResult` and the already validated symbolic Gemini
+proposal. It does not recalculate the value. Data support, important mapped
+warnings, and the development-only limitation follow without a duplicate
+evidence card. The initial answer and detail components stay hidden, and blocked
+or failed runs show a reason plus next action instead of an empty result. Display
 rounding never changes the evidence-bound raw value. Explicit mappings cover the
 allowed claim types, support states, warnings, and blocked errors; an unknown
 code fails closed without a number or plot. Gradio, `google-genai`, and

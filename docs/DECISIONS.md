@@ -660,3 +660,34 @@ Do not rewrite an accepted entry when it changes; append a superseding entry.
   views at desktop and 390 px.
 - Source: User-requested Phase 0 implementation of
   `plan/Website_Demo_UI_UX_Optimization_Plan_ZH.md` on 2026-08-19.
+
+## D-031 — Make the website result-first and project four visitor stages
+
+- Date: 2026-08-19
+- Status: Accepted local presentation behavior; Phase 1 implemented
+- Decision: Lead a successful visitor result with one direction-aware sentence
+  derived from the validated query value and the already validated symbolic
+  Gemini proposal. Follow it only with data support, important mapped warnings,
+  and the development-only limitation. Replace raw workflow events with four
+  visitor stages—understand the question, check the data, run the analysis, and
+  verify the result—using completed, current, pending, and blocked states. A
+  blocked state names its visitor stage and safe next action. Hide empty answer
+  and detail components before the first run, disable both submit buttons during
+  execution, suppress native percentage progress, and announce the final status
+  through a live region. Keep the guided and CSV transfer summaries visible
+  before their respective submit actions.
+- Rationale: The local demo should answer the visitor's question before exposing
+  method detail, while the runtime remains auditable and fail closed. Symbolic
+  proposal labels supply direction and treatment wording but never replace the
+  evidence-bound numerical value. A small exhaustive progress projection makes
+  waiting and blocked states understandable without leaking state reasons,
+  request metadata, or tool counts.
+- Affected tracks: Local TabCF Analyst presentation only. No estimator,
+  diagnostic threshold, support gate, evidence record, Gemini request, managed
+  TabPFN request, retry policy, or Track T/H/A evidence changes.
+- Verification impact: Test direction-aware answer phrasing and unknown-label
+  fallback, all four progress stages, blocked-stage mapping, mutually exclusive
+  initial/running/success/error states, submit-button locking, visitor redaction,
+  weak/outside-support preservation, and desktop plus 390 px browser layouts.
+- Source: User-requested Phase 1 implementation of
+  `plan/Website_Demo_UI_UX_Optimization_Plan_ZH.md` on 2026-08-19.

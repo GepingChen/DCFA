@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import html
 import importlib.metadata
+import logging
 import os
 import re
 import subprocess
@@ -40,7 +41,12 @@ from dcfa_website_demo.gemini import (
     compile_website_question,
     write_compilation_trace,
 )
-from dcfa_website_demo.presentation import present_error, present_query, render_visitor_plot
+from dcfa_website_demo.presentation import (
+    answer_sentence,
+    present_error,
+    present_query,
+    render_visitor_plot,
+)
 
 DEFAULT_OUTPUT_ROOT = Path("artifacts/local/website-demo")
 DEFAULT_MANAGED_TOKEN_FILE = Path.home() / ".config" / "dcfa" / "tabpfn_api_key"
@@ -51,6 +57,7 @@ MIN_DEMO_SEED = 0
 MAX_DEMO_SEED = 2**32 - 1
 _OUTPUT_RESERVATION_LOCK = threading.Lock()
 _BUILD_REVISION_PATTERN = re.compile(r"^[0-9a-f]{7,12}$")
+_LOGGER = logging.getLogger(__name__)
 
 
 @dataclass(frozen=True)
@@ -140,7 +147,7 @@ body,
 }
 
 .demo-hero {
-  padding: clamp(1.25rem, 4vw, 2.75rem) 0 1.5rem;
+  padding: clamp(1rem, 3vw, 2rem) 0 1.25rem;
   border-bottom: 1px solid var(--demo-line);
 }
 
@@ -154,10 +161,10 @@ body,
 }
 
 .demo-hero h1 {
-  max-width: 19ch;
-  margin: 0 0 1rem;
+  max-width: 21ch;
+  margin: 0 0 .75rem;
   color: var(--demo-ink);
-  font-size: clamp(2.15rem, 6vw, 4.2rem);
+  font-size: clamp(2rem, 5vw, 3.6rem);
   line-height: 1.02;
   letter-spacing: -.045em;
 }
@@ -171,15 +178,46 @@ body,
   line-height: 1.65;
 }
 
-.demo-development-notice {
+.demo-hero-actions {
+  display: flex;
+  align-items: center;
+  margin: 1rem 0;
+  gap: .75rem;
+}
+
+.demo-primary-link {
+  display: inline-flex;
+  min-height: 2.8rem;
+  align-items: center;
+  padding: 0 1rem;
+  border-radius: .3rem;
+  background: var(--demo-accent-deep);
+  color: white !important;
+  font-size: .9rem;
+  font-weight: 750;
+  text-decoration: none !important;
+}
+
+.demo-privacy-summary,
+.demo-transfer-note {
   max-width: 47rem;
-  margin: 1rem 0 0;
+  margin: .75rem 0 0;
   padding: .75rem .9rem;
   border-left: .25rem solid var(--demo-warning);
   background: #fff5e6;
   color: var(--demo-ink);
   font-size: .84rem;
   line-height: 1.55;
+}
+
+.demo-privacy-summary summary {
+  cursor: pointer;
+  font-weight: 700;
+}
+
+.demo-privacy-summary p,
+.demo-transfer-note p {
+  margin: .45rem 0 0;
 }
 
 .demo-badges {
@@ -292,9 +330,32 @@ body,
   width: .65rem;
   height: .65rem;
   border-radius: 50%;
-  background: var(--demo-accent);
+  background: var(--demo-line);
   content: "";
   transform: translateY(-50%);
+}
+
+.state-graph li.completed {
+  color: var(--demo-ink);
+}
+
+.state-graph li.completed::before {
+  background: var(--demo-accent);
+}
+
+.state-graph li.current {
+  border-color: var(--demo-accent);
+  background: #edf4f1;
+  color: var(--demo-ink);
+}
+
+.state-graph li.current::before {
+  background: var(--demo-accent);
+  box-shadow: 0 0 0 .22rem #d7e6e1;
+}
+
+.state-graph li.pending {
+  color: var(--demo-muted);
 }
 
 .state-graph li.blocked::before {
@@ -307,6 +368,26 @@ body,
   color: var(--demo-muted);
   font-size: .72rem;
   font-weight: 450;
+}
+
+.demo-answer {
+  margin-top: .65rem;
+}
+
+.demo-answer h3 {
+  margin-bottom: .55rem !important;
+  color: var(--demo-muted) !important;
+  font-size: .78rem !important;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+}
+
+.demo-answer p {
+  max-width: 52rem;
+  margin-bottom: 0 !important;
+  font-family: Charter, Georgia, serif;
+  font-size: clamp(1.35rem, 3vw, 2rem);
+  line-height: 1.35;
 }
 
 .demo-answer code {
@@ -327,38 +408,41 @@ body,
   height: 100%;
 }
 
-.demo-evidence-card h3 {
-  margin: 0 0 .85rem;
-  font-size: 1rem;
-}
-
-.demo-evidence-card dl {
+.demo-result-details {
   display: grid;
-  margin: 0;
-  gap: .65rem;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: .8rem;
 }
 
-.demo-evidence-card dl > div {
-  padding-bottom: .55rem;
-  border-bottom: 1px solid var(--demo-line);
+.demo-result-detail {
+  padding: .9rem;
+  border: 1px solid var(--demo-line);
+  border-radius: .35rem;
+  background: var(--demo-surface);
 }
 
-.demo-evidence-card dt {
-  margin-bottom: .15rem;
-  color: var(--demo-muted);
-  font-size: .69rem;
-  font-weight: 750;
-  letter-spacing: .08em;
+.demo-result-detail h3 {
+  margin: 0 0 .45rem;
+  font-size: .78rem;
+  letter-spacing: .05em;
   text-transform: uppercase;
 }
 
-.demo-evidence-card dd {
-  margin: 0;
-  color: var(--demo-ink);
-  font-family: "IBM Plex Mono", ui-monospace, monospace;
-  font-size: .78rem;
+.demo-result-detail p {
+  margin: .4rem 0 0;
+  color: var(--demo-muted);
+  font-size: .84rem;
   line-height: 1.5;
-  overflow-wrap: anywhere;
+}
+
+.demo-result-detail--development {
+  border-left: .25rem solid var(--demo-warning);
+  background: #fff5e6;
+}
+
+.demo-evidence-card h3 {
+  margin: 0 0 .85rem;
+  font-size: 1rem;
 }
 
 .demo-evidence-placeholder {
@@ -406,9 +490,21 @@ body,
   .demo-boundary-grid {
     grid-template-columns: 1fr 1fr;
   }
+
+  .demo-result-details {
+    grid-template-columns: 1fr;
+  }
 }
 
 @media (max-width: 30rem) {
+  .demo-hero {
+    padding-top: .45rem;
+  }
+
+  .demo-hero-copy {
+    line-height: 1.45;
+  }
+
   .demo-boundary-grid {
     grid-template-columns: 1fr;
   }
@@ -725,31 +821,119 @@ def _status_html(result: PortfolioDemoResult) -> str:
     if response.status == "blocked":
         presentation = present_error((response.error or {}).get("code"))
         return (
-            '<div class="demo-status demo-status--blocked" role="status">'
+            '<div class="demo-status demo-status--blocked" role="status" aria-live="polite">'
             f"<strong>{html.escape(presentation.title)}</strong>"
-            f"{html.escape(presentation.explanation)} "
-            f"{html.escape(presentation.action)} No numerical result was returned.</div>"
+            "No numerical result was returned.</div>"
         )
     if not response.queries or not present_query(response.queries[0]).allow_numeric:
         presentation = present_error(ErrorCode.EVIDENCE_MISMATCH)
         return (
-            '<div class="demo-status demo-status--blocked" role="status">'
+            '<div class="demo-status demo-status--blocked" role="status" aria-live="polite">'
             f"<strong>{html.escape(presentation.title)}</strong>"
-            f"{html.escape(presentation.explanation)} No numerical result is displayed.</div>"
+            "No numerical result is displayed.</div>"
         )
     presented = present_query(response.queries[0])
     if any(item.severity == "caution" for item in presented.warnings):
         return (
-            '<div class="demo-status demo-status--warning" role="status">'
+            '<div class="demo-status demo-status--warning" role="status" aria-live="polite">'
             "<strong>Completed with important limitations</strong>"
-            "The result passed evidence validation, but empirical warnings require caution. "
-            "This is a development-only demonstration result.</div>"
+            "The result passed evidence validation; review the warnings below.</div>"
         )
     return (
-        '<div class="demo-status" role="status">'
+        '<div class="demo-status" role="status" aria-live="polite">'
         "<strong>Result verified</strong>"
-        "The displayed value comes from the validated result bundle. This is a "
-        "development-only demonstration result.</div>"
+        "The displayed value comes from the validated result bundle.</div>"
+    )
+
+
+_VISITOR_STAGES = (
+    "Understand the question",
+    "Check the data",
+    "Run the analysis",
+    "Verify the result",
+)
+
+
+def _progress_html(
+    states: tuple[str, str, str, str],
+    *,
+    blocked_stage: int | None = None,
+    blocked_title: str = "",
+    blocked_action: str = "",
+) -> str:
+    rendered: list[str] = []
+    for index, (label, state) in enumerate(zip(_VISITOR_STAGES, states, strict=True)):
+        detail = ""
+        if index == blocked_stage:
+            detail = (
+                f'<span class="state-reason">{html.escape(blocked_title)}. '
+                f"{html.escape(blocked_action)}</span>"
+            )
+        rendered.append(f'<li class="{state}"><span>{html.escape(label)}</span>{detail}</li>')
+    return '<ol class="state-graph" aria-label="Analysis progress">' + "".join(rendered) + "</ol>"
+
+
+def _error_stage_index(code: str | ErrorCode | None) -> int:
+    try:
+        error_code = code if isinstance(code, ErrorCode) else ErrorCode(str(code))
+    except ValueError:
+        return 3
+    if error_code in {
+        ErrorCode.LLM_IMPORT_FAILED,
+        ErrorCode.LLM_API_FAILED,
+        ErrorCode.LLM_OUTPUT_INVALID,
+    }:
+        return 0
+    if error_code in {
+        ErrorCode.INVALID_SPECIFICATION,
+        ErrorCode.MISSING_CAUSAL_ROLE,
+        ErrorCode.ROLE_CONFLICT,
+        ErrorCode.UNSUPPORTED_BASELINE_COVARIATES,
+        ErrorCode.UNSUPPORTED_TREATMENT,
+        ErrorCode.INVALID_DATA,
+        ErrorCode.OUTSIDE_SUPPORT,
+        ErrorCode.DATA_ACCESS_BLOCKED,
+        ErrorCode.CONSTRAINT_VIOLATION,
+        ErrorCode.OUTPUT_PATH_EXISTS,
+    }:
+        return 1
+    if error_code in {
+        ErrorCode.UNSUPPORTED_BACKEND_PROFILE,
+        ErrorCode.BACKEND_IMPORT_FAILED,
+        ErrorCode.BACKEND_LOAD_FAILED,
+        ErrorCode.BACKEND_FIT_FAILED,
+        ErrorCode.BACKEND_PREDICT_FAILED,
+    }:
+        return 2
+    return 3
+
+
+def _blocked_progress_html(code: str | ErrorCode | None) -> str:
+    stage_index = _error_stage_index(code)
+    presentation = present_error(code)
+    states = tuple(
+        "completed" if index < stage_index else "blocked" if index == stage_index else "pending"
+        for index in range(len(_VISITOR_STAGES))
+    )
+    return _progress_html(
+        states,
+        blocked_stage=stage_index,
+        blocked_title=presentation.title,
+        blocked_action=presentation.action,
+    )
+
+
+def _running_outputs() -> tuple[str, str, str, str, None]:
+    """Return one stable waiting state without implying completed work or a percentage."""
+    return (
+        '<div class="demo-status" role="status" aria-live="polite">'
+        "<strong>Analysis in progress</strong>Understanding the question before any result "
+        "is shown."
+        "</div>",
+        _progress_html(("current", "pending", "pending", "pending")),
+        "",
+        "",
+        None,
     )
 
 
@@ -761,48 +945,33 @@ def _state_graph_html(response: AgentResponse, llm_trace: dict[str, Any]) -> str
         and present_query(response.queries[0]).allow_numeric
     )
     if visitor_result_allowed:
-        items = (
-            "Question interpreted",
-            "Scope and data support checked",
-            "Analysis completed",
-            "Result verified",
-        )
-        css_class = "completed"
-    else:
-        items = ("Question interpreted", "Safety check stopped the workflow")
-        css_class = "blocked"
-    rendered = "".join(
-        f'<li class="{css_class}"><span>{html.escape(item)}</span></li>' for item in items
-    )
-    return '<ol class="state-graph" aria-label="Workflow progress">' + rendered + "</ol>"
+        return _progress_html(("completed", "completed", "completed", "completed"))
+    return _blocked_progress_html((response.error or {}).get("code"))
 
 
-def _answer_markdown(response: AgentResponse) -> str:
+def _answer_markdown(response: AgentResponse, llm_trace: dict[str, Any]) -> str:
     if not response.queries:
+        presentation = present_error((response.error or {}).get("code"))
         return (
             "### No numerical answer\n\n"
-            "The workflow stopped at a safety check. Review the status above for the next step."
+            f"**{presentation.title}.** {presentation.explanation} {presentation.action}"
         )
     presented = present_query(response.queries[0])
     if not presented.allow_numeric:
         return (
             "### No numerical answer\n\n"
-            "The result could not be projected into an approved visitor-safe format."
+            "**Result verification failed.** Do not use a numerical result; inspect the run "
+            "with the local verifier."
         )
-    return (
-        f"### {presented.claim.title}\n\n"
-        f"**{presented.claim.explanation} The estimate is "
-        f"{presented.value_display} {presented.units}.**\n\n"
-        f"{presented.claim.action}"
-    )
+    return f"### Answer\n\n**{answer_sentence(response.queries[0], llm_trace.get('proposal'))}**"
 
 
 def _evidence_card_html(response: AgentResponse) -> str:
     if not response.queries:
         return (
             '<div class="demo-evidence-card demo-evidence-placeholder">'
-            "<h3>Result details</h3>"
-            "No result details are available because the workflow returned no numerical answer."
+            "<h3>What to do next</h3>"
+            "Use the action in the answer above; no evidence record or chart was created."
             "</div>"
         )
     presented = present_query(response.queries[0])
@@ -813,11 +982,11 @@ def _evidence_card_html(response: AgentResponse) -> str:
             "This result requires local artifact review and is not available for visitor display."
             "</div>"
         )
-    details = (
-        "<div><dt>Verification</dt><dd>Result verified</dd></div>"
-        f"<div><dt>Data support</dt><dd>{html.escape(presented.support.title)}</dd></div>"
-        f"<div><dt>What it means</dt><dd>{html.escape(presented.support.explanation)}</dd></div>"
-        f"<div><dt>Suggested action</dt><dd>{html.escape(presented.support.action)}</dd></div>"
+    support_html = (
+        '<section class="demo-result-detail"><h3>Data support</h3>'
+        f"<strong>{html.escape(presented.support.title)}</strong>"
+        f"<p>{html.escape(presented.support.explanation)} "
+        f"{html.escape(presented.support.action)}</p></section>"
     )
     visible_warnings = tuple(
         warning for warning in presented.warnings if warning.title != "Development result"
@@ -831,14 +1000,24 @@ def _evidence_card_html(response: AgentResponse) -> str:
             for warning in visible_warnings
         )
         warning_html = (
-            '<div class="demo-evidence-warnings"><h4>Important limitations</h4>'
-            f'<ul class="demo-warning-list">{warning_items}</ul></div>'
+            '<section class="demo-result-detail demo-evidence-warnings">'
+            "<h3>Important warnings</h3>"
+            f'<ul class="demo-warning-list">{warning_items}</ul></section>'
         )
     else:
-        warning_html = "<p>No additional empirical warning was triggered.</p>"
+        warning_html = (
+            '<section class="demo-result-detail"><h3>Important warnings</h3>'
+            "<p>No additional empirical warning was triggered.</p></section>"
+        )
+    development_html = (
+        '<section class="demo-result-detail demo-result-detail--development">'
+        "<h3>Development-only</h3>"
+        "<p>This managed-service result is for local demonstration, not published or "
+        "production causal evidence.</p></section>"
+    )
     return (
-        '<div class="demo-evidence-card"><h3>Result details</h3>'
-        f"<dl>{details}</dl>{warning_html}</div>"
+        '<div class="demo-evidence-card demo-result-details">'
+        f"{support_html}{warning_html}{development_html}</div>"
     )
 
 
@@ -846,14 +1025,12 @@ def _input_error_outputs(message: str) -> tuple[str, str, str, str, None]:
     del message
     presentation = present_error(ErrorCode.INVALID_DATA)
     return (
-        '<div class="demo-status demo-status--blocked" role="status">'
-        f"<strong>{html.escape(presentation.title)}</strong>"
-        f"{html.escape(presentation.explanation)} {html.escape(presentation.action)} "
-        "No workflow was run.</div>",
-        '<div class="demo-status demo-status--idle">No workflow progress was created.</div>',
-        "### No numerical answer\n\nCorrect the bounded demo inputs and try again.",
+        '<div class="demo-status demo-status--blocked" role="status" aria-live="polite">'
+        f"<strong>{html.escape(presentation.title)}</strong>No workflow was run.</div>",
+        _blocked_progress_html(ErrorCode.INVALID_DATA),
+        f"### No numerical answer\n\n**{presentation.title}.** {presentation.explanation}",
         '<div class="demo-evidence-card demo-evidence-placeholder">'
-        "<h3>Result details</h3>No numerical result was emitted.</div>",
+        f"<h3>What to do next</h3>{html.escape(presentation.action)}</div>",
         None,
     )
 
@@ -861,15 +1038,24 @@ def _input_error_outputs(message: str) -> tuple[str, str, str, str, None]:
 def _execution_error_outputs(error: DCFAError) -> tuple[str, str, str, str, None]:
     presentation = present_error(error.code)
     return (
-        '<div class="demo-status demo-status--blocked" role="status">'
+        '<div class="demo-status demo-status--blocked" role="status" aria-live="polite">'
         f"<strong>{html.escape(presentation.title)}</strong>"
-        f"{html.escape(presentation.explanation)} {html.escape(presentation.action)} "
         "No numerical result was returned.</div>",
-        '<div class="demo-status demo-status--idle">The workflow stopped before a result.</div>',
-        "### No numerical answer\n\nThe workflow failed closed and did not use a fallback model.",
+        _blocked_progress_html(error.code),
+        f"### No numerical answer\n\n**{presentation.title}.** {presentation.explanation}",
         '<div class="demo-evidence-card demo-evidence-placeholder">'
-        "<h3>Result details</h3>No numerical result was emitted.</div>",
+        f"<h3>What to do next</h3>{html.escape(presentation.action)} "
+        "The workflow did not use a fallback model.</div>",
         None,
+    )
+
+
+def _log_operator_error(error: DCFAError) -> None:
+    """Keep the typed failure diagnosable without sending its context to the browser."""
+    _LOGGER.warning(
+        "Website demo run stopped with code=%s at stage=%s",
+        error.code.value,
+        error.stage,
     )
 
 
@@ -877,11 +1063,17 @@ def format_portfolio_result(
     result: PortfolioDemoResult,
 ) -> tuple[str, str, str, str, str | None]:
     """Project a runtime response into display-only values without recomputing numbers."""
+    if result.response.error:
+        _LOGGER.warning(
+            "Website demo workflow blocked with code=%s at stage=%s",
+            result.response.error.get("code", "unknown"),
+            result.response.error.get("stage", "unknown"),
+        )
     presented = present_query(result.response.queries[0]) if result.response.queries else None
     return (
         _status_html(result),
         _state_graph_html(result.response, result.llm_trace),
-        _answer_markdown(result.response),
+        _answer_markdown(result.response, result.llm_trace),
         _evidence_card_html(result.response),
         (
             str(result.plot_path)
@@ -941,28 +1133,29 @@ def build_app(
             f"""
             <header class="demo-hero">
               <p class="demo-eyebrow">DCFA · Local demo · Build {visible_revision}</p>
-              <h1>Trace a causal workflow. See every gate.</h1>
+              <h1>Ask how outcomes change under treatment.</h1>
               <p class="demo-hero-copy">
-                A narrow distributional-IV agent that uses Gemini to compile a natural-language
-                question, calls a deterministic tool, blocks unsupported claims, and links each
-                answer to reproducible evidence.
+                Turn one bounded continuous-treatment question into an evidence-checked answer,
+                with unsupported claims stopped before a number is shown.
               </p>
               <div class="demo-badges" aria-label="Supported scope">
-                <span>Continuous treatment X</span><span>Scalar instrument Z</span>
-                <span>Continuous outcome Y</span><span>Gemini-compiled request</span>
-                <span>No baseline covariates W</span>
+                <span>Continuous Y / X / Z only</span><span>Development-only</span>
               </div>
-              <p class="demo-development-notice" role="note">
-                <strong>Local and development-only.</strong> Built-in examples are synthetic;
-                the question is sent to Google Gemini, but no data rows or actual intervention
-                values are. Uploaded Y/X/Z inputs use the official managed TabPFN service and
-                leave this machine after confirmation. Neither service may create an automatic
-                real-world causal claim.
-              </p>
+              <div class="demo-hero-actions">
+                <a class="demo-primary-link" href="#guided-input">Try a guided example</a>
+              </div>
+              <details class="demo-privacy-summary" role="note">
+                <summary>Question text goes to Google Gemini; approved CSV rows go
+                separately to Prior Labs.</summary>
+                <p>Built-in examples are synthetic. Gemini receives no data rows or actual
+                intervention values. A CSV leaves this machine only after explicit confirmation.
+                This local result is development-only and cannot create an automatic real-world
+                causal claim.</p>
+              </details>
             </header>
             """
         )
-        with gr.Row(elem_classes="demo-controls"):
+        with gr.Row(elem_classes="demo-controls", elem_id="guided-input"):
             with gr.Column(scale=5, elem_classes="demo-panel"):
                 gr.Markdown("### 1 · Choose an input", elem_classes="demo-section-heading")
                 with gr.Tabs():
@@ -985,6 +1178,13 @@ def build_app(
                             ),
                             lines=3,
                             interactive=True,
+                        )
+                        gr.HTML(
+                            '<div class="demo-transfer-note" role="note">'
+                            "<strong>Before you run:</strong> Your question text will be sent to "
+                            "Google Gemini. Do not enter private "
+                            "or sensitive information. Gemini receives no data rows or actual "
+                            "treatment values.</div>"
                         )
                         with gr.Accordion("Reproducibility controls", open=False):
                             rows = gr.Slider(
@@ -1044,11 +1244,14 @@ def build_app(
                         )
                         csv_confirmed = gr.Checkbox(
                             value=False,
-                            label=(
-                                "I am authorized to use this data and confirm the question will "
-                                "be sent to Google Gemini while the selected Y/X/Z rows will be "
-                                "sent separately to Prior Labs for managed TabPFN inference."
-                            ),
+                            label="I am authorized to use this data and approve both transfers.",
+                        )
+                        gr.HTML(
+                            '<div class="demo-transfer-note" role="note">'
+                            "<strong>Two separate transfers:</strong> the question text goes to "
+                            "Google Gemini with no CSV rows; the selected "
+                            "Y/X/Z rows go to Prior Labs for managed TabPFN inference. Do not use "
+                            "private or sensitive data in this local demo.</div>"
                         )
                         csv_run_button = gr.Button(
                             "Run uploaded CSV",
@@ -1069,19 +1272,10 @@ def build_app(
                     "<strong>Ready</strong>Choose a path and run the frozen workflow.</div>"
                 )
 
-        gr.Markdown("## 3 · Inspect the validated output", elem_classes="demo-section-heading")
-        status = gr.HTML(
-            '<div class="demo-status demo-status--idle">'
-            "No run yet. The demo never invents a numerical placeholder.</div>"
-        )
-        with gr.Row():
-            with gr.Column(scale=4, elem_classes="demo-panel demo-answer"):
-                answer = gr.Markdown("### Answer\n\nRun a scenario to populate this panel.")
-            with gr.Column(scale=6, elem_classes="demo-panel"):
-                evidence = gr.HTML(
-                    '<div class="demo-evidence-card demo-evidence-placeholder">'
-                    "<h3>Result details</h3>Run a scenario to populate this panel.</div>"
-                )
+        gr.Markdown("## 3 · Review the answer", elem_classes="demo-section-heading")
+        answer = gr.Markdown("", visible=False, elem_classes="demo-panel demo-answer")
+        status = gr.HTML("", visible=False)
+        evidence = gr.HTML("", visible=False)
         plot = gr.Image(
             type="filepath",
             label="Estimated outcome distributions and summaries",
@@ -1090,7 +1284,7 @@ def build_app(
         gr.HTML(
             """
             <section class="demo-boundary" aria-labelledby="boundary-title">
-              <p class="demo-eyebrow" id="boundary-title">What this demo will not claim</p>
+              <p class="demo-eyebrow" id="boundary-title">Scope and limitations</p>
               <div class="demo-boundary-grid">
                 <div class="demo-boundary-item"><strong>Not a general router</strong>
                   <span>Only the continuous-treatment IV contract is public.</span></div>
@@ -1112,12 +1306,29 @@ def build_app(
             queue=False,
         )
 
+        def ui_updates(
+            formatted: tuple[str, str, str, str, str | None],
+            *,
+            buttons_enabled: bool,
+        ) -> tuple[Any, ...]:
+            status_value, state_value, answer_value, evidence_value, plot_value = formatted
+            return (
+                gr.update(value=answer_value, visible=bool(answer_value)),
+                gr.update(value=status_value, visible=bool(status_value)),
+                gr.update(value=state_value),
+                gr.update(value=evidence_value, visible=bool(evidence_value)),
+                gr.update(value=plot_value, visible=plot_value is not None),
+                gr.update(interactive=buttons_enabled),
+                gr.update(interactive=buttons_enabled),
+            )
+
         def handle_run(
             selected_scenario: str,
             selected_question: str,
             selected_rows: int,
             selected_seed: int,
         ):
+            yield ui_updates(_running_outputs(), buttons_enabled=False)
             try:
                 formatted = format_portfolio_result(
                     execute_portfolio_scenario(
@@ -1129,22 +1340,27 @@ def build_app(
                     )
                 )
             except DCFAError as exc:
+                _log_operator_error(exc)
                 formatted = _execution_error_outputs(exc)
             except (TypeError, ValueError) as exc:
                 formatted = _input_error_outputs(str(exc))
-            status_value, state_value, answer_value, evidence_value, plot_value = formatted
-            return (
-                status_value,
-                state_value,
-                answer_value,
-                evidence_value,
-                gr.update(value=plot_value, visible=plot_value is not None),
-            )
+            yield ui_updates(formatted, buttons_enabled=True)
 
         run_button.click(
             fn=handle_run,
             inputs=(scenario, question, rows, seed),
-            outputs=(status, state_graph, answer, evidence, plot),
+            outputs=(
+                answer,
+                status,
+                state_graph,
+                evidence,
+                plot,
+                run_button,
+                csv_run_button,
+            ),
+            scroll_to_output=True,
+            show_progress="hidden",
+            trigger_mode="once",
         )
 
         def handle_csv_run(
@@ -1156,6 +1372,7 @@ def build_app(
             selected_question: str,
             selected_seed: int,
         ):
+            yield ui_updates(_running_outputs(), buttons_enabled=False)
             try:
                 if not selected_file:
                     raise ValueError("Choose a local CSV file before running the workflow.")
@@ -1172,17 +1389,11 @@ def build_app(
                     )
                 )
             except DCFAError as exc:
+                _log_operator_error(exc)
                 formatted = _execution_error_outputs(exc)
             except (OSError, TypeError, ValueError) as exc:
                 formatted = _input_error_outputs(str(exc))
-            status_value, state_value, answer_value, evidence_value, plot_value = formatted
-            return (
-                status_value,
-                state_value,
-                answer_value,
-                evidence_value,
-                gr.update(value=plot_value, visible=plot_value is not None),
-            )
+            yield ui_updates(formatted, buttons_enabled=True)
 
         csv_run_button.click(
             fn=handle_csv_run,
@@ -1195,7 +1406,18 @@ def build_app(
                 csv_question,
                 csv_seed,
             ),
-            outputs=(status, state_graph, answer, evidence, plot),
+            outputs=(
+                answer,
+                status,
+                state_graph,
+                evidence,
+                plot,
+                run_button,
+                csv_run_button,
+            ),
+            scroll_to_output=True,
+            show_progress="hidden",
+            trigger_mode="once",
         )
     return app.queue(max_size=8, default_concurrency_limit=1)
 

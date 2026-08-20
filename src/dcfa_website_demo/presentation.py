@@ -312,6 +312,55 @@ def present_query(query: QueryResult) -> PresentedQuery:
     )
 
 
+_WEBSITE_OBJECTIVE_BY_CLAIM = {
+    "interventional_mean": "mean",
+    "interventional_quantile": "quantile",
+    "mean_contrast_x_minus_comparison_x": "mean_contrast",
+    "quantile_contrast_x_minus_comparison_x": "quantile_contrast",
+}
+_TREATMENT_LABELS = {"low": "low", "center": "center", "high": "high"}
+
+
+def answer_sentence(query: QueryResult, proposal: object) -> str:
+    """Answer directly when an approved symbolic compilation matches the query."""
+    presented = present_query(query)
+    if not presented.allow_numeric:
+        return "No numerical answer is approved for visitor display."
+    fallback = (
+        f"{presented.claim.explanation} The estimate is "
+        f"{presented.value_display} {presented.units}."
+    )
+    if not isinstance(proposal, dict):
+        return fallback
+    objective = proposal.get("objective")
+    if objective != _WEBSITE_OBJECTIVE_BY_CLAIM.get(query.claim_type):
+        return fallback
+    x_label = _TREATMENT_LABELS.get(proposal.get("x_label"))
+    if x_label is None:
+        return fallback
+    summary = "mean" if objective.startswith("mean") else "median"
+    if objective.endswith("_contrast"):
+        comparison_label = _TREATMENT_LABELS.get(proposal.get("comparison_x_label"))
+        if comparison_label is None or comparison_label == x_label:
+            return fallback
+        magnitude = display_value(abs(query.value_raw))
+        if math.isclose(float(query.value_raw), 0.0, abs_tol=1e-12):
+            return (
+                f"From the {comparison_label} to the {x_label} treatment level, "
+                f"the estimated {summary} outcome does not change."
+            )
+        direction = "increases" if query.value_raw > 0 else "decreases"
+        return (
+            f"From the {comparison_label} to the {x_label} treatment level, "
+            f"the estimated {summary} outcome {direction} by {magnitude} "
+            f"{presented.units}."
+        )
+    return (
+        f"At the {x_label} treatment level, the estimated {summary} outcome is "
+        f"{presented.value_display} {presented.units}."
+    )
+
+
 def build_visitor_plot_projection(
     bundle: ResultBundle,
     ledger: EvidenceLedger,

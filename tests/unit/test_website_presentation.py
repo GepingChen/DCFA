@@ -12,6 +12,7 @@ from dcfa_website_demo.presentation import (
     UNKNOWN_CLAIM,
     UNKNOWN_WARNING,
     WARNING_PRESENTATION,
+    answer_sentence,
     display_value,
     present_error,
     present_query,
@@ -100,3 +101,34 @@ def test_unknown_claim_warning_support_and_error_fail_closed_without_raw_text() 
     error = present_error("FUTURE_INTERNAL_ERROR")
     assert error.title == "Result verification failed"
     assert "FUTURE_INTERNAL_ERROR" not in error.explanation
+
+
+def test_answer_sentence_uses_approved_direction_and_symbolic_treatment_labels() -> None:
+    proposal = {
+        "objective": "quantile_contrast",
+        "x_label": "high",
+        "comparison_x_label": "low",
+    }
+
+    assert answer_sentence(_query(), proposal) == (
+        "From the low to the high treatment level, the estimated median outcome "
+        "increases by 4.85 outcome units."
+    )
+    assert "decreases by 4.85" in answer_sentence(_query(value_raw=-4.84621917), proposal)
+
+
+def test_answer_sentence_falls_back_without_exposing_unapproved_proposal_values() -> None:
+    sentence = answer_sentence(
+        _query(),
+        {
+            "objective": "quantile_contrast",
+            "x_label": "private_internal_label",
+            "comparison_x_label": "low",
+        },
+    )
+
+    assert sentence == (
+        "The estimated difference in the requested outcome quantile between treatment levels. "
+        "The estimate is 4.85 outcome units."
+    )
+    assert "private_internal_label" not in sentence

@@ -1,6 +1,6 @@
 # DCFA codebase map
 
-Last verified: 2026-08-15
+Last verified: 2026-08-19
 
 This map describes checked-in executable behavior. The integrated plan remains
 the authority for intended research behavior; code and tests are the authority
@@ -169,6 +169,16 @@ service metadata. There is no Hillstrom, W, general-router, or sklearn fallback
 route. CSV confirmation distinguishes the question sent to Google from selected
 rows sent to Prior Labs. The static personal site can only embed or link a
 separately hosted instance; it cannot execute this Python service on GitHub Pages.
+
+The website projection is result-first: an approved Gemini symbolic proposal is
+matched to the validated query to phrase a direction-aware answer without
+recomputing its value. The visitor then sees only support, mapped warnings, and
+the development-only limitation. A four-stage progress projection marks
+completed/current/pending/blocked states, locates blocked requests with a safe
+next action, and never exposes state reasons or tool counts. Gradio generator
+events hide native percentage progress, disable both submit buttons during a
+run, and use a live result status; the initial answer/detail components remain
+hidden rather than displaying duplicate placeholders.
 
 `dcfa_website_demo.service` mounts the queued Gradio app on a single-worker
 FastAPI service and exposes `/healthz` plus output-path- and credential-aware

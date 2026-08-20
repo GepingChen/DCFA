@@ -25,6 +25,7 @@ from dcfa_website_demo.app import (
     _execution_error_outputs,
     _input_error_outputs,
     _reserve_output_directory,
+    _running_outputs,
     build_app,
     execute_csv_upload,
     execute_portfolio_scenario,
@@ -251,13 +252,17 @@ def test_supported_website_scenario_returns_real_state_trace_and_evidence(
     assert verify_run_directory(result.output_dir)["status"] == "valid"
 
     status, states, answer, evidence, plot = format_portfolio_result(result)
-    assert "development-only" in status
     assert "Result verified" in status
-    assert "Question interpreted" in states
-    assert "Result verified" in states
+    assert "Understand the question" in states
+    assert "Verify the result" in states
+    assert states.count('class="completed"') == 4
     query = result.response.queries[0]
     assert display_value(query.value_raw) in answer
     assert "outcome units" in answer
+    assert "From the low to the high treatment level" in answer
+    assert "Data support" in evidence
+    assert "Important warnings" in evidence
+    assert "Development-only" in evidence
     visitor_text = "\n".join((status, states, answer, evidence))
     for internal_value in (
         query.claim_type,
@@ -285,7 +290,8 @@ def test_supported_website_scenario_returns_real_state_trace_and_evidence(
         format_portfolio_result(unknown_result)
     )
     assert "Result verification failed" in unknown_status
-    assert "Safety check stopped" in unknown_states
+    assert "Verify the result" in unknown_states
+    assert 'class="blocked"' in unknown_states
     assert display_value(query.value_raw) not in unknown_answer
     assert "local artifact review" in unknown_details
     assert unknown_plot is None
@@ -420,9 +426,10 @@ def test_outside_support_executes_real_gate_and_renders_without_number(
     status, states, answer, evidence, plot = format_portfolio_result(result)
     assert ErrorCode.OUTSIDE_SUPPORT.value not in status
     assert "Outside observed data support" in status
-    assert "Safety check stopped" in states
+    assert "Check the data" in states
+    assert "Choose treatment levels within the supported range" in states
     assert "No numerical answer" in answer
-    assert "No result details" in evidence
+    assert "What to do next" in evidence
     assert plot is None
 
 
@@ -464,9 +471,10 @@ def test_managed_failure_never_falls_back_to_sklearn(tmp_path: Path) -> None:
     status, states, answer, evidence, plot = format_portfolio_result(result)
     assert ErrorCode.BACKEND_FIT_FAILED.value not in status
     assert "temporarily unavailable" in status
-    assert "Safety check stopped" in states
+    assert "Run the analysis" in states
+    assert "Try again later" in states
     assert "No numerical answer" in answer
-    assert "No result details" in evidence
+    assert "What to do next" in evidence
     assert plot is None
 
 
@@ -591,9 +599,10 @@ def test_bounded_controls_reject_invalid_values_before_allocating_output(
             raise AssertionError("Invalid controls unexpectedly executed the workflow.")
         assert "Input needs attention" in status
         assert raw_message not in status
-        assert "No workflow progress" in states
+        assert "Check the data" in states
+        assert 'class="blocked"' in states
         assert "No numerical answer" in answer
-        assert "No numerical result" in evidence
+        assert "What to do next" in evidence
         assert plot is None
     assert not list(tmp_path.rglob("run-*"))
 
@@ -601,8 +610,18 @@ def test_bounded_controls_reject_invalid_values_before_allocating_output(
 def test_default_app_config_omits_machine_audit_payload_and_shows_build() -> None:
     app = build_app(build_revision="deadbee")
     config = json.dumps(app.config, sort_keys=True)
+    component_ids = {
+        component.get("props", {}).get("elem_id"): component["id"]
+        for component in app.config["components"]
+    }
 
     assert "Build deadbee" in config
+    assert "Try a guided example" in config
+    assert "Do not enter private or sensitive information" in config
+    assert "I am authorized to use this data and approve both transfers" in config
+    assert "Scope and limitations" in config
+    assert "Run a scenario to populate this panel" not in config
+    assert "No run yet" not in config
     for forbidden in (
         "Agent trace",
         "Machine-readable state and identity",
@@ -612,6 +631,65 @@ def test_default_app_config_omits_machine_audit_payload_and_shows_build() -> Non
         "state_events",
     ):
         assert forbidden not in config
+    run_button_ids = {
+        component_ids["run-demo-button"],
+        component_ids["run-csv-button"],
+    }
+    click_dependencies = [
+        dependency
+        for dependency in app.config["dependencies"]
+        if any(target[1] == "click" for target in dependency["targets"])
+    ]
+    assert len(click_dependencies) == 2
+    for dependency in click_dependencies:
+        assert dependency["trigger_mode"] == "once"
+        assert dependency["show_progress"] == "hidden"
+        assert dependency["scroll_to_output"] is True
+        assert run_button_ids.issubset(dependency["outputs"])
+    assert all(app.fns[index + 1].types_generator for index in range(2))
+
+
+def test_running_state_has_four_honest_stages_without_fake_percentage() -> None:
+    status, states, answer, evidence, plot = _running_outputs()
+
+    assert "Analysis in progress" in status
+    assert states.count("<li") == 4
+    assert states.count('class="current"') == 1
+    assert states.count('class="pending"') == 3
+    assert "completed" not in states
+    assert "%" not in states
+    assert answer == ""
+    assert evidence == ""
+    assert plot is None
+
+
+def test_both_submit_handlers_disable_both_buttons_before_external_work() -> None:
+    app = build_app(build_revision="deadbee")
+    handlers = (
+        app.fns[1].fn(
+            "strong_iv",
+            "How does the median outcome change from low to high treatment?",
+            128,
+            20260810,
+        ),
+        app.fns[2].fn(
+            None,
+            "Y",
+            "X",
+            "Z",
+            False,
+            "Estimate the median outcome contrast from low to high treatment.",
+            20260813,
+        ),
+    )
+
+    for handler in handlers:
+        first_update = next(handler)
+        assert first_update[0]["visible"] is False
+        assert first_update[1]["visible"] is True
+        assert first_update[-2]["interactive"] is False
+        assert first_update[-1]["interactive"] is False
+        handler.close()
 
 
 def test_build_revision_accepts_short_commit_and_safe_container_fallback(monkeypatch) -> None:

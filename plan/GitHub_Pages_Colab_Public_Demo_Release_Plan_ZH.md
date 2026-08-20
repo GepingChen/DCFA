@@ -2,7 +2,7 @@
 title: "DCFA GitHub Pages + Colab 正式展示版发布计划"
 language: "zh-CN"
 version: "2.0"
-status: "Static replay released; public Colab entry blocked on anonymous repository access"
+status: "Static replay and public Colab CTA released; fresh credentialed Colab run not repeated"
 approved_on: "2026-08-19"
 supersedes: "Hugging_Face_Space_Public_Demo_Release_Plan_ZH.md at commit cea25b0"
 ui_dependencies: "Phase 0 b4d3e7d and Phase 1 76ca4bc are complete"
@@ -11,7 +11,7 @@ affected_repositories:
   - "/Users/chgp/Dropbox/nova/website"
 affected_surface: "Static portfolio replay on GitHub Pages and user-owned Colab execution"
 affected_evidence_tracks: "None; no new Track T, H, or A evidence"
-implementation_updated_on: "2026-08-19"
+implementation_updated_on: "2026-08-20"
 ---
 
 # DCFA GitHub Pages + Colab 正式展示版发布计划
@@ -552,10 +552,10 @@ implementation. Do not introduce an undocumented fallback or a free-runtime poli
   overflow、零 iframe/零脚本/零 console error 与 production asset hash 已验证。Clean Colab
   runtime 未验证。
 - GC5：两个仓库均已普通 commit/push 并核对 remote ref；GitHub Pages Actions 成功部署静态
-  replay。匿名访问 `https://github.com/GepingChen/DCFA/...ipynb` 返回 404，因此 Colab 虽能
-  打开外壳，不能为公众取得 notebook source。按 hard gate，公开 Colab/GitHub CTA 已撤下，
-  未把双入口计划报告为完成。
+  replay。2026-08-20，用户将 `GepingChen/DCFA` 设为 public；匿名访问 repository、GitHub
+  notebook、raw notebook 与精确 Colab URL 均成功，Projects 卡片与详情页的 `Open in Colab`
+  CTA 已恢复。
 
-解除剩余阻塞需要用户明确选择并授权以下之一：将 `GepingChen/DCFA` 改为 public，或批准一个
-新的公开 mirror/source path 并相应 version 本计划。仓库可匿名读取后仍需完成一次 clean Colab
-runtime 验收；不得仅凭本地 fake-provider tests 恢复公开 CTA。
+本次 CTA 恢复只验证公开 source/link 与既有 notebook 静态契约，没有在 Colab 中重新传输用户
+密钥、问题或 Y/X/Z 数据，也没有新增 Gemini/managed TabPFN 请求。若需要把“fresh clean Colab
+runtime with live providers”作为独立验收结论，仍需单独授权该有成本的外部执行。

@@ -6,12 +6,10 @@ DCFA now has three deliberately different presentation paths:
 2. a precomputed, independently verified static replay for GitHub Pages;
 3. a pinned notebook for custom analysis in a visitor's own Colab runtime.
 
-The static route is linked from the public portfolio and makes no provider call.
-The Colab implementation uses the visitor's accounts, secrets,
+The static route and Colab entry are linked from the public portfolio. Static
+replay makes no provider call. The Colab implementation uses the visitor's accounts, secrets,
 quota, ephemeral filesystem, and explicit transfer confirmations. None of the
 three paths is locked Track T evidence or a general causal-analysis service.
-Its public CTA remains withheld until the DCFA repository or an approved mirror
-is anonymously readable and a clean public runtime is verified.
 
 ## What is ready
 
@@ -141,12 +139,12 @@ not mount Google Drive, launch Gradio, create a tunnel, expose SSH, or promise a
 free or persistent runtime. After download, the user deletes the uploaded CSV and
 chooses **Runtime → Disconnect and delete runtime**.
 
-Anonymous access to the expected `GepingChen/DCFA` GitHub notebook path returned
-404 during publication QA. Colab can render its outer application URL without
-proving that the notebook source is retrievable. The public page therefore shows
-`Public Colab access pending` without a link. Changing repository visibility or
-creating a public mirror requires an explicit user decision; after that change,
-repeat a clean-runtime acceptance before restoring the CTA.
+On 2026-08-20, `GepingChen/DCFA` became public. Anonymous checks returned 200 for
+the GitHub notebook, raw notebook bytes, and the exact Colab URL. The public page
+therefore restores `Open in Colab`. The retrieved notebook remains nbformat 4,
+pins release `87b2b750d1c9a83497f5b16a7b0597758214d20a`, contains six code cells,
+and has no saved outputs. This link/readiness verification did not execute a new
+Gemini or managed TabPFN request with user credentials.
 
 ## Service and container operation
 

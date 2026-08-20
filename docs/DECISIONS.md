@@ -695,7 +695,7 @@ Do not rewrite an accepted entry when it changes; append a superseding entry.
 ## D-032 — Publish a static prepared replay and move custom execution to user-owned Colab
 
 - Date: 2026-08-19
-- Status: Static replay released; dual-entry release blocked on public notebook access
+- Status: Static replay and public Colab CTA released; clean provider execution not repeated
 - Decision: Supersede the unimplemented Hugging Face/public-service direction with
   two explicit paths. GitHub Pages receives one hash-bound, precomputed synthetic
   replay with no runtime, provider client, credential input, storage, or inference.

@@ -146,8 +146,8 @@ Pages serves only a hash-bound, precomputed replay with no Python runtime, provi
 client, credential input, or analysis request. Custom analysis runs only in a
 visitor's own Colab runtime with separately confirmed Google and Prior Labs
 transfers. The notebook implementation is pinned and verified locally, but its
-public CTA is withheld while the DCFA source repository is not anonymously
-readable. Both paths remain synthetic or user-authorized `development_only`
+public CTA now points to the anonymously readable `GepingChen/DCFA` repository.
+Both paths remain synthetic or user-authorized `development_only`
 demonstrations and establish no new Track T, H, or A evidence.
 
 ## Stable commands

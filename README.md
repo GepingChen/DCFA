@@ -1,253 +1,235 @@
-# DCFA
+<h1 align="center">TabCF-Agent</h1>
 
-DCFA is an auditable local runtime for **TabCF Analyst**, a deliberately narrow
-continuous-treatment distributional-IV workflow. It separates three evidence
-tracks that must never be merged in claims:
+<p align="center">
+  <strong>An auditable causal agent for continuous-treatment distributional IV analysis</strong>
+</p>
 
-- **Track T:** TabCF estimator evidence for continuous treatment, continuous
-  outcome, one scalar IV, and no baseline covariates `W`.
-- **Track H:** held-out policy value in a categorical three-action randomized
-  experiment, plus known-oracle semi-synthetic evaluation.
-- **Track A:** workflow reliability for a fixed chain versus an explicit agent
-  using identical recorded tools and fixtures.
+<p align="center">
+  <a href="https://arxiv.org/abs/2605.05993"><img src="https://img.shields.io/badge/arXiv-2605.05993-b31b1b.svg" alt="arXiv:2605.05993"></a>
+  <a href="https://github.com/GepingChen/TabCF"><img src="https://img.shields.io/badge/Method-TabCF-2563eb.svg" alt="TabCF method"></a>
+  <img src="https://img.shields.io/badge/Python-3.11%2B-0f766e.svg" alt="Python 3.11+">
+  <img src="https://img.shields.io/badge/Status-research%20prototype-7c3aed.svg" alt="Research prototype">
+</p>
 
-Hillstrom is an offline companion evaluation environment. It is not a TabCF
-validation dataset and is never exposed through the public TabCF UI.
+<p align="center">
+  <a href="https://gepingchen.github.io/projects/dcfa/"><strong>Prepared demo</strong></a>
+  ·
+  <a href="https://colab.research.google.com/github/GepingChen/DCFA/blob/main/notebooks/DCFA_Custom_Analysis_Colab.ipynb"><strong>Open in Colab</strong></a>
+  ·
+  <a href="https://arxiv.org/abs/2605.05993"><strong>Read the paper</strong></a>
+</p>
 
-## Implemented local scope
+**TabCF-Agent** (implemented here as the `dcfa` package) is the agentic system
+built on the method introduced in our arXiv paper,
+**[TabCF: Distributional Control Function Estimation with Tabular Foundation
+Models](https://arxiv.org/abs/2605.05993)**. The paper introduces TabCF for
+distributional control-function estimation; this repository adds a bounded agent
+layer that compiles natural-language questions, runs deterministic causal tools,
+checks diagnostics and support, and binds every displayed number to verifiable
+evidence.
 
-The repository now contains an installable Python package, pinned local
-development environments, typed schemas/errors, immutable specifications,
-content-addressed evidence, audit logs, cache validation, independent artifact
-verification, and these deterministic entry points:
+> **LLMs compile intent. Deterministic tools compute. Evidence gates decide what
+> can be shown.**
 
-- a no-`W` TabCF IV vertical slice with an explicitly selected
-  `sklearn_quantile_fallback`;
-- a bounded, development-only `tabpfn-client` adapter for fixed synthetic agent
-  smoke and website-demo paths, plus a default one-call Gemini compiler and an
-  explicitly confirmed local CSV website route with exact Y/X/Z roles, strict
-  row/column gates, and service metadata;
-- mean, CDF, quantile, threshold-risk, contrast, diagnostic, and strict-support
-  tools derived from one validated result bundle;
-- strong-IV, weak-IV, unsupported-treatment, non-empty-`W`, and outside-support
-  paths;
-- an oracle-scored fallback engineering benchmark on a DCFA-only triangular
-  DGP;
-- a provenance-required Fulton Fish local-file loader, with no automatic data
-  download;
-- an isolated Hillstrom policy adapter with arm-stratified 60/20/20 splits,
-  strict missingness and baseline-balance audit, split-scoped preprocessing,
-  immutable policy freeze, a test-outcome access gate, uniform and
-  uncertainty-aware policies, randomized-arm effects, DR/IPW/direct values,
-  paired contrasts, costs, capacity, allocations, and release checks;
-- four known-oracle semi-synthetic policy DGPs with constrained value/regret,
-  action confusion, abstention/selective-regret, fallback-inclusive value, and
-  action-gap calibration metrics;
-- an explicit agent state machine and 24-case recorded Track A benchmark with
-  five runs nested within each case;
-- a one-request Gemini Track A smoke that compiles one frozen synthetic prompt
-  into a typed proposal before the deterministic evidence-validated runtime;
-- a lazy Gradio shell that imports neither Hillstrom nor model backends until
-  their own paths are explicitly requested.
+<p align="center">
+  <a href="plots/tabcf_agent_overview_4k.png">
+    <img src="plots/tabcf_agent_overview_editable.svg" alt="TabCF-Agent architecture: bounded language compilation, explicit agent runtime, deterministic TabCF-IV engine, evidence validation, and visitor or audit outputs" width="100%">
+  </a>
+</p>
 
-Every local sklearn TabCF result is labeled
-`local_development / sklearn_quantile_fallback / development_only`. It is not a
-TabCF result and is ineligible for locked Track T claims. Synthetic Track H
-fixtures are likewise `development_only` and are not real Hillstrom evidence.
+<p align="center"><sub>Click the architecture figure to open the 4K version. The editable SVG and deterministic generator are in <a href="plots/">plots/</a>.</sub></p>
 
-## Local setup
+## Why TabCF-Agent?
 
-Core development and tests:
+Many causal-agent demos blur together language-model reasoning, statistical
+estimation, and presentation. TabCF-Agent keeps those responsibilities separate:
+
+1. **A bounded compiler** turns a natural-language request into an immutable,
+   typed analysis specification. Gemini sees symbolic treatment labels and the
+   Y/X/Z role contract—not data rows or actual intervention values.
+2. **An explicit runtime** validates roles, state transitions, approvals, and
+   failures. Unsupported requests fail closed instead of silently changing the
+   estimand or model.
+3. **Deterministic TabCF-IV tools** perform every numerical calculation, from
+   control-function construction to interventional distributions, means,
+   quantiles, risks, and directed contrasts.
+4. **An evidence and audit layer** binds results to data and specification hashes,
+   versions, support status, warnings, unrounded values, and source artifacts.
+   An independent verifier checks the saved bundle without refitting.
+
+## Supported analysis
+
+The public workflow intentionally supports one causal design:
+
+| Role | v1 contract |
+|---|---|
+| Outcome `Y` | One continuous outcome |
+| Treatment `X` | One continuous treatment |
+| Instrument `Z` | One scalar instrument |
+| Baseline covariates `W` | None; non-empty `W` is rejected before Stage 1 |
+
+Within that scope, the agent can return interventional means, medians and other
+quantiles, threshold risks, and directed contrasts. It preserves weak-IV and
+support warnings, blocks interventions outside joint support before Stage 2, and
+serves ordinary follow-ups from a validated cache rather than refitting.
+
+It is **not** a general causal-method router, an IV-discovery system, an
+invalid-instrument repair tool, or an autonomous policy-deployment system.
+Empirical diagnostics do not prove instrument validity or identification.
+
+## Try the project
+
+Choose the path that matches what you want to inspect:
+
+| Path | What happens | Providers and data boundary |
+|---|---|---|
+| **[Prepared demo](https://gepingchen.github.io/projects/dcfa/)** | Replays one hash-bound, independently verified synthetic result | Static GitHub Pages; no provider call at view time |
+| **[Colab workflow](https://colab.research.google.com/github/GepingChen/DCFA/blob/main/notebooks/DCFA_Custom_Analysis_Colab.ipynb)** | Runs one bounded custom CSV analysis in your own ephemeral runtime | Your question goes to Google; only separately authorized Y/X/Z rows and prediction grids go to Prior Labs |
+| **Local operator demo** | Runs the guided Gradio workflow and preserves full audit artifacts | Uses your repository-external Gemini and TabPFN Client credentials |
+
+The Colab and local managed-service paths are `development_only`. Provider
+availability, quotas, charges, and Colab resources are not guaranteed. Do not use
+sensitive, confidential, personally identifiable, or otherwise unshareable data.
+
+### Local setup
+
+Clone the pinned TabCF submodule and install the core development environment:
 
 ```bash
-python3 -m venv .venv
+git clone --recurse-submodules https://github.com/GepingChen/DCFA.git
+cd DCFA
+python3.11 -m venv .venv
 .venv/bin/python -m pip install -r requirements-dev.lock
 .venv/bin/python -m pip install -e . --no-deps
 ```
 
-Managed TabPFN client smoke (networked and usage-credit consuming):
+Run a credential-free mechanics demo:
 
 ```bash
-python3 -m venv .venv-managed
-.venv-managed/bin/python -m pip install -r requirements-managed-client.lock
-.venv-managed/bin/python -m pip install -e . --no-deps
-chmod 600 ~/.config/dcfa/tabpfn_api_key
-.venv-managed/bin/dcfa managed-agent-smoke \
-  --token-file ~/.config/dcfa/tabpfn_api_key \
-  --output-dir artifacts/local/managed-agent-smoke-v1
+.venv/bin/dcfa tabcf-demo \
+  --scenario strong_iv \
+  --output-dir artifacts/local/tabcf-strong-v1
 ```
 
-The token file must be outside this repository and contain only the API key.
-The command sends one frozen 128-row synthetic IV fixture to the Prior Labs
-service. It pins `tabpfn-client==0.3.3`, model `v2.5_default`, one estimator,
-and thinking mode off. Stage-2 intervention rows are batched, so one successful
-run makes three prediction API calls. It does not accept a CSV or user dataset.
+This command explicitly uses the local
+`sklearn_quantile_fallback`. Its output is `development_only`, is **not a TabCF
+result**, and cannot enter locked Track T evidence.
 
-Gemini live-agent smoke (one network request, with no data rows transmitted):
-
-```bash
-python3 -m venv .venv-gemini
-.venv-gemini/bin/python -m pip install -r requirements-gemini.lock
-.venv-gemini/bin/python -m pip install -e . --no-deps
-chmod 600 ~/.config/dcfa/gemini_api_key
-.venv-gemini/bin/dcfa gemini-agent-smoke \
-  --api-key-file ~/.config/dcfa/gemini_api_key \
-  --output-dir artifacts/local/gemini-live-smoke-v1
-```
-
-The Gemini key must remain outside the repository. The frozen
-`gemini-3.6-flash` request sends only the prompt, Y/X/Z schema contract, and
-symbolic intervention labels. Gemini never sees data rows or actual intervention
-values and makes no numerical causal calculation. The local deterministic tool
-produces the numerical result and evidence ID. API failure or unexpected output
-stops without retry or backend fallback.
-
-Managed TabPFN website-demo environment:
+To run the managed website demo, install the combined environment and place both
+credentials outside the repository:
 
 ```bash
 .venv/bin/python -m pip install -r requirements-website-demo.lock
 .venv/bin/python -m pip install -e . --no-deps
-chmod 600 ~/.config/dcfa/tabpfn_api_key
 chmod 600 ~/.config/dcfa/gemini_api_key
-```
-
-Website-oriented guided demo (`development_only`; local service only):
-
-```bash
+chmod 600 ~/.config/dcfa/tabpfn_api_key
 .venv/bin/dcfa-website-demo
 ```
 
-This presentation shell defaults to `gemini-3.6-flash` for one bounded structured
-compile call per run, then uses the real typed agent state machine and official
-managed TabPFN service. Gemini receives the natural-language question, Y/X/Z
-contract, and symbolic `low/center/high` labels; it receives no rows or actual
-intervention values and performs no numerical causal calculation. The page
-supports mean or median summaries and directed contrasts within that symbolic
-scope. It reads `~/.config/dcfa/gemini_api_key` and
-`~/.config/dcfa/tabpfn_api_key` by default. CSV runs require confirmation before
-the question goes to Google and selected rows go separately to Prior Labs. Any
-Gemini or Client failure blocks without retry, LLM bypass, or sklearn fallback.
-The default visitor page shows only explicit human-readable claim, support,
-warning, and error projections plus a short build revision. Full IDs, traces,
-unrounded values, service metadata, and the identity-rich audit plot remain in
-the immutable run artifact and are checked through the independent verifier;
-they are not sent to the default visitor DOM.
-The result view leads with a direction-aware plain-language answer, followed by
-data support, important warnings, and the development-only boundary. Four
-visitor stages replace raw runtime events, and blocked runs identify the stopped
-stage and next action without exposing internal codes. Both submit buttons are
-disabled during a queued run, and the initial page renders no empty result cards.
-See [`docs/WEBSITE_DEMO.md`](docs/WEBSITE_DEMO.md) for the health-checkable
-container workflow, cloud-data boundary, static prepared-replay contract, and
-user-owned Colab workflow.
+Open `http://127.0.0.1:7860`. See
+[`docs/WEBSITE_DEMO.md`](docs/WEBSITE_DEMO.md) for credential setup, readiness
+checks, Docker/Compose operation, transfer boundaries, and failure semantics.
 
-The public portfolio route uses a different boundary from the local service. GitHub
-Pages serves only a hash-bound, precomputed replay with no Python runtime, provider
-client, credential input, or analysis request. Custom analysis runs only in a
-visitor's own Colab runtime with separately confirmed Google and Prior Labs
-transfers. The notebook implementation is pinned and verified locally, but its
-public CTA now points to the anonymously readable `GepingChen/DCFA` repository.
-Both paths remain synthetic or user-authorized `development_only`
-demonstrations and establish no new Track T, H, or A evidence.
+## Architecture at a glance
 
-## Stable commands
+```text
+natural-language question + Y/X/Z data
+  -> bounded language compiler
+  -> immutable typed specification
+  -> explicit agent state machine
+  -> input, role, backend, diagnostic, and joint-support gates
+  -> Stage 1: estimate F(X | Z) and construct control rank V
+  -> Stage 2: estimate E[Y | X,V] and F(Y | X,V)
+  -> deterministic integration over V
+  -> canonical validated result bundle
+  -> evidence ledger + audit trail + independent verifier
+  -> visitor-safe answer and operator audit artifacts
+```
+
+The upstream statistical core remains pinned in
+[`third_party/TabCF`](third_party/TabCF). DCFA wraps its inspected interfaces; it
+does not rewrite the TabCF core or invent support for baseline covariates.
+
+## Evidence tracks
+
+The repository separates three questions that must not be merged into one claim:
+
+| Track | Question | Current evidence boundary |
+|---|---|---|
+| **T — estimator** | How does TabCF recover continuous-treatment interventional distributions? | Local fallback and managed-client runs test mechanics only; locked TabCF evidence still requires a reproducible checkpoint- and image-hashed runtime |
+| **H — decision** | How should a frozen three-action policy be evaluated? | Implemented on generated and semi-synthetic fixtures; no approved real Hillstrom run is claimed |
+| **A — agent** | Does explicit agent orchestration improve workflow reliability when tools are held fixed? | A 24-case × 5-run recorded-tool benchmark is implemented; it is not a paired live-LLM comparison |
+
+Hillstrom is an isolated randomized-policy evaluation environment. It is **not a
+TabCF validation dataset**, is never encoded as a continuous-treatment problem,
+and is not exposed through the public TabCF Analyst workflow.
+
+## What is implemented
+
+- immutable typed specifications, schemas, errors, evidence, audit, and cache;
+- a deterministic no-`W` TabCF-IV vertical slice with strict support gates;
+- explicit local, managed-client, and locked-runtime backend contracts with no
+  silent fallback;
+- a bounded Gemini compiler and explicit agent state machine;
+- a visitor-safe Gradio projection plus full machine-audit artifacts;
+- a hash-bound static replay and a pinned, output-free Colab notebook;
+- an isolated Hillstrom policy-value adapter with freeze-before-test leakage
+  gates and DR/IPW/direct estimators;
+- a recorded Track A benchmark with identical tools and fixtures;
+- independent artifact verification that never refits a model.
+
+For the exact protocol versions, verified artifacts, and external blockers, see
+[`docs/IMPLEMENTATION_STATUS.md`](docs/IMPLEMENTATION_STATUS.md).
+
+## Repository map
+
+| Path | Purpose |
+|---|---|
+| [`src/dcfa/`](src/dcfa/) | Shared contracts, evidence, CLI, runtime, TabCF-IV, and Hillstrom adapters |
+| [`src/dcfa_website_demo/`](src/dcfa_website_demo/) | Bounded Gemini + managed TabPFN presentation workflow |
+| [`src/dcfa_showcase/`](src/dcfa_showcase/) | Static prepared-replay freeze and verifier |
+| [`src/dcfa_colab/`](src/dcfa_colab/) | Secret-scoped Colab adapter |
+| [`evaluation/`](evaluation/) | Frozen benchmark cases and provider profiles |
+| [`showcase/prepared_demo_v1/`](showcase/prepared_demo_v1/) | Public-safe verified replay bundle |
+| [`notebooks/`](notebooks/) | Pinned custom-analysis Colab workflow |
+| [`tests/`](tests/) | Unit, statistical, leakage, agent-behavior, and integration gates |
+| [`plots/`](plots/) | Architecture figure, 4K export, and deterministic generator |
+| [`third_party/TabCF`](third_party/TabCF) | Pinned upstream TabCF source |
+
+For deeper orientation, read the
+[`architecture`](docs/ARCHITECTURE.md),
+[`identification boundaries`](docs/IDENTIFICATION_BOUNDARIES.md),
+[`codebase map`](docs/CODEBASE_MAP.md), and
+[`decision log`](docs/DECISIONS.md).
+
+## Verification
 
 ```bash
-# TabCF contract/demo branches; all local results are development-only.
-dcfa tabcf-demo --scenario strong_iv --output-dir artifacts/local/tabcf-strong
-dcfa tabcf-demo --scenario weak_iv --output-dir artifacts/local/tabcf-weak
-dcfa tabcf-demo --scenario support_violation --output-dir artifacts/local/tabcf-blocked
-dcfa track-t-development-evaluation \
-  --seeds 101,202,303 --rows 200 \
-  --output-dir artifacts/local/track-t-development-evaluation-v6
-
-# Offline Track H mechanics; generated input is not real Hillstrom.
-dcfa hillstrom-demo --output-dir artifacts/local/hillstrom-smoke-v6
-dcfa hillstrom-semisynthetic --replications 50 \
-  --output-dir artifacts/local/hillstrom-semisynthetic-v7
-
-# Recorded Track A: 24 cases x 5 nested runs x 2 systems.
-dcfa agent-benchmark --runs 5 \
-  --output artifacts/local/agent-benchmark-recorded-v5.json
-
-# One-call live Gemini mechanics; not a comparative Track A benchmark.
-dcfa gemini-agent-smoke \
-  --api-key-file ~/.config/dcfa/gemini_api_key \
-  --output-dir artifacts/local/gemini-live-smoke-v1
-dcfa verify-gemini-agent-smoke artifacts/local/gemini-live-smoke-v1
-
-# Networked managed-client mechanics; fixed synthetic data, development-only.
-dcfa managed-agent-smoke \
-  --token-file ~/.config/dcfa/tabpfn_api_key \
-  --output-dir artifacts/local/managed-agent-smoke-v1
-
-# Independent verification never refits.
-dcfa verify-artifacts artifacts/local/hillstrom-smoke-v6
-dcfa verify-agent-benchmark artifacts/local/agent-benchmark-recorded-v5.json
-
-# Prepared static replay and notebook release gates; verification is offline.
-python -m dcfa_showcase verify showcase/prepared_demo_v1
-
-# Quality gates.
 .venv/bin/ruff check src tests
 .venv/bin/ruff format --check src tests
 .venv/bin/python -m pytest
+.venv/bin/dcfa --help
+python -m dcfa_showcase verify showcase/prepared_demo_v1
 git diff --check
 ```
 
-Result paths are immutable. Every CLI run must use a fresh versioned directory
-or filename; an existing material path returns `OUTPUT_PATH_EXISTS`. The UI
-allocates a new numbered run directory instead of replacing an earlier result.
+A smoke test proves mechanics only. It does not establish statistical quality,
+coverage, identification, policy improvement, or release readiness. Generated
+outputs are immutable and belong under ignored `artifacts/local/` paths; use a
+fresh versioned destination for every run.
 
-## Repository delivery workflow
+## Citation
 
-Completed and verified in-scope repository changes are committed and pushed to
-the current branch by default. Each delivery must inspect and explicitly stage
-the intended paths, exclude secrets, raw/private data, generated artifacts and
-unrelated user work, run the applicable quality gates, make a normal commit, and
-push without rewriting history. Pulls, rebases, merges, force-pushes, tags, PRs,
-releases, deployments, and publication still require separate user direction.
-See [`AGENTS.md`](AGENTS.md) for the full repository operating rule.
+If this project or the underlying method is useful in your work, please cite the
+TabCF paper:
 
-`dcfa fulton-local` requires a user-provided CSV plus exact source, retrieval
-date, and usage/license note. `dcfa validate-tabpfn-runtime` requires a fully
-frozen remote manifest described in
-[`docs/REMOTE_TABPFN_RUNNER.md`](docs/REMOTE_TABPFN_RUNNER.md).
+```bibtex
+@article{chen2026tabcf,
+  title   = {TabCF: Distributional Control Function Estimation with Tabular Foundation Models},
+  author  = {Chen, Geping and Li, Chunlin and Yang, Tianzhong and Zhu, Zhengyuan and Zhou, Jing},
+  journal = {arXiv preprint arXiv:2605.05993},
+  year    = {2026}
+}
+```
 
-## Release blockers
-
-The following are intentionally not represented as complete:
-
-1. This macOS environment has no working local Torch/TabPFN installation. A
-   separate managed-client development path can test mechanics against the
-   Prior Labs service, but it does not expose a checkpoint hash or service
-   image digest and is therefore not release-eligible. Publishable Track T must
-   run in a validated, hashed runtime with the real model checkpoint.
-2. The TabCF manuscript/predecessor artifacts needed to freeze the plan's
-   conceptual DGP labels against upstream `A*`/`B*` codes are not in this
-   repository.
-3. No Fulton raw CSV or explicit data-use decision was supplied. The upstream
-   package is GPL-3, while the Rdatasets archive warns that row-level data
-   licensing may be unclear, so DCFA does not auto-download or redistribute it.
-4. No approved Hillstrom raw file, exact hash, or dataset usage/license decision
-   was supplied. Real-RCT and genuinely Hillstrom-calibrated results therefore
-   remain blocked; only the loader/contracts and explicitly synthetic mechanics
-   run locally.
-5. Diagnostic warning/stop thresholds have not been calibrated on the frozen
-   manuscript DGP suite. The current thresholds are development checks and have
-   no locked Track T configuration ID.
-6. One Gemini model/prompt manifest is frozen for a single clean synthetic smoke,
-   and a separate versioned Gemini profile now powers the local website compiler.
-   The first authenticated smoke request exposed a removed Interactions API
-   parameter and stopped before analysis; the corrected request shape and website
-   integration are offline-tested, but neither is a paired 24-case
-   fixed-workflow/full-agent evaluation. Repeated live reliability, Hillstrom
-   leakage, policy constraints, and final production cost/latency distributions
-   remain unevaluated.
-
-Read [`AGENTS.md`](AGENTS.md), the
-[`integrated research plan`](plan/TabCF_Agent_Integrated_Research_Plan_ZH.md),
-[`identification boundaries`](docs/IDENTIFICATION_BOUNDARIES.md), and the
-[`codebase map`](docs/CODEBASE_MAP.md) before extending a research boundary.
-The exact current coverage, verified artifact IDs, and external blockers are in
-[`docs/IMPLEMENTATION_STATUS.md`](docs/IMPLEMENTATION_STATUS.md).
+TabCF method and paper code: <https://github.com/GepingChen/TabCF>

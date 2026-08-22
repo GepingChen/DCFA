@@ -1,0 +1,380 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:ev="http://www.w3.org/2001/xml-events" xmlns:xlink="http://www.w3.org/1999/xlink" baseProfile="full" height="2160" version="1.1" viewBox="0 0 3840 2160" width="3840">
+  <defs>
+    <marker id="arrow_blue" markerHeight="12" markerUnits="userSpaceOnUse" markerWidth="12" orient="auto" refX="12" refY="6">
+      <path d="M 0 0 L 12 6 L 0 12 z" fill="#2A5BD7"/>
+    </marker>
+    <marker id="arrow_teal" markerHeight="12" markerUnits="userSpaceOnUse" markerWidth="12" orient="auto" refX="12" refY="6">
+      <path d="M 0 0 L 12 6 L 0 12 z" fill="#12836E"/>
+    </marker>
+    <marker id="arrow_amber" markerHeight="12" markerUnits="userSpaceOnUse" markerWidth="12" orient="auto" refX="12" refY="6">
+      <path d="M 0 0 L 12 6 L 0 12 z" fill="#D97706"/>
+    </marker>
+    <marker id="arrow_red" markerHeight="12" markerUnits="userSpaceOnUse" markerWidth="12" orient="auto" refX="12" refY="6">
+      <path d="M 0 0 L 12 6 L 0 12 z" fill="#D83B35"/>
+    </marker>
+    <marker id="arrow_violet" markerHeight="12" markerUnits="userSpaceOnUse" markerWidth="12" orient="auto" refX="12" refY="6">
+      <path d="M 0 0 L 12 6 L 0 12 z" fill="#6B35B2"/>
+    </marker>
+  </defs>
+  <rect fill="#FCFCFB" height="2160" width="3840" x="0" y="0"/>
+  <text fill="#202734" font-family="Arial" font-size="92" font-weight="800" text-anchor="middle" x="1920.0" y="105">TabCF-Agent</text>
+  <text fill="#202734" font-family="Arial" font-size="44" font-weight="600" text-anchor="middle" x="1920.0" y="178">An Auditable Causal Agent for Continuous-Treatment IV Analysis</text>
+  <text fill="#5F6B7A" font-family="Arial" font-size="30" font-style="italic" font-weight="400" text-anchor="middle" x="1920.0" y="228">LLM compiles intent · deterministic tools compute · evidence gates decide what can be shown</text>
+  <rect fill="#F4F7FF" height="58" rx="29.0" ry="29.0" stroke="#2A5BD7" stroke-width="3" width="570" x="750" y="252"/>
+  <text fill="#2A5BD7" font-family="Arial" font-size="27" font-weight="600" text-anchor="middle" x="1035.0" y="290.18">LLM compiles intent</text>
+  <rect fill="#F2FBF7" height="58" rx="29.0" ry="29.0" stroke="#12836E" stroke-width="3" width="610" x="1460" y="252"/>
+  <text fill="#12836E" font-family="Arial" font-size="27" font-weight="600" text-anchor="middle" x="1765.0" y="290.18">Deterministic tools compute</text>
+  <rect fill="#F8F4FF" height="58" rx="29.0" ry="29.0" stroke="#6B35B2" stroke-width="3" width="900" x="2230" y="252"/>
+  <text fill="#6B35B2" font-family="Arial" font-size="27" font-weight="600" text-anchor="middle" x="2680.0" y="290.18">Evidence gates control every displayed number</text>
+  <rect fill="#F6F8FD" height="610" width="3780" x="30" y="400"/>
+  <rect fill="#F5FBF8" height="470" width="3780" x="30" y="1010"/>
+  <rect fill="#FAF8FD" height="510" width="3780" x="30" y="1480"/>
+  <rect fill="#FFFFFF" height="70" stroke="#CBD5E1" stroke-width="2" width="3780" x="30" y="330"/>
+  <line stroke="#CBD5E1" stroke-width="2" x1="30" x2="30" y1="330" y2="1990"/>
+  <line stroke="#CBD5E1" stroke-width="2" x1="240" x2="240" y1="330" y2="1990"/>
+  <line stroke="#CBD5E1" stroke-width="2" x1="660" x2="660" y1="330" y2="1990"/>
+  <line stroke="#CBD5E1" stroke-width="2" x1="1130" x2="1130" y1="330" y2="1990"/>
+  <line stroke="#CBD5E1" stroke-width="2" x1="1580" x2="1580" y1="330" y2="1990"/>
+  <line stroke="#CBD5E1" stroke-width="2" x1="2610" x2="2610" y1="330" y2="1990"/>
+  <line stroke="#CBD5E1" stroke-width="2" x1="3400" x2="3400" y1="330" y2="1990"/>
+  <line stroke="#CBD5E1" stroke-width="2" x1="3810" x2="3810" y1="330" y2="1990"/>
+  <line stroke="#CBD5E1" stroke-width="2" x1="30" x2="3810" y1="330" y2="330"/>
+  <line stroke="#CBD5E1" stroke-width="2" x1="30" x2="3810" y1="400" y2="400"/>
+  <line stroke="#CBD5E1" stroke-width="2" x1="30" x2="3810" y1="1010" y2="1010"/>
+  <line stroke="#CBD5E1" stroke-width="2" x1="30" x2="3810" y1="1480" y2="1480"/>
+  <line stroke="#CBD5E1" stroke-width="2" x1="30" x2="3810" y1="1990" y2="1990"/>
+  <text fill="#202734" font-family="Arial" font-size="27" font-weight="700" text-anchor="middle" x="450" y="375">1. USER INPUT</text>
+  <text fill="#202734" font-family="Arial" font-size="27" font-weight="700" text-anchor="middle" x="895" y="375">2. BOUNDED AI AGENT</text>
+  <text fill="#202734" font-family="Arial" font-size="27" font-weight="700" text-anchor="middle" x="1355" y="375">3. EXPLICIT AGENT RUNTIME</text>
+  <text fill="#202734" font-family="Arial" font-size="27" font-weight="700" text-anchor="middle" x="2095" y="375">4. DETERMINISTIC TABCF-IV ENGINE</text>
+  <text fill="#202734" font-family="Arial" font-size="27" font-weight="700" text-anchor="middle" x="3005" y="375">5. RESULT BUNDLE &amp; TRUST LAYER</text>
+  <text fill="#202734" font-family="Arial" font-size="27" font-weight="700" text-anchor="middle" x="3605" y="375">6. TWO OUTPUT PROJECTIONS</text>
+  <text fill="#183E9D" font-family="Arial" font-size="39" font-style="normal" font-weight="800" text-anchor="middle" x="135" y="645">
+    <tspan dy="0" x="135">AGENT</tspan>
+    <tspan dy="47" x="135">CONTROL</tspan>
+    <tspan dy="47" x="135">PLANE</tspan>
+  </text>
+  <text fill="#086451" font-family="Arial" font-size="32" font-style="normal" font-weight="800" text-anchor="middle" x="135" y="1195">
+    <tspan dy="0" x="135">DETERMINISTIC</tspan>
+    <tspan dy="42" x="135">CAUSAL</tspan>
+    <tspan dy="42" x="135">DATA PLANE</tspan>
+  </text>
+  <text fill="#4D2389" font-family="Arial" font-size="32" font-style="normal" font-weight="800" text-anchor="middle" x="135" y="1700">
+    <tspan dy="0" x="135">EVIDENCE,</tspan>
+    <tspan dy="42" x="135">AUDIT &amp;</tspan>
+    <tspan dy="42" x="135">PRESENTATION</tspan>
+  </text>
+  <rect fill="#0F172A" height="145" opacity="0.055" rx="22" ry="22" width="325" x="260" y="442"/>
+  <rect fill="#FFFFFF" height="145" rx="22" ry="22" stroke="#2A5BD7" stroke-width="3" width="325" x="255" y="435"/>
+  <text fill="#2A5BD7" font-family="Arial" font-size="24" font-weight="700" text-anchor="middle" x="417.5" y="477">Natural-language question</text>
+  <text fill="#202734" font-family="Arial" font-size="21" font-style="normal" font-weight="400" text-anchor="middle" x="417.5" y="519">
+    <tspan dy="0" x="417.5">Mean or median · low / center /</tspan>
+    <tspan dy="26.88" x="417.5">high treatment</tspan>
+  </text>
+  <rect fill="#0F172A" height="170" opacity="0.055" rx="22" ry="22" width="325" x="260" y="717"/>
+  <rect fill="#FFFFFF" height="170" rx="22" ry="22" stroke="#2A5BD7" stroke-width="3" width="325" x="255" y="710"/>
+  <text fill="#2A5BD7" font-family="Arial" font-size="25" font-weight="700" text-anchor="middle" x="417.5" y="750">Guided synthetic data</text>
+  <text fill="#202734" font-family="Arial" font-size="19" font-style="normal" font-weight="400" text-anchor="middle" x="417.5" y="788">
+    <tspan dy="0" x="417.5">or authorized CSV</tspan>
+    <tspan dy="27" x="417.5">Exactly three numeric roles:</tspan>
+    <tspan dy="27" x="417.5">Y, X, Z</tspan>
+  </text>
+  <rect fill="#0F172A" height="155" opacity="0.055" rx="22" ry="22" width="325" x="260" y="917"/>
+  <rect fill="#FFF7E8" height="155" rx="22" ry="22" stroke="#D97706" stroke-width="3" width="325" x="255" y="910"/>
+  <text fill="#202734" font-family="Arial" font-size="28" font-weight="700" text-anchor="middle" x="417.5" y="952">Scope lock</text>
+  <text fill="#202734" font-family="DejaVu Sans" font-size="18" font-style="normal" font-weight="400" text-anchor="middle" x="417.5" y="993">
+    <tspan dy="0" x="417.5">Continuous outcome Y</tspan>
+    <tspan dy="27" x="417.5">continuous treatment X</tspan>
+    <tspan dy="27" x="417.5">scalar instrument Z · W = ∅</tspan>
+  </text>
+  <rect fill="#FFFFFF" height="82" rx="16" ry="16" stroke="#CBD5E1" stroke-width="3" width="325" x="255" y="1085"/>
+  <text fill="#5F6B7A" font-family="Arial" font-size="17" font-style="normal" font-weight="400" text-anchor="middle" x="417.5" y="1115">
+    <tspan dy="0" x="417.5">TabCF-IV only · no general causal router</tspan>
+    <tspan dy="23" x="417.5">no Hillstrom path</tspan>
+  </text>
+  <rect fill="#FFF7E8" height="72" rx="13" ry="13" stroke="#D97706" stroke-width="3" width="145" x="590" y="405"/>
+  <text fill="#D97706" font-family="Arial" font-size="14" font-style="normal" font-weight="600" text-anchor="middle" x="662.5" y="433">
+    <tspan dy="0" x="662.5">Question + generic roles</tspan>
+    <tspan dy="19" x="662.5">+ symbolic labels only</tspan>
+  </text>
+  <path d="M 580 500 L 742 500" fill="none" marker-end="url(#arrow_amber)" opacity="1.0" stroke="#D97706" stroke-dasharray="12 10" stroke-linecap="round" stroke-linejoin="round" stroke-width="4"/>
+  <rect fill="#FFF7E8" height="105" rx="14" ry="14" stroke="#D97706" stroke-dasharray="9 7" stroke-width="3" width="145" x="590" y="575"/>
+  <text fill="#D97706" font-family="Arial" font-size="15" font-style="normal" font-weight="600" text-anchor="middle" x="662.5" y="610">
+    <tspan dy="0" x="662.5">No data rows</tspan>
+    <tspan dy="20" x="662.5">No actual intervention</tspan>
+    <tspan dy="20" x="662.5">values</tspan>
+  </text>
+  <rect fill="#0F172A" height="300" opacity="0.055" rx="22" ry="22" width="345" x="755" y="427"/>
+  <rect fill="#F4F7FF" height="300" rx="22" ry="22" stroke="#2A5BD7" stroke-width="3" width="345" x="750" y="420"/>
+  <text fill="#183E9D" font-family="Arial" font-size="25" font-weight="700" text-anchor="middle" x="922.5" y="463">Bounded Gemini Compiler</text>
+  <text fill="#202734" font-family="Arial" font-size="23" font-style="normal" font-weight="400" text-anchor="middle" x="922.5" y="510">
+    <tspan dy="0" x="922.5">Understand intent</tspan>
+    <tspan dy="31" x="922.5">Choose an allowed summary</tspan>
+    <tspan dy="31" x="922.5">Analyze · Clarify · Block</tspan>
+  </text>
+  <line opacity="0.55" stroke="#2A5BD7" stroke-width="2" x1="780" x2="1065" y1="612" y2="612"/>
+  <text fill="#183E9D" font-family="Arial" font-size="22" font-style="normal" font-weight="500" text-anchor="middle" x="922.5" y="648">
+    <tspan dy="0" x="922.5">mean / median</tspan>
+    <tspan dy="28" x="922.5">low / center / high</tspan>
+    <tspan dy="28" x="922.5">single structured request</tspan>
+  </text>
+  <rect fill="#0F172A" height="135" opacity="0.055" rx="22" ry="22" width="325" x="765" y="762"/>
+  <rect fill="#FFFFFF" height="135" rx="22" ry="22" stroke="#2A5BD7" stroke-width="3" width="325" x="760" y="755"/>
+  <text fill="#2A5BD7" font-family="Arial" font-size="22" font-weight="700" text-anchor="middle" x="922.5" y="793">Local Deterministic Mapper</text>
+  <text fill="#202734" font-family="Arial" font-size="20" font-style="normal" font-weight="400" text-anchor="middle" x="922.5" y="834">
+    <tspan dy="0" x="922.5">Symbolic labels → actual</tspan>
+    <tspan dy="28" x="922.5">intervention values</tspan>
+  </text>
+  <path d="M 922.5 720 L 922.5 750" fill="none" marker-end="url(#arrow_blue)" opacity="1.0" stroke="#2A5BD7" stroke-linecap="round" stroke-linejoin="round" stroke-width="5"/>
+  <rect fill="#0F172A" height="280" opacity="0.055" rx="22" ry="22" width="400" x="720" y="937"/>
+  <rect fill="#F4F7FF" height="280" rx="22" ry="22" stroke="#2A5BD7" stroke-width="3" width="400" x="715" y="930"/>
+  <text fill="#183E9D" font-family="Arial" font-size="24" font-style="normal" font-weight="800" text-anchor="middle" x="915" y="968">
+    <tspan dy="0" x="915">Immutable Analysis</tspan>
+    <tspan dy="27" x="915">Specification</tspan>
+  </text>
+  <rect fill="#FFFFFF" height="55" rx="14" ry="14" stroke="#2A5BD7" stroke-width="2.2" width="165" x="740" y="1005"/>
+  <text fill="#202734" font-family="Arial" font-size="20" font-weight="500" text-anchor="middle" x="822.5" y="1039.3">Y / X / Z roles</text>
+  <rect fill="#FFFFFF" height="55" rx="14" ry="14" stroke="#2A5BD7" stroke-width="2.2" width="165" x="925" y="1005"/>
+  <text fill="#202734" font-family="Arial" font-size="20" font-weight="500" text-anchor="middle" x="1007.5" y="1039.3">objective</text>
+  <rect fill="#FFFFFF" height="55" rx="14" ry="14" stroke="#2A5BD7" stroke-width="2.2" width="165" x="740" y="1075"/>
+  <text fill="#202734" font-family="Arial" font-size="19" font-weight="500" text-anchor="middle" x="822.5" y="1108.96">intervention grid</text>
+  <rect fill="#FFFFFF" height="55" rx="14" ry="14" stroke="#2A5BD7" stroke-width="2.2" width="165" x="925" y="1075"/>
+  <text fill="#202734" font-family="Arial" font-size="19" font-weight="500" text-anchor="middle" x="1007.5" y="1108.96">backend profile</text>
+  <rect fill="#FFFFFF" height="55" rx="14" ry="14" stroke="#2A5BD7" stroke-width="2.2" width="165" x="740" y="1145"/>
+  <text fill="#202734" font-family="Arial" font-size="20" font-weight="500" text-anchor="middle" x="822.5" y="1179.3">dataset hash</text>
+  <rect fill="#FFFFFF" height="55" rx="14" ry="14" stroke="#2A5BD7" stroke-width="2.2" width="165" x="925" y="1145"/>
+  <text fill="#202734" font-family="Arial" font-size="20" font-weight="500" text-anchor="middle" x="1007.5" y="1179.3">seed</text>
+  <path d="M 915 890 L 915 925" fill="none" marker-end="url(#arrow_blue)" opacity="1.0" stroke="#2A5BD7" stroke-linecap="round" stroke-linejoin="round" stroke-width="5"/>
+  <rect fill="#0F172A" height="520" opacity="0.055" rx="22" ry="22" width="390" x="1165" y="487"/>
+  <rect fill="#F4F7FF" height="520" rx="22" ry="22" stroke="#2A5BD7" stroke-width="3" width="390" x="1160" y="480"/>
+  <text fill="#183E9D" font-family="Arial" font-size="30" font-weight="800" text-anchor="middle" x="1355" y="528">Causal Agent Runtime</text>
+  <rect fill="#FFFFFF" height="112" rx="16" ry="16" stroke="#2A5BD7" stroke-width="3" width="340" x="1185" y="560"/>
+  <text fill="#183E9D" font-family="Arial" font-size="17" font-style="normal" font-weight="600" text-anchor="middle" x="1355" y="590">
+    <tspan dy="0" x="1355">Received → Compile → Validate Spec</tspan>
+    <tspan dy="25" x="1355">→ Execute → Validate Evidence</tspan>
+    <tspan dy="25" x="1355">→ Complete</tspan>
+  </text>
+  <rect fill="#FFFFFF" height="52" rx="14" ry="14" stroke="#2A5BD7" stroke-width="3" width="300" x="1205" y="705"/>
+  <text fill="#202734" font-family="Arial" font-size="23" font-weight="600" text-anchor="middle" x="1355" y="740">Clarify</text>
+  <rect fill="#FFFFFF" height="52" rx="14" ry="14" stroke="#2A5BD7" stroke-width="3" width="300" x="1205" y="775"/>
+  <text fill="#202734" font-family="Arial" font-size="23" font-weight="600" text-anchor="middle" x="1355" y="810">Approval required</text>
+  <rect fill="#FFF3F2" height="52" rx="14" ry="14" stroke="#D83B35" stroke-width="3" width="300" x="1205" y="845"/>
+  <text fill="#D83B35" font-family="Arial" font-size="23" font-weight="600" text-anchor="middle" x="1355" y="880">Block</text>
+  <text fill="#5F6B7A" font-family="Arial" font-size="21" font-style="normal" font-weight="400" text-anchor="middle" x="1355" y="935">
+    <tspan dy="0" x="1355">Single bounded orchestrator</tspan>
+    <tspan dy="25" x="1355">Typed state transitions · fail closed</tspan>
+  </text>
+  <path d="M 1115 1065 L 1135 1065 L 1135 690 L 1155 690" fill="none" marker-end="url(#arrow_blue)" opacity="1.0" stroke="#2A5BD7" stroke-linecap="round" stroke-linejoin="round" stroke-width="5"/>
+  <path d="M 1550 680 L 1595 680" fill="none" marker-end="url(#arrow_blue)" opacity="1.0" stroke="#2A5BD7" stroke-linecap="round" stroke-linejoin="round" stroke-width="5"/>
+  <path d="M 580 795 L 640 795 L 640 1215 L 1590 1215 L 1590 930 L 1618 930" fill="none" marker-end="url(#arrow_teal)" opacity="1.0" stroke="#12836E" stroke-linecap="round" stroke-linejoin="round" stroke-width="5"/>
+  <rect fill="#0F172A" height="150" opacity="0.055" rx="22" ry="22" width="445" x="1850" y="422"/>
+  <rect fill="#FFF7E8" height="150" rx="22" ry="22" stroke="#D97706" stroke-dasharray="12 9" stroke-width="3" width="445" x="1845" y="415"/>
+  <text fill="#202734" font-family="Arial" font-size="28" font-weight="700" text-anchor="middle" x="2067.5" y="457">Prior Labs</text>
+  <text fill="#D97706" font-family="Arial" font-size="28" font-weight="700" text-anchor="middle" x="2067.5" y="495">Managed TabPFN</text>
+  <text fill="#5F6B7A" font-family="Arial" font-size="20" font-weight="400" text-anchor="middle" x="2067.5" y="535">Service-version-traceable backend</text>
+  <rect fill="#FFF7E8" height="118" rx="16" ry="16" stroke="#D97706" stroke-dasharray="10 8" stroke-width="3" width="225" x="2320" y="430"/>
+  <text fill="#D97706" font-family="Arial" font-size="21" font-style="normal" font-weight="600" text-anchor="middle" x="2432.5" y="472">
+    <tspan dy="0" x="2432.5">Separate transfer</tspan>
+    <tspan dy="28" x="2432.5">from Gemini</tspan>
+  </text>
+  <rect fill="#0F172A" height="780" opacity="0.055" rx="28" ry="28" width="965" x="1610" y="617"/>
+  <rect fill="#F2FBF7" height="780" rx="28" ry="28" stroke="#12836E" stroke-width="4" width="965" x="1605" y="610"/>
+  <text fill="#086451" font-family="Arial" font-size="32" font-weight="800" text-anchor="middle" x="2087.5" y="660">Deterministic TabCF-IV Engine</text>
+  <rect fill="#FFFFFF" height="555" rx="18" ry="18" stroke="#12836E" stroke-width="3" width="175" x="1625" y="700"/>
+  <text fill="#086451" font-family="Arial" font-size="24" font-style="normal" font-weight="800" text-anchor="middle" x="1712.5" y="742">
+    <tspan dy="0" x="1712.5">Local Input &amp;</tspan>
+    <tspan dy="28" x="1712.5">Scope Gates</tspan>
+  </text>
+  <text fill="#202734" font-family="Arial" font-size="16" font-style="normal" font-weight="400" text-anchor="middle" x="1712.5" y="820">
+    <tspan dy="0" x="1712.5">Explicit Y / X / Z</tspan>
+    <tspan dy="29" x="1712.5">mapping</tspan>
+    <tspan dy="29" x="1712.5">Consent and numeric-data</tspan>
+    <tspan dy="29" x="1712.5">checks</tspan>
+    <tspan dy="29" x="1712.5">Role, hash, profile and</tspan>
+    <tspan dy="29" x="1712.5">backend checks</tspan>
+    <tspan dy="29" x="1712.5">Reject W, extra roles and</tspan>
+    <tspan dy="29" x="1712.5">unsupported treatments</tspan>
+  </text>
+  <rect fill="#FFFFFF" height="220" rx="18" ry="18" stroke="#12836E" stroke-width="3" width="145" x="1815" y="770"/>
+  <text fill="#086451" font-family="Arial" font-size="25" font-weight="700" text-anchor="middle" x="1887.5" y="815">Stage 1</text>
+  <text fill="#202734" font-family="Arial" font-size="16" font-style="normal" font-weight="400" text-anchor="middle" x="1887.5" y="858">
+    <tspan dy="0" x="1887.5">Estimate</tspan>
+    <tspan dy="27" x="1887.5">F(X | Z)</tspan>
+    <tspan dy="27" x="1887.5">Construct</tspan>
+    <tspan dy="27" x="1887.5">control rank V</tspan>
+  </text>
+  <rect fill="#FFFFFF" height="315" rx="18" ry="18" stroke="#12836E" stroke-width="3" width="215" x="1975" y="735"/>
+  <text fill="#086451" font-family="Arial" font-size="23" font-style="normal" font-weight="800" text-anchor="middle" x="2082.5" y="780">
+    <tspan dy="0" x="2082.5">Diagnostics &amp;</tspan>
+    <tspan dy="27" x="2082.5">Joint Support Gate</tspan>
+  </text>
+  <text fill="#202734" font-family="Arial" font-size="16" font-style="normal" font-weight="400" text-anchor="middle" x="2082.5" y="846">
+    <tspan dy="0" x="2082.5">First-stage relevance</tspan>
+    <tspan dy="32" x="2082.5">Control-rank calibration</tspan>
+    <tspan dy="32" x="2082.5">Residual dependence</tspan>
+    <tspan dy="32" x="2082.5">Intervention support</tspan>
+  </text>
+  <rect fill="#FFFFFF" height="220" rx="18" ry="18" stroke="#12836E" stroke-width="3" width="155" x="2205" y="770"/>
+  <text fill="#086451" font-family="Arial" font-size="25" font-weight="700" text-anchor="middle" x="2282.5" y="815">Stage 2</text>
+  <text fill="#202734" font-family="Arial" font-size="16" font-style="normal" font-weight="400" text-anchor="middle" x="2282.5" y="858">
+    <tspan dy="0" x="2282.5">Fit E[Y | X,V]</tspan>
+    <tspan dy="28" x="2282.5">and</tspan>
+    <tspan dy="28" x="2282.5">F(Y | X,V)</tspan>
+  </text>
+  <rect fill="#FFFFFF" height="155" rx="18" ry="18" stroke="#12836E" stroke-width="3" width="175" x="2375" y="730"/>
+  <text fill="#086451" font-family="Arial" font-size="19" font-style="normal" font-weight="800" text-anchor="middle" x="2462.5" y="770">
+    <tspan dy="0" x="2462.5">Deterministic</tspan>
+    <tspan dy="29" x="2462.5">integration</tspan>
+    <tspan dy="29" x="2462.5">over V</tspan>
+  </text>
+  <rect fill="#FFFFFF" height="385" rx="18" ry="18" stroke="#12836E" stroke-width="3" width="175" x="2375" y="920"/>
+  <text fill="#086451" font-family="Arial" font-size="18" font-style="normal" font-weight="800" text-anchor="middle" x="2462.5" y="960">
+    <tspan dy="0" x="2462.5">Interventional</tspan>
+    <tspan dy="27" x="2462.5">distribution</tspan>
+    <tspan dy="27" x="2462.5">F(Y | do(X = x))</tspan>
+  </text>
+  <rect fill="#F2FBF7" height="48" rx="14" ry="14" stroke="#12836E" stroke-width="2.2" width="141" x="2392" y="1045"/>
+  <text fill="#202734" font-family="Arial" font-size="20" font-weight="500" text-anchor="middle" x="2462.5" y="1075.8">Mean</text>
+  <rect fill="#F2FBF7" height="48" rx="14" ry="14" stroke="#12836E" stroke-width="2.2" width="141" x="2392" y="1105"/>
+  <text fill="#202734" font-family="Arial" font-size="14" font-weight="500" text-anchor="middle" x="2462.5" y="1133.76">Median / Quantiles</text>
+  <rect fill="#F2FBF7" height="48" rx="14" ry="14" stroke="#12836E" stroke-width="2.2" width="141" x="2392" y="1165"/>
+  <text fill="#202734" font-family="Arial" font-size="18" font-weight="500" text-anchor="middle" x="2462.5" y="1195.12">Threshold risk</text>
+  <rect fill="#F2FBF7" height="48" rx="14" ry="14" stroke="#12836E" stroke-width="2.2" width="141" x="2392" y="1225"/>
+  <text fill="#202734" font-family="Arial" font-size="14" font-weight="500" text-anchor="middle" x="2462.5" y="1253.76">Directed contrast</text>
+  <path d="M 1800 875 L 1810 875" fill="none" marker-end="url(#arrow_teal)" opacity="1.0" stroke="#12836E" stroke-linecap="round" stroke-linejoin="round" stroke-width="4"/>
+  <path d="M 1960 875 L 1970 875" fill="none" marker-end="url(#arrow_teal)" opacity="1.0" stroke="#12836E" stroke-linecap="round" stroke-linejoin="round" stroke-width="4"/>
+  <path d="M 2190 875 L 2200 875" fill="none" marker-end="url(#arrow_teal)" opacity="1.0" stroke="#12836E" stroke-linecap="round" stroke-linejoin="round" stroke-width="4"/>
+  <path d="M 2360 825 L 2370 825" fill="none" marker-end="url(#arrow_teal)" opacity="1.0" stroke="#12836E" stroke-linecap="round" stroke-linejoin="round" stroke-width="4"/>
+  <path d="M 2462.5 885 L 2462.5 915" fill="none" marker-end="url(#arrow_teal)" opacity="1.0" stroke="#12836E" stroke-linecap="round" stroke-linejoin="round" stroke-width="4"/>
+  <rect fill="#F2FBF7" height="66" rx="15" ry="15" stroke="#12836E" stroke-width="3" width="200" x="1985" y="1070"/>
+  <text fill="#086451" font-family="Arial" font-size="18" font-style="normal" font-weight="600" text-anchor="middle" x="2085" y="1096">
+    <tspan dy="0" x="2085">Supported or</tspan>
+    <tspan dy="22" x="2085">weak support</tspan>
+  </text>
+  <rect fill="#FFF7E8" height="66" rx="15" ry="15" stroke="#D97706" stroke-width="3" width="160" x="2200" y="1070"/>
+  <text fill="#D97706" font-family="Arial" font-size="18" font-style="normal" font-weight="600" text-anchor="middle" x="2280" y="1096">
+    <tspan dy="0" x="2280">Continue with</tspan>
+    <tspan dy="22" x="2280">warning</tspan>
+  </text>
+  <path d="M 2082.5 1050 L 2082.5 1065" fill="none" stroke="#12836E" stroke-linecap="round" stroke-linejoin="round" stroke-width="4"/>
+  <path d="M 2185 1103 L 2195 1103" fill="none" marker-end="url(#arrow_teal)" opacity="1.0" stroke="#12836E" stroke-linecap="round" stroke-linejoin="round" stroke-width="4"/>
+  <path d="M 2280 1070 L 2280 1000 L 2282.5 995" fill="none" marker-end="url(#arrow_teal)" opacity="1.0" stroke="#12836E" stroke-linecap="round" stroke-linejoin="round" stroke-width="4"/>
+  <rect fill="#0F172A" height="150" opacity="0.055" rx="18" ry="18" width="415" x="1950" y="1177"/>
+  <rect fill="#FFF3F2" height="150" rx="18" ry="18" stroke="#D83B35" stroke-width="3.5" width="415" x="1945" y="1170"/>
+  <text fill="#D83B35" font-family="Arial" font-size="25" font-weight="800" text-anchor="middle" x="2152.5" y="1214">Outside support — BLOCKED</text>
+  <text fill="#202734" font-family="Arial" font-size="20" font-style="normal" font-weight="400" text-anchor="middle" x="2152.5" y="1253">
+    <tspan dy="0" x="2152.5">Stops before Stage 2</tspan>
+    <tspan dy="30" x="2152.5">No number · No evidence · No plot</tspan>
+  </text>
+  <path d="M 2082.5 1050 L 2082.5 1155" fill="none" marker-end="url(#arrow_red)" opacity="1.0" stroke="#D83B35" stroke-linecap="round" stroke-linejoin="round" stroke-width="4"/>
+  <text fill="#D97706" font-family="Arial" font-size="18" font-style="normal" font-weight="600" text-anchor="middle" x="1825" y="600">
+    <tspan dy="0" x="1825">Authorized Y/X/Z rows</tspan>
+    <tspan dy="23" x="1825">+ prediction grids</tspan>
+  </text>
+  <text fill="#D97706" font-family="Arial" font-size="18" font-style="normal" font-weight="600" text-anchor="middle" x="2310" y="600">
+    <tspan dy="0" x="2310">Authorized Y/X/Z rows</tspan>
+    <tspan dy="23" x="2310">+ prediction grids</tspan>
+  </text>
+  <path d="M 1985 565 L 1805 565 L 1805 720 L 1887.5 720 L 1887.5 760" fill="none" marker-end="url(#arrow_amber)" opacity="1.0" stroke="#D97706" stroke-dasharray="12 10" stroke-linecap="round" stroke-linejoin="round" stroke-width="4"/>
+  <path d="M 2160 565 L 2545 565 L 2545 720 L 2282.5 720 L 2282.5 760" fill="none" marker-end="url(#arrow_amber)" opacity="1.0" stroke="#D97706" stroke-dasharray="12 10" stroke-linecap="round" stroke-linejoin="round" stroke-width="4"/>
+  <rect fill="#0F172A" height="350" opacity="0.055" rx="22" ry="22" width="350" x="1905" y="1537"/>
+  <rect fill="#F8F4FF" height="350" rx="22" ry="22" stroke="#6B35B2" stroke-width="3" width="350" x="1900" y="1530"/>
+  <text fill="#4D2389" font-family="Arial" font-size="28" font-style="normal" font-weight="800" text-anchor="middle" x="2075" y="1580">
+    <tspan dy="0" x="2075">Canonical Validated</tspan>
+    <tspan dy="32" x="2075">Result Bundle</tspan>
+  </text>
+  <text fill="#202734" font-family="Arial" font-size="22" font-style="normal" font-weight="400" text-anchor="middle" x="2075" y="1665">
+    <tspan dy="0" x="2075">Interventional distributions</tspan>
+    <tspan dy="38" x="2075">Requested query result</tspan>
+    <tspan dy="38" x="2075">Diagnostics and support</tspan>
+    <tspan dy="38" x="2075">Warnings and assumptions</tspan>
+    <tspan dy="38" x="2075">Unrounded numerical values</tspan>
+  </text>
+  <path d="M 2462.5 1305 L 2462.5 1450 L 2075 1450 L 2075 1525" fill="none" marker-end="url(#arrow_teal)" opacity="1.0" stroke="#12836E" stroke-linecap="round" stroke-linejoin="round" stroke-width="5"/>
+  <rect fill="#FFFFFF" height="105" rx="17" ry="17" stroke="#6B35B2" stroke-width="3" width="300" x="2290" y="1530"/>
+  <text fill="#4D2389" font-family="Arial" font-size="24" font-weight="700" text-anchor="middle" x="2440" y="1565">Evidence Ledger</text>
+  <text fill="#202734" font-family="Arial" font-size="18" font-style="normal" font-weight="400" text-anchor="middle" x="2440" y="1596">
+    <tspan dy="0" x="2440">IDs · hashes · raw values</tspan>
+    <tspan dy="22" x="2440">units · provenance</tspan>
+  </text>
+  <rect fill="#FFFFFF" height="105" rx="17" ry="17" stroke="#6B35B2" stroke-width="3" width="300" x="2290" y="1665"/>
+  <text fill="#4D2389" font-family="Arial" font-size="24" font-weight="700" text-anchor="middle" x="2440" y="1700">Audit Trail</text>
+  <text fill="#202734" font-family="Arial" font-size="18" font-style="normal" font-weight="400" text-anchor="middle" x="2440" y="1731">
+    <tspan dy="0" x="2440">State events · backend metadata</tspan>
+    <tspan dy="22" x="2440">immutable run artifacts</tspan>
+  </text>
+  <rect fill="#FFFFFF" height="105" rx="17" ry="17" stroke="#6B35B2" stroke-width="3" width="300" x="2290" y="1800"/>
+  <text fill="#4D2389" font-family="Arial" font-size="24" font-weight="700" text-anchor="middle" x="2440" y="1835">Validated Cache</text>
+  <text fill="#202734" font-family="Arial" font-size="18" font-style="normal" font-weight="400" text-anchor="middle" x="2440" y="1866">
+    <tspan dy="0" x="2440">Ordinary follow-ups</tspan>
+    <tspan dy="22" x="2440">without refitting</tspan>
+  </text>
+  <path d="M 2250 1600 L 2275 1600 L 2275 1582 L 2285 1582" fill="none" marker-end="url(#arrow_violet)" opacity="1.0" stroke="#6B35B2" stroke-linecap="round" stroke-linejoin="round" stroke-width="4"/>
+  <path d="M 2250 1705 L 2285 1705" fill="none" marker-end="url(#arrow_violet)" opacity="1.0" stroke="#6B35B2" stroke-linecap="round" stroke-linejoin="round" stroke-width="4"/>
+  <path d="M 2250 1810 L 2275 1810 L 2275 1852 L 2285 1852" fill="none" marker-end="url(#arrow_violet)" opacity="1.0" stroke="#6B35B2" stroke-linecap="round" stroke-linejoin="round" stroke-width="4"/>
+  <polygon fill="#0F172A" opacity="0.055" points="2855.0,1512 3065,1550 3045,1812 2855.0,1902 2665,1812 2645,1557"/>
+  <polygon fill="#FFFFFF" points="2850.0,1505 3060,1543 3040,1805 2850.0,1895 2660,1805 2640,1543" stroke="#6B35B2" stroke-width="4"/>
+  <text fill="#4D2389" font-family="Arial" font-size="30" font-style="normal" font-weight="800" text-anchor="middle" x="2850" y="1565">
+    <tspan dy="0" x="2850">Evidence</tspan>
+    <tspan dy="33" x="2850">Validation Gate</tspan>
+  </text>
+  <text fill="#202734" font-family="Arial" font-size="21" font-style="normal" font-weight="400" text-anchor="middle" x="2850" y="1658">
+    <tspan dy="0" x="2850">Dataset hash matches</tspan>
+    <tspan dy="36" x="2850">Specification matches</tspan>
+    <tspan dy="36" x="2850">Bundle ↔ evidence agreement</tspan>
+    <tspan dy="36" x="2850">Unknown or mismatched values</tspan>
+    <tspan dy="36" x="2850">fail closed</tspan>
+  </text>
+  <circle cx="2755" cy="1842" fill="#FFFFFF" r="22" stroke="#6B35B2" stroke-width="3"/>
+  <path d="M 2745.1 1842 L 2752.8 1850.36 L 2767.1 1832.76" fill="none" stroke="#6B35B2" stroke-linecap="round" stroke-linejoin="round" stroke-width="4"/>
+  <text fill="#4D2389" font-family="Arial" font-size="17" font-style="normal" font-weight="600" text-anchor="start" x="2790" y="1838">
+    <tspan dy="0" x="2790">Independent artifact</tspan>
+    <tspan dy="22" x="2790">verifier</tspan>
+  </text>
+  <path d="M 2590 1582 L 2630 1582" fill="none" marker-end="url(#arrow_violet)" opacity="1.0" stroke="#6B35B2" stroke-linecap="round" stroke-linejoin="round" stroke-width="4"/>
+  <path d="M 2590 1717 L 2630 1717" fill="none" marker-end="url(#arrow_violet)" opacity="1.0" stroke="#6B35B2" stroke-linecap="round" stroke-linejoin="round" stroke-width="4"/>
+  <path d="M 2590 1852 L 2630 1852" fill="none" marker-end="url(#arrow_violet)" opacity="1.0" stroke="#6B35B2" stroke-linecap="round" stroke-linejoin="round" stroke-width="4"/>
+  <rect fill="#0F172A" height="370" opacity="0.055" rx="22" ry="22" width="370" x="3425" y="522"/>
+  <rect fill="#FFFFFF" height="370" rx="22" ry="22" stroke="#12836E" stroke-width="3" width="370" x="3420" y="515"/>
+  <text fill="#086451" font-family="Arial" font-size="29" font-weight="800" text-anchor="middle" x="3605" y="563">Visitor-safe Demo</text>
+  <text fill="#202734" font-family="Arial" font-size="19" font-style="normal" font-weight="400" text-anchor="start" x="3448" y="625">
+    <tspan dy="0" x="3448">Direct natural-language answer</tspan>
+    <tspan dy="40" x="3448">Data-support status</tspan>
+    <tspan dy="40" x="3448">Mapped warnings and limitations</tspan>
+    <tspan dy="40" x="3448">Human-readable distribution plot</tspan>
+  </text>
+  <line opacity="0.55" stroke="#12836E" stroke-width="2" x1="3448" x2="3762" y1="805" y2="805"/>
+  <text fill="#086451" font-family="Arial" font-size="21" font-weight="600" text-anchor="middle" x="3605" y="848">3-significant-digit display</text>
+  <path d="M 3435 1030 L 3425 1030 L 3425 1175 L 3445 1175" fill="none" stroke="#6B35B2" stroke-linecap="round" stroke-linejoin="round" stroke-width="4"/>
+  <path d="M 3775 1030 L 3795 1030 L 3795 1175 L 3775 1175" fill="none" stroke="#6B35B2" stroke-linecap="round" stroke-linejoin="round" stroke-width="4"/>
+  <text fill="#4D2389" font-family="Arial" font-size="25" font-style="normal" font-weight="700" text-anchor="middle" x="3605" y="1080">
+    <tspan dy="0" x="3605">Two projections ·</tspan>
+    <tspan dy="32" x="3605">one validated bundle</tspan>
+  </text>
+  <rect fill="#0F172A" height="340" opacity="0.055" rx="22" ry="22" width="370" x="3425" y="1537"/>
+  <rect fill="#FFFFFF" height="340" rx="22" ry="22" stroke="#6B35B2" stroke-width="3" width="370" x="3420" y="1530"/>
+  <text fill="#4D2389" font-family="Arial" font-size="28" font-weight="800" text-anchor="middle" x="3605" y="1578">Operator Audit Artifacts</text>
+  <text fill="#202734" font-family="Arial" font-size="19" font-style="normal" font-weight="400" text-anchor="start" x="3448" y="1640">
+    <tspan dy="0" x="3448">Unrounded values</tspan>
+    <tspan dy="40" x="3448">Evidence and specification IDs</tspan>
+    <tspan dy="40" x="3448">Gemini compilation trace</tspan>
+    <tspan dy="40" x="3448">Backend and service metadata</tspan>
+    <tspan dy="40" x="3448">Audit plot</tspan>
+  </text>
+  <path d="M 3060 1700 L 3360 1700" fill="none" stroke="#6B35B2" stroke-linecap="round" stroke-linejoin="round" stroke-width="5"/>
+  <path d="M 3360 700 L 3360 1700" fill="none" stroke="#6B35B2" stroke-linecap="round" stroke-linejoin="round" stroke-width="5"/>
+  <path d="M 3360 700 L 3415 700" fill="none" marker-end="url(#arrow_violet)" opacity="1.0" stroke="#6B35B2" stroke-linecap="round" stroke-linejoin="round" stroke-width="5"/>
+  <path d="M 3360 1700 L 3415 1700" fill="none" marker-end="url(#arrow_violet)" opacity="1.0" stroke="#6B35B2" stroke-linecap="round" stroke-linejoin="round" stroke-width="5"/>
+  <rect fill="#FFFFFF" height="100" rx="18" ry="18" stroke="#CBD5E1" stroke-width="3" width="2480" x="680" y="2020"/>
+  <line stroke="#2A5BD7" stroke-width="5" x1="750" x2="820" y1="2070" y2="2070"/>
+  <text fill="#202734" font-family="Arial" font-size="20" font-weight="600" text-anchor="start" x="838" y="2079">Blue — agent control</text>
+  <line stroke="#12836E" stroke-width="5" x1="1220" x2="1290" y1="2070" y2="2070"/>
+  <text fill="#202734" font-family="Arial" font-size="20" font-weight="600" text-anchor="start" x="1308" y="2079">Teal — deterministic computation</text>
+  <line stroke="#D97706" stroke-dasharray="13 9" stroke-width="5" x1="1800" x2="1870" y1="2070" y2="2070"/>
+  <text fill="#202734" font-family="Arial" font-size="20" font-weight="600" text-anchor="start" x="1888" y="2079">Amber dashed — external transfer</text>
+  <line stroke="#D83B35" stroke-width="5" x1="2440" x2="2510" y1="2070" y2="2070"/>
+  <text fill="#202734" font-family="Arial" font-size="20" font-weight="600" text-anchor="start" x="2528" y="2079">Red — blocked path</text>
+  <line stroke="#6B35B2" stroke-width="5" x1="2820" x2="2890" y1="2070" y2="2070"/>
+  <text fill="#202734" font-family="Arial" font-size="20" font-weight="600" text-anchor="start" x="2908" y="2079">Violet — evidence and audit</text>
+</svg>

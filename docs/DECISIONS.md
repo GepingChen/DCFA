@@ -758,3 +758,30 @@ Do not rewrite an accepted entry when it changes; append a superseding entry.
   PyPI release.
 - Source: User-approved ZeroGPU implementation plan and the inspected Prior Labs v2 and
   v2.5 model licenses on 2026-08-30.
+
+## D-034 — Permit an explicitly disclosed one-request Gemini key in the public Space
+
+- Date: 2026-08-31
+- Status: Accepted implementation; live provider success pending
+- Decision: Keep the canonical presets frozen and provider-free, while allowing a
+  logged-in visitor to enter a Gemini API key in a password field for one authorized
+  CSV request. The key is passed with the CSV event, materialized only in a mode-600
+  request-scoped temporary file for the existing compiler boundary, scanned out of all
+  artifacts, cleared from the UI on every terminal result, and never placed in Gradio
+  state, environment variables, application logs, traces, ZIPs, or repository files.
+  Duplicate Spaces may continue to use their owner-provided `DCFA_GEMINI_API_KEY`
+  Secret and hide the browser key field.
+- Rationale: A temporary browser key removes the duplication barrier for a one-time
+  research demo without shifting Gemini quota to the canonical Space owner. A password
+  widget masks only the display; the UI must disclose that the credential passes over
+  HTTPS through Hugging Face and Google and that DCFA can promise only no intentional
+  persistence, not absence from all third-party infrastructure processing.
+- Affected tracks: TabCF Analyst public presentation only. No estimator, evidence,
+  support, retry, Track T/H/A, or local managed-client behavior changes.
+- Verification impact: Require Hugging Face login, explicit transfer consent, disabled
+  public analysis APIs and browser run history, request-local credential handling,
+  terminal key clearing, exact secret-byte artifact scanning, and separate canonical
+  temporary-key versus duplicate-Secret UI tests. Do not call the browser-key route
+  live with a real credential without action-time user authorization.
+- Source: User request to replace duplicate-only access with a non-persistent temporary
+  key input while retaining the safer Duplicate + Secret option on 2026-08-31.

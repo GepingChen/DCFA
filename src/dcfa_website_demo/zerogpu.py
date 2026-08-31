@@ -64,9 +64,26 @@ def _gemini_secret() -> str | None:
     value = os.environ.get("DCFA_GEMINI_API_KEY")
     if value is None:
         return None
-    if len(value) < 20 or any(character.isspace() for character in value):
-        raise RuntimeError("DCFA_GEMINI_API_KEY is malformed.")
+    return _validate_gemini_key(value, "DCFA_GEMINI_API_KEY is malformed.")
+
+
+def _validate_gemini_key(value: str | None, message: str) -> str:
+    if (
+        not isinstance(value, str)
+        or len(value) < 20
+        or any(character.isspace() for character in value)
+    ):
+        raise ValueError(message)
     return value
+
+
+def _request_gemini_key(space_secret: str | None, temporary_key: str | None) -> str:
+    if space_secret is not None:
+        return space_secret
+    return _validate_gemini_key(
+        temporary_key,
+        "Enter a valid temporary Gemini API key for this request.",
+    )
 
 
 @contextmanager
@@ -170,6 +187,13 @@ def build_zerogpu_app(*, build_revision: str) -> Any:
     def authorize(profile: gr.OAuthProfile | None) -> None:
         _require_login(profile)
 
+    def authorize_csv(
+        temporary_api_key: str | None,
+        profile: gr.OAuthProfile | None,
+    ) -> None:
+        _require_login(profile)
+        _request_gemini_key(secret, temporary_api_key)
+
     def inspect_header(
         csv_path: str | None,
         profile: gr.OAuthProfile | None,
@@ -227,6 +251,7 @@ def build_zerogpu_app(*, build_revision: str) -> Any:
     @spaces.GPU(duration=120)
     def run_csv(
         csv_path: str | None,
+        temporary_api_key: str | None,
         outcome: str,
         treatment: str,
         instrument: str,
@@ -236,12 +261,12 @@ def build_zerogpu_app(*, build_revision: str) -> Any:
         profile: gr.OAuthProfile | None,
     ) -> tuple[Any, ...]:
         _require_login(profile)
+        request_secret: str | None = None
         try:
-            if secret is None:
-                raise ValueError("Duplicate this Space and add DCFA_GEMINI_API_KEY first.")
             if not csv_path:
                 raise ValueError("Choose a CSV file before running the workflow.")
-            with _temporary_gemini_file(secret) as secret_file:
+            request_secret = _request_gemini_key(secret, temporary_api_key)
+            with _temporary_gemini_file(request_secret) as secret_file:
                 result = execute_local_csv_upload(
                     csv_path,
                     outcome,
@@ -254,13 +279,15 @@ def build_zerogpu_app(*, build_revision: str) -> Any:
                     output_root=output_root,
                     gemini_api_key_file=secret_file,
                 )
-            return _verified_projection(result, secret)
+            return _verified_projection(result, request_secret)
         except DCFAError as exc:
             _log_operator_error(exc)
             return portfolio_ui_updates(_execution_error_outputs(exc), buttons_enabled=True)
         except (OSError, RuntimeError, TypeError, ValueError) as exc:
             return portfolio_ui_updates(_input_error_outputs(str(exc)), buttons_enabled=True)
         finally:
+            request_secret = None
+            temporary_api_key = None
             _safe_unlink_upload(csv_path)
 
     return build_app(
@@ -268,7 +295,8 @@ def build_zerogpu_app(*, build_revision: str) -> Any:
         build_revision=build_revision,
         deployment_mode=deployment_mode,
         space_authorize_handler=authorize,
+        space_csv_authorize_handler=authorize_csv,
         space_scenario_handler=run_scenario,
-        space_csv_handler=run_csv if secret is not None else None,
-        space_csv_header_handler=inspect_header if secret is not None else None,
+        space_csv_handler=run_csv,
+        space_csv_header_handler=inspect_header,
     )

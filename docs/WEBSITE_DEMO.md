@@ -16,16 +16,24 @@ four paths is locked Track T evidence or a general causal-analysis service.
 
 The canonical Space is `GPChen01/dcfa-zerogpu`. It requires Hugging Face login
 before any GPU event and runs the three synthetic presets with a frozen typed
-median contrast, so the canonical Space makes no Gemini or Prior Labs request.
+median contrast, so those preset runs make no Gemini or Prior Labs request.
 It preloads and hash-checks `Prior-Labs/TabPFN-v2-reg` at revision
 `4972a65a1b30806315c6f92499959ffbfc69a673`, uses one CUDA estimator, and
 prominently displays the required `Built with PriorLabs-TabPFN` attribution.
 
-A visitor can duplicate the Space and add `DCFA_GEMINI_API_KEY` as their own
-Space Secret. Only that duplicated mode enables editable natural-language
-questions and bounded CSV analysis. Gemini receives question text and symbolic
-roles but no rows or actual intervention values; CSV rows remain in the
-Hugging Face runtime and are not sent to Prior Labs. Uploads must be authorized,
+For a one-time bounded CSV analysis, a logged-in visitor may enter a temporary
+Gemini API key in the canonical password field. DCFA passes it through the
+Hugging Face backend for that request, materializes it only in a mode-600
+temporary file, clears the field after success or failure, and scans the result
+tree before export. It is not written to state, environment variables, logs,
+traces, artifacts, or ZIPs. This is no guarantee about transient processing by
+Hugging Face or Google, so the UI recommends a separate restricted key.
+
+A visitor who prefers server-side secret storage can instead duplicate the Space
+and add `DCFA_GEMINI_API_KEY` as their own Space Secret; that mode hides the
+browser key field. In either mode, Gemini receives question text and symbolic
+roles but no rows or actual intervention values; CSV rows remain in the Hugging
+Face runtime and are not sent to Prior Labs. Uploads must be authorized,
 non-sensitive three-column Y/X/Z data. Completed runs are independently verified,
 made available as a path-safe ZIP, and removed from uncompressed server storage;
 Gradio cache files expire after fifteen minutes.

@@ -1314,6 +1314,7 @@ def portfolio_ui_updates(
     *,
     buttons_enabled: bool,
     archive_path: str | None = None,
+    clear_api_key: bool = True,
 ) -> tuple[Any, ...]:
     """Map one visitor projection to Gradio component updates."""
     import gradio as gr
@@ -1326,6 +1327,7 @@ def portfolio_ui_updates(
         gr.update(value=evidence_value, visible=bool(evidence_value)),
         gr.update(value=plot_value, visible=plot_value is not None),
         gr.update(value=archive_path, visible=archive_path is not None),
+        gr.update(value="") if clear_api_key else gr.update(),
         gr.update(interactive=buttons_enabled),
         gr.update(interactive=buttons_enabled),
     )
@@ -1337,6 +1339,7 @@ def build_app(
     build_revision: str | None = None,
     deployment_mode: str = "managed_local",
     space_authorize_handler: Any | None = None,
+    space_csv_authorize_handler: Any | None = None,
     space_scenario_handler: Any | None = None,
     space_csv_handler: Any | None = None,
     space_csv_header_handler: Any | None = None,
@@ -1353,11 +1356,14 @@ def build_app(
         raise ValueError(f"Unsupported website deployment mode: {deployment_mode}")
     is_space = deployment_mode.startswith("zerogpu_")
     gemini_enabled = deployment_mode != "zerogpu_canonical"
-    csv_enabled = deployment_mode != "zerogpu_canonical"
+    csv_enabled = True
+    temporary_key_enabled = deployment_mode == "zerogpu_canonical"
     if is_space and (
         space_authorize_handler is None
+        or space_csv_authorize_handler is None
         or space_scenario_handler is None
-        or (csv_enabled and (space_csv_handler is None or space_csv_header_handler is None))
+        or space_csv_handler is None
+        or space_csv_header_handler is None
     ):
         raise ValueError("ZeroGPU deployment requires explicit authenticated event handlers.")
     scenario_choices = [(item.label, key) for key, item in SCENARIOS.items()]
@@ -1483,12 +1489,9 @@ def build_app(
                                 f"Upload exactly three numeric columns and {MIN_UPLOAD_ROWS}–"
                                 f"{MAX_UPLOAD_ROWS} rows. The file is processed ephemerally by "
                                 "Hugging Face and local TabPFN v2; extra columns are rejected."
-                                if csv_enabled and is_space
+                                if is_space
                                 else (
-                                    "Duplicate this Space and add your own DCFA_GEMINI_API_KEY "
-                                    "Secret to enable authorized CSV analysis."
-                                    if is_space
-                                    else f"Upload exactly three numeric columns and "
+                                    f"Upload exactly three numeric columns and "
                                     f"{MIN_UPLOAD_ROWS}–{MAX_UPLOAD_ROWS} rows. Extra columns are "
                                     "rejected rather than silently treated as W."
                                 )
@@ -1516,6 +1519,26 @@ def build_app(
                                 csv_outcome = gr.Textbox(value="Y", label="Outcome Y column")
                                 csv_treatment = gr.Textbox(value="X", label="Treatment X column")
                                 csv_instrument = gr.Textbox(value="Z", label="Instrument Z column")
+                        csv_api_key = gr.Textbox(
+                            value="",
+                            type="password",
+                            label="Temporary Gemini API key",
+                            info=(
+                                "Used only for this request by the Hugging Face backend, then "
+                                "cleared. DCFA does not write it to files, logs, state, or "
+                                "artifacts."
+                            ),
+                            lines=1,
+                            max_lines=1,
+                            visible=temporary_key_enabled,
+                            interactive=temporary_key_enabled,
+                        )
+                        if is_space and not temporary_key_enabled:
+                            gr.Markdown(
+                                "This duplicate uses its owner-provided `DCFA_GEMINI_API_KEY` "
+                                "Space Secret; no browser key is required.",
+                                elem_classes="demo-section-copy",
+                            )
                         csv_seed = gr.Number(
                             value=20260813,
                             precision=0,
@@ -1541,7 +1564,7 @@ def build_app(
                             value=False,
                             label=(
                                 "I am authorized to upload this data to Hugging Face and send only "
-                                "the question text to Google Gemini."
+                                "the question text and temporary API credential to Google Gemini."
                                 if is_space
                                 else "I am authorized to use this data and approve both transfers."
                             ),
@@ -1551,9 +1574,10 @@ def build_app(
                             '<div class="demo-transfer-note" role="note">'
                             + (
                                 "<strong>Data boundary:</strong> the question text goes to Google "
-                                "Gemini; CSV rows remain in the Hugging Face runtime and are "
-                                "deleted "
-                                "after processing. Never upload sensitive data.</div>"
+                                "Gemini; the temporary key passes through the Hugging Face runtime "
+                                "but is not intentionally persisted by DCFA. CSV rows remain in "
+                                "the runtime and are deleted after processing. Never upload "
+                                "sensitive data.</div>"
                                 if is_space
                                 else "<strong>Two separate transfers:</strong> the question text "
                                 "goes to Google Gemini; selected Y/X/Z rows go to Prior Labs.</div>"
@@ -1646,13 +1670,18 @@ def build_app(
             evidence,
             plot,
             artifact_download,
+            csv_api_key,
             run_button,
             csv_run_button,
         )
         if is_space:
 
             def show_running() -> tuple[Any, ...]:
-                return portfolio_ui_updates(_running_outputs(), buttons_enabled=False)
+                return portfolio_ui_updates(
+                    _running_outputs(),
+                    buttons_enabled=False,
+                    clear_api_key=False,
+                )
 
             authorized = run_button.click(
                 fn=space_authorize_handler,
@@ -1720,13 +1749,26 @@ def build_app(
             yield portfolio_ui_updates(formatted, buttons_enabled=True)
 
         csv_inputs = (
-            csv_file,
-            csv_outcome,
-            csv_treatment,
-            csv_instrument,
-            csv_confirmed,
-            csv_question,
-            csv_seed,
+            (
+                csv_file,
+                csv_api_key,
+                csv_outcome,
+                csv_treatment,
+                csv_instrument,
+                csv_confirmed,
+                csv_question,
+                csv_seed,
+            )
+            if is_space
+            else (
+                csv_file,
+                csv_outcome,
+                csv_treatment,
+                csv_instrument,
+                csv_confirmed,
+                csv_question,
+                csv_seed,
+            )
         )
         if is_space and csv_enabled:
             csv_file.upload(
@@ -1737,8 +1779,8 @@ def build_app(
                 api_name=False,
             )
             authorized_csv = csv_run_button.click(
-                fn=space_authorize_handler,
-                inputs=None,
+                fn=space_csv_authorize_handler,
+                inputs=csv_api_key,
                 outputs=None,
                 queue=False,
                 api_name=False,

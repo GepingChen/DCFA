@@ -13,9 +13,11 @@ from dcfa.artifact_validation import verify_run_directory
 from dcfa.constants import EstimatorBackend
 from dcfa.tabcf_iv.backend import SklearnQuantileBackend
 from dcfa_website_demo.app import (
+    _input_error_outputs,
     build_app,
     execute_local_csv_upload,
     execute_local_portfolio_scenario,
+    portfolio_ui_updates,
 )
 from dcfa_website_demo.csv_upload import export_standard_demo_csv
 from tests.provider_fakes import FakeGeminiClient
@@ -110,11 +112,54 @@ def test_preloaded_model_hash_mismatch_fails_closed(
         zerogpu_module.resolve_preloaded_model()
 
 
-def test_canonical_space_config_requires_login_and_hides_csv_execution(tmp_path: Path) -> None:
+def test_request_key_prefers_space_secret_and_validates_temporary_input() -> None:
+    assert zerogpu_module._request_gemini_key("s" * 24, "t" * 24) == "s" * 24
+    assert zerogpu_module._request_gemini_key(None, "t" * 24) == "t" * 24
+    with pytest.raises(ValueError, match="temporary Gemini API key"):
+        zerogpu_module._request_gemini_key(None, "short")
+
+
+def test_temporary_key_file_is_owner_only_and_deleted() -> None:
+    secret = "temporary_test_key_not_real"
+    with zerogpu_module._temporary_gemini_file(secret) as key_file:
+        assert key_file.read_text(encoding="utf-8") == secret
+        assert key_file.stat().st_mode & 0o777 == 0o600
+        parent = key_file.parent
+    assert not parent.exists()
+
+
+def test_every_terminal_ui_update_clears_the_temporary_key() -> None:
+    updates = portfolio_ui_updates(
+        _input_error_outputs("invalid request"),
+        buttons_enabled=True,
+    )
+    assert updates[6]["value"] == ""
+    running = portfolio_ui_updates(
+        _input_error_outputs("running"),
+        buttons_enabled=False,
+        clear_api_key=False,
+    )
+    assert "value" not in running[6]
+
+
+def test_canonical_space_config_requires_login_and_enables_temporary_key(
+    tmp_path: Path,
+) -> None:
     def authorize(profile: gr.OAuthProfile | None) -> None:
         del profile
 
+    def authorize_csv(api_key: str, profile: gr.OAuthProfile | None) -> None:
+        del api_key, profile
+
     def scenario_handler(*args):
+        del args
+        return ()
+
+    def csv_handler(*args):
+        del args
+        return ()
+
+    def header_handler(*args):
         del args
         return ()
 
@@ -123,7 +168,10 @@ def test_canonical_space_config_requires_login_and_hides_csv_execution(tmp_path:
         build_revision="12345678",
         deployment_mode="zerogpu_canonical",
         space_authorize_handler=authorize,
+        space_csv_authorize_handler=authorize_csv,
         space_scenario_handler=scenario_handler,
+        space_csv_handler=csv_handler,
+        space_csv_header_handler=header_handler,
     )
     config = app.get_config_file()
     assert any(
@@ -137,4 +185,33 @@ def test_canonical_space_config_requires_login_and_hides_csv_execution(tmp_path:
     )
     serialized = json.dumps(config, ensure_ascii=False)
     assert "Frozen preset question · no live LLM call" in serialized
-    assert "Duplicate this Space" in serialized
+    key_components = [
+        component
+        for component in config["components"]
+        if component.get("props", {}).get("label") == "Temporary Gemini API key"
+    ]
+    assert len(key_components) == 1
+    assert key_components[0]["props"]["type"] == "password"
+    assert key_components[0]["props"]["interactive"] is True
+    assert "not intentionally persisted by DCFA" in serialized
+
+
+def test_duplicate_space_keeps_secret_mode_and_hides_browser_key(tmp_path: Path) -> None:
+    app = build_app(
+        output_root=tmp_path,
+        build_revision="12345678",
+        deployment_mode="zerogpu_duplicate",
+        space_authorize_handler=lambda: None,
+        space_csv_authorize_handler=lambda _key: None,
+        space_scenario_handler=lambda *_args: (),
+        space_csv_handler=lambda *_args: (),
+        space_csv_header_handler=lambda *_args: (),
+    )
+    config = app.get_config_file()
+    key_component = next(
+        component
+        for component in config["components"]
+        if component.get("props", {}).get("label") == "Temporary Gemini API key"
+    )
+    assert key_component["props"]["visible"] is False
+    assert "owner-provided" in json.dumps(config, ensure_ascii=False)

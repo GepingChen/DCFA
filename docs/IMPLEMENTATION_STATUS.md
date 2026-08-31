@@ -165,7 +165,7 @@ Current ZeroGPU implementation checks:
 .venv/bin/ruff check src tests                         passed
 .venv/bin/ruff format --check src tests                84 files already formatted
 .venv/bin/python -m pip check                          no broken requirements
-HF Space commit                                        d8e635cdb2ac5cb5c46ef827034f7e680e0f4d45
+HF Space commit                                        c8e0c304a6615bf7d09002f198b398907e8e8a06
 HF runtime                                             RUNNING; current=zero-a10g
 strong preset                                          completed; median contrast +5.1
 weak preset                                            completed; weak-IV/support warnings preserved
@@ -173,6 +173,7 @@ outside-support preset                                 blocked; no number, plot,
 downloaded live backend                                tabpfn 8.5.0; torch 2.11.0; device=cuda
 live checkpoint SHA-256                                2ab5a07d...8c10736
 canonical Gemini requests/data rows                    0 / 0
+temporary-key UI                                       password input; CSV enabled; APIs hidden
 responsive checks                                      390 px and 1280 px; no overflow
 ```
 

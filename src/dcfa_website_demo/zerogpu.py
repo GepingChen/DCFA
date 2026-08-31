@@ -39,6 +39,7 @@ from dcfa_website_demo.csv_upload import inspect_csv_header
 
 DEFAULT_ZEROGPU_OUTPUT_ROOT = Path("/tmp/dcfa-zerogpu-runs")
 DEFAULT_GRADIO_TEMP_ROOT = Path("/tmp/gradio")
+DEFAULT_SECRET_ROOT = Path("/tmp/dcfa-zerogpu-secrets")
 
 
 def resolve_preloaded_model() -> Path:
@@ -70,7 +71,13 @@ def _gemini_secret() -> str | None:
 
 @contextmanager
 def _temporary_gemini_file(secret: str) -> Iterator[Path]:
-    with tempfile.TemporaryDirectory(prefix="dcfa-zerogpu-secret-") as temporary:
+    secret_parent = Path(os.environ.get("DCFA_SECRET_ROOT", str(DEFAULT_SECRET_ROOT)))
+    secret_parent.mkdir(parents=True, exist_ok=True)
+    secret_parent.chmod(0o700)
+    with tempfile.TemporaryDirectory(
+        prefix="request-",
+        dir=secret_parent,
+    ) as temporary:
         root = Path(temporary)
         root.chmod(0o700)
         path = root / "gemini_api_key"
@@ -94,7 +101,9 @@ def _scan_for_secret(root: Path, secret: str | None) -> None:
 
 
 def _archive_run(root: Path) -> Path:
-    archive = root.parent / f"{root.name}-{uuid.uuid4().hex[:8]}.zip"
+    archive_root = Path(os.environ.get("GRADIO_TEMP_DIR", str(DEFAULT_GRADIO_TEMP_ROOT)))
+    archive_root.mkdir(parents=True, exist_ok=True)
+    archive = archive_root / f"{root.name}-{uuid.uuid4().hex[:8]}.zip"
     with zipfile.ZipFile(archive, mode="x", compression=zipfile.ZIP_DEFLATED) as stream:
         for path in sorted(root.rglob("*")):
             if path.is_file():

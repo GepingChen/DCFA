@@ -191,8 +191,8 @@ def build_zerogpu_app(*, build_revision: str) -> Any:
         temporary_api_key: str | None,
         profile: gr.OAuthProfile | None,
     ) -> None:
+        del temporary_api_key
         _require_login(profile)
-        _request_gemini_key(secret, temporary_api_key)
 
     def inspect_header(
         csv_path: str | None,

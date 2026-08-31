@@ -26,7 +26,7 @@ zerogpu = [
   "google-genai==2.18.1",
   "gradio[oauth]==6.22.0",
   "huggingface-hub==1.27.0",
-  "spaces==0.51.2",
+  "spaces==0.51.1",
   "tabpfn==8.5.0",
   "torch==2.11.0",
 ]

@@ -753,5 +753,8 @@ Do not rewrite an accepted entry when it changes; append a superseding entry.
   Gemini Secret; delete uploaded files and uncompressed run directories; test the
   canonical no-LLM mode separately from the duplicate BYOK mode; and retain the locked
   runtime release gate because ZeroGPU supplies no immutable container image digest.
+- Runtime resolution: The live ZeroGPU builder injects `spaces==0.51.1`; the deployment
+  profile follows that platform-owned exact version rather than the newer standalone
+  PyPI release.
 - Source: User-approved ZeroGPU implementation plan and the inspected Prior Labs v2 and
   v2.5 model licenses on 2026-08-30.

@@ -12,6 +12,8 @@
 </p>
 
 <p align="center">
+  <a href="https://huggingface.co/spaces/GPChen01/dcfa-zerogpu"><strong>Live ZeroGPU demo</strong></a>
+  ·
   <a href="https://gepingchen.github.io/projects/dcfa/"><strong>Prepared demo</strong></a>
   ·
   <a href="https://colab.research.google.com/github/GepingChen/DCFA/blob/main/notebooks/DCFA_Custom_Analysis_Colab.ipynb"><strong>Open in Colab</strong></a>
@@ -83,11 +85,12 @@ Choose the path that matches what you want to inspect:
 
 | Path | What happens | Providers and data boundary |
 |---|---|---|
+| **[Live ZeroGPU demo](https://huggingface.co/spaces/GPChen01/dcfa-zerogpu)** | Runs three authenticated synthetic presets with pinned local TabPFN v2 | Canonical Space makes no Gemini/Prior Labs call; development-only |
 | **[Prepared demo](https://gepingchen.github.io/projects/dcfa/)** | Replays one hash-bound, independently verified synthetic result | Static GitHub Pages; no provider call at view time |
 | **[Colab workflow](https://colab.research.google.com/github/GepingChen/DCFA/blob/main/notebooks/DCFA_Custom_Analysis_Colab.ipynb)** | Runs one bounded custom CSV analysis in your own ephemeral runtime | Your question goes to Google; only separately authorized Y/X/Z rows and prediction grids go to Prior Labs |
 | **Local operator demo** | Runs the guided Gradio workflow and preserves full audit artifacts | Uses your repository-external Gemini and TabPFN Client credentials |
 
-The Colab and local managed-service paths are `development_only`. Provider
+The ZeroGPU, Colab, and local managed-service paths are `development_only`. Provider
 availability, quotas, charges, and Colab resources are not guaranteed. Do not use
 sensitive, confidential, personally identifiable, or otherwise unshareable data.
 

@@ -729,7 +729,7 @@ Do not rewrite an accepted entry when it changes; append a superseding entry.
 ## D-033 — Permit a development-only public ZeroGPU template with local TabPFN v2
 
 - Date: 2026-08-30
-- Status: Accepted implementation direction; live ZeroGPU acceptance pending
+- Status: Canonical ZeroGPU Space implemented and live-accepted; duplicate BYOK pending
 - Decision: Add a native Gradio Space that runs the permissively hosted TabPFN v2
   regression checkpoint on Hugging Face ZeroGPU. The canonical public Space requires
   Hugging Face login and exposes only three synthetic presets compiled from one frozen

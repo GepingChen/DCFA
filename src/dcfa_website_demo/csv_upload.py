@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import csv
 from dataclasses import dataclass
+from enum import StrEnum
 from pathlib import Path
 
 import numpy as np
@@ -19,6 +20,13 @@ MAX_UPLOAD_BYTES = 1_000_000
 MIN_CONTINUOUS_VALUES = 20
 STANDARD_DEMO_ROWS = 128
 STANDARD_DEMO_SEED = 20260813
+
+
+class CSVDataBoundary(StrEnum):
+    """Explicit destination and consent semantics for uploaded rows."""
+
+    MANAGED_PRIOR_LABS = "managed_prior_labs"
+    HF_ZEROGPU_LOCAL = "hf_zerogpu_local"
 
 
 @dataclass(frozen=True)
@@ -41,6 +49,31 @@ def _role_names(outcome: str, treatment: str, instrument: str) -> tuple[str, str
     return roles
 
 
+def inspect_csv_header(path: str | Path) -> tuple[str, str, str]:
+    """Read only the bounded CSV header for explicit role selection."""
+    csv_path = Path(path)
+    if not csv_path.is_file():
+        raise ValueError("Choose a readable CSV file before selecting roles.")
+    if csv_path.stat().st_size > MAX_UPLOAD_BYTES:
+        raise ValueError(f"CSV files are limited to {MAX_UPLOAD_BYTES // 1_000_000} MB.")
+    try:
+        with csv_path.open("r", encoding="utf-8-sig", newline="") as stream:
+            header = next(csv.reader(stream, strict=True), None)
+    except (OSError, UnicodeError, csv.Error) as exc:
+        raise ValueError(
+            "The selected file could not be read as a UTF-8 comma-separated CSV."
+        ) from exc
+    if header is None:
+        raise ValueError("The CSV is empty and has no header row.")
+    if any(not name or name != name.strip() for name in header):
+        raise ValueError("CSV headers must be non-empty and have no surrounding whitespace.")
+    if len(header) != len(set(header)):
+        raise ValueError("CSV headers must be unique.")
+    if len(header) != 3:
+        raise ValueError("The public workflow accepts exactly three Y/X/Z columns.")
+    return header[0], header[1], header[2]
+
+
 def load_authorized_csv(
     path: str | Path,
     *,
@@ -48,12 +81,18 @@ def load_authorized_csv(
     treatment: str,
     instrument: str,
     confirmed: bool,
+    data_boundary: CSVDataBoundary = CSVDataBoundary.MANAGED_PRIOR_LABS,
 ) -> UploadedIVDataset:
     """Load an explicitly authorized, exactly-three-column numeric IV CSV."""
+    if not isinstance(data_boundary, CSVDataBoundary):
+        raise ValueError("CSV data boundary must be selected explicitly.")
     if not confirmed:
-        raise ValueError(
-            "Confirm authorization and Prior Labs transmission before running uploaded data."
+        destination = (
+            "Prior Labs transmission"
+            if data_boundary is CSVDataBoundary.MANAGED_PRIOR_LABS
+            else "Hugging Face processing"
         )
+        raise ValueError(f"Confirm authorization and {destination} before running uploaded data.")
     outcome, treatment, instrument = _role_names(outcome, treatment, instrument)
     csv_path = Path(path)
     if not csv_path.is_file():
@@ -124,20 +163,30 @@ def load_authorized_csv(
         outcome: arrays[outcome],
     }
     digest = dataset_sha256(role_columns)
+    if data_boundary is CSVDataBoundary.MANAGED_PRIOR_LABS:
+        source = "user_authorized_local_csv_upload"
+        license_note = (
+            "User confirmed authorization to send the selected Y/X/Z rows to Prior Labs; "
+            "source and license were not independently verified."
+        )
+    else:
+        source = "user_authorized_hf_zerogpu_csv_upload"
+        license_note = (
+            "User confirmed authorization to upload the selected Y/X/Z rows to Hugging Face "
+            "for ephemeral local-model processing; source and license were not independently "
+            "verified."
+        )
     manifest = DatasetManifest(
         dataset_id=f"dataset_{digest.split(':', maxsplit=1)[1][:24]}",
         dataset_hash=digest,
-        source="user_authorized_local_csv_upload",
-        source_kind="user_authorized_local_csv_upload",
+        source=source,
+        source_kind=source,
         row_count=row_count,
         columns=(instrument, treatment, outcome),
         generation_seed=None,
         dgp_label=None,
         dgp_mapping_status="not_mapped_to_a_frozen_track_t_protocol",
-        license_note=(
-            "User confirmed authorization to send the selected Y/X/Z rows to Prior Labs; "
-            "source and license were not independently verified."
-        ),
+        license_note=license_note,
         track=Track.TABCF_IV,
         execution_profile=ExecutionProfile.LOCAL_DEVELOPMENT,
         estimator_backend=EstimatorBackend.TABPFN,

@@ -1,15 +1,38 @@
 # Local, static, and Colab demo paths
 
-DCFA now has three deliberately different presentation paths:
+DCFA now has four deliberately different presentation paths:
 
 1. the repeatable local Gradio service for operator review;
 2. a precomputed, independently verified static replay for GitHub Pages;
 3. a pinned notebook for custom analysis in a visitor's own Colab runtime.
+4. a development-only public ZeroGPU template using local TabPFN v2.
 
 The static route and Colab entry are linked from the public portfolio. Static
 replay makes no provider call. The Colab implementation uses the visitor's accounts, secrets,
 quota, ephemeral filesystem, and explicit transfer confirmations. None of the
-three paths is locked Track T evidence or a general causal-analysis service.
+four paths is locked Track T evidence or a general causal-analysis service.
+
+## Hugging Face ZeroGPU path
+
+The canonical Space is `GPChen01/dcfa-zerogpu`. It requires Hugging Face login
+before any GPU event and runs the three synthetic presets with a frozen typed
+median contrast, so the canonical Space makes no Gemini or Prior Labs request.
+It preloads and hash-checks `Prior-Labs/TabPFN-v2-reg` at revision
+`4972a65a1b30806315c6f92499959ffbfc69a673`, uses one CUDA estimator, and
+prominently displays the required `Built with PriorLabs-TabPFN` attribution.
+
+A visitor can duplicate the Space and add `DCFA_GEMINI_API_KEY` as their own
+Space Secret. Only that duplicated mode enables editable natural-language
+questions and bounded CSV analysis. Gemini receives question text and symbolic
+roles but no rows or actual intervention values; CSV rows remain in the
+Hugging Face runtime and are not sent to Prior Labs. Uploads must be authorized,
+non-sensitive three-column Y/X/Z data. Completed runs are independently verified,
+made available as a path-safe ZIP, and removed from uncompressed server storage;
+Gradio cache files expire after fifteen minutes.
+
+The ZeroGPU runtime is `development_only`. Its package, model revision, model
+hash, Space commit, and DCFA commit are recorded, but it has no immutable
+container-image digest and cannot enter locked Track T evidence.
 
 ## What is ready
 

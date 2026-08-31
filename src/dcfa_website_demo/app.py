@@ -17,10 +17,15 @@ import numpy as np
 
 from dcfa.agent.compiler import CompilationRequest
 from dcfa.agent.runtime import AgentResponse, CausalAgentRuntime
+from dcfa.canonical import content_id, sha256_digest
 from dcfa.constants import EstimatorBackend, EvidenceStatus, ExecutionProfile
 from dcfa.errors import DCFAError, ErrorCode
 from dcfa.schemas import AnalysisSpecification, DatasetManifest
 from dcfa.tabcf_iv.development_dgp import generate_development_iv
+from dcfa.tabcf_iv.local_tabpfn import (
+    LOCAL_TABPFN_V2_BACKEND_PARAMETERS,
+    make_local_tabpfn_v2_backend,
+)
 from dcfa.tabcf_iv.managed_client import (
     MANAGED_BACKEND_PARAMETERS,
     MANAGED_CLIENT_VERSION,
@@ -34,10 +39,12 @@ from dcfa.tabcf_iv.pipeline import AnalysisRun, TabCFAnalysisEngine
 from dcfa_website_demo.csv_upload import (
     MAX_UPLOAD_ROWS,
     MIN_UPLOAD_ROWS,
+    CSVDataBoundary,
     load_authorized_csv,
 )
 from dcfa_website_demo.gemini import (
     GEMINI_MODEL,
+    GeminiWebsiteCompilation,
     compile_website_question,
     write_compilation_trace,
 )
@@ -58,6 +65,18 @@ MAX_DEMO_SEED = 2**32 - 1
 _OUTPUT_RESERVATION_LOCK = threading.Lock()
 _BUILD_REVISION_PATTERN = re.compile(r"^[0-9a-f]{7,12}$")
 _LOGGER = logging.getLogger(__name__)
+_FROZEN_PRESET_PROPOSAL = {
+    "decision": "analyze",
+    "reason": "Use the published preset median contrast specification.",
+    "outcome": "Y",
+    "treatment": "X",
+    "instrument": "Z",
+    "treatment_type": "continuous",
+    "objective": "quantile_contrast",
+    "x_label": "high",
+    "comparison_x_label": "low",
+    "level_label": "median",
+}
 
 
 @dataclass(frozen=True)
@@ -670,6 +689,7 @@ def execute_csv_upload(
         treatment=treatment,
         instrument=instrument,
         confirmed=bool(confirmed),
+        data_boundary=CSVDataBoundary.MANAGED_PRIOR_LABS,
     )
     interventions = tuple(
         float(value)
@@ -697,6 +717,155 @@ def execute_csv_upload(
         gemini_api_key_file=gemini_api_key_file,
         gemini_client=gemini_client,
         gemini_sdk_version=gemini_sdk_version,
+    )
+
+
+def _frozen_preset_compilation(question: str) -> GeminiWebsiteCompilation:
+    trace_body = {
+        "protocol_version": "website_demo_frozen_preset_v1",
+        "provider": "none",
+        "model": "none",
+        "model_request_count": 0,
+        "interaction_id": None,
+        "interaction_status": "not_requested",
+        "usage": {
+            "input_tokens": 0,
+            "output_tokens": 0,
+            "thought_tokens": 0,
+            "total_tokens": 0,
+        },
+        "request_hash": sha256_digest(question.strip()),
+        "data_sent_to_gemini": [],
+        "data_rows_sent_to_gemini": 0,
+        "actual_intervention_values_sent_to_gemini": 0,
+        "proposal": dict(_FROZEN_PRESET_PROPOSAL),
+    }
+    return GeminiWebsiteCompilation(
+        objective="quantile_contrast",
+        x_label="high",
+        comparison_x_label="low",
+        level=0.5,
+        trace={"trace_id": content_id("website_frozen_trace", trace_body), **trace_body},
+    )
+
+
+def execute_local_portfolio_scenario(
+    scenario: str,
+    rows: int,
+    seed: int,
+    *,
+    model_path: Path,
+    question: str | None = None,
+    output_root: Path = DEFAULT_OUTPUT_ROOT,
+    gemini_api_key_file: Path | None = None,
+    gemini_client: Any | None = None,
+    gemini_sdk_version: str | None = None,
+) -> PortfolioDemoResult:
+    """Execute a synthetic scenario with the frozen local TabPFN v2 profile."""
+    if scenario not in SCENARIOS:
+        raise ValueError(f"Unknown demo scenario: {scenario}")
+    rows = int(rows)
+    seed = int(seed)
+    if not MIN_DEMO_ROWS <= rows <= MAX_DEMO_ROWS:
+        raise ValueError(f"Demo rows must be between {MIN_DEMO_ROWS} and {MAX_DEMO_ROWS}.")
+    if not MIN_DEMO_SEED <= seed <= MAX_DEMO_SEED:
+        raise ValueError(f"Demo seed must be between {MIN_DEMO_SEED} and {MAX_DEMO_SEED}.")
+    selected = SCENARIOS[scenario]
+    dataset = generate_development_iv(
+        n=rows,
+        seed=seed,
+        instrument_strength=selected.instrument_strength,
+    )
+    manifest = replace(dataset.manifest, estimator_backend=EstimatorBackend.TABPFN)
+    interventions = tuple(
+        float(value) for value in np.quantile(dataset.columns["X"], selected.intervention_quantiles)
+    )
+    if selected.violate_support:
+        interventions = (*interventions[:-1], float(np.max(dataset.columns["X"]) + 5.0))
+    selected_question = question or selected.question
+    compilation = (
+        _frozen_preset_compilation(selected_question)
+        if gemini_api_key_file is None and gemini_client is None
+        else compile_website_question(
+            selected_question,
+            api_key_file=gemini_api_key_file or gemini_api_key_file_from_environment(),
+            client=gemini_client,
+            sdk_version=gemini_sdk_version,
+        )
+    )
+    return _execute_compiled_dataset(
+        result_scenario=scenario,
+        output_scenario=scenario,
+        columns=dataset.columns,
+        manifest=manifest,
+        outcome="Y",
+        treatment="X",
+        instrument="Z",
+        interventions=interventions,
+        seed=seed,
+        output_root=output_root,
+        compilation=compilation,
+        backend_parameters=LOCAL_TABPFN_V2_BACKEND_PARAMETERS,
+        backend_factory=lambda specification: make_local_tabpfn_v2_backend(
+            specification, model_path=model_path
+        ),
+    )
+
+
+def execute_local_csv_upload(
+    csv_file: str | Path,
+    outcome: str,
+    treatment: str,
+    instrument: str,
+    confirmed: bool,
+    seed: int,
+    *,
+    model_path: Path,
+    question: str,
+    output_root: Path = DEFAULT_OUTPUT_ROOT,
+    gemini_api_key_file: Path,
+    gemini_client: Any | None = None,
+    gemini_sdk_version: str | None = None,
+) -> PortfolioDemoResult:
+    """Execute an authorized HF-uploaded CSV with local TabPFN v2."""
+    seed = int(seed)
+    if not MIN_DEMO_SEED <= seed <= MAX_DEMO_SEED:
+        raise ValueError(f"Demo seed must be between {MIN_DEMO_SEED} and {MAX_DEMO_SEED}.")
+    dataset = load_authorized_csv(
+        csv_file,
+        outcome=outcome,
+        treatment=treatment,
+        instrument=instrument,
+        confirmed=bool(confirmed),
+        data_boundary=CSVDataBoundary.HF_ZEROGPU_LOCAL,
+    )
+    interventions = tuple(
+        float(value)
+        for value in np.quantile(dataset.columns[dataset.treatment], (0.1, 0.3, 0.5, 0.7, 0.9))
+    )
+    compilation = compile_website_question(
+        question,
+        api_key_file=gemini_api_key_file,
+        client=gemini_client,
+        sdk_version=gemini_sdk_version,
+    )
+    digest_suffix = dataset.manifest.dataset_hash.split(":", maxsplit=1)[1][:12]
+    return _execute_compiled_dataset(
+        result_scenario="csv_upload",
+        output_scenario=f"csv-upload-{digest_suffix}",
+        columns=dataset.columns,
+        manifest=dataset.manifest,
+        outcome=dataset.outcome,
+        treatment=dataset.treatment,
+        instrument=dataset.instrument,
+        interventions=interventions,
+        seed=seed,
+        output_root=output_root,
+        compilation=compilation,
+        backend_parameters=LOCAL_TABPFN_V2_BACKEND_PARAMETERS,
+        backend_factory=lambda specification: make_local_tabpfn_v2_backend(
+            specification, model_path=model_path
+        ),
     )
 
 
@@ -742,35 +911,8 @@ def _execute_managed_dataset(
             client=gemini_client,
             sdk_version=gemini_sdk_version,
         )
-        label_values = {
-            "low": interventions[0],
-            "center": interventions[len(interventions) // 2],
-            "high": interventions[-1],
-        }
         client.set_access_token(credential)
         del credential
-        request = CompilationRequest(
-            dataset_hash=manifest.dataset_hash,
-            outcome=outcome,
-            treatment=treatment,
-            instrument=instrument,
-            objective=llm_compilation.objective,
-            intervention_grid=interventions,
-            x=label_values[llm_compilation.x_label],
-            comparison_x=(
-                None
-                if llm_compilation.comparison_x_label is None
-                else label_values[llm_compilation.comparison_x_label]
-            ),
-            level=llm_compilation.level,
-            units=f"{outcome}_units",
-            confirmed_by_user=True,
-            execution_profile=ExecutionProfile.LOCAL_DEVELOPMENT,
-            estimator_backend=EstimatorBackend.TABPFN,
-            evidence_status=EvidenceStatus.DEVELOPMENT_ONLY,
-            backend_parameters=MANAGED_BACKEND_PARAMETERS,
-            seed=seed,
-        )
 
         def backend_factory(specification: AnalysisSpecification) -> TabPFNClientBackend:
             return TabPFNClientBackend.from_specification(
@@ -779,14 +921,74 @@ def _execute_managed_dataset(
                 client_version=observed_client_version,
             )
 
+        return _execute_compiled_dataset(
+            result_scenario=result_scenario,
+            output_scenario=output_scenario,
+            columns=columns,
+            manifest=manifest,
+            outcome=outcome,
+            treatment=treatment,
+            instrument=instrument,
+            interventions=interventions,
+            seed=seed,
+            output_root=output_root,
+            compilation=llm_compilation,
+            backend_parameters=MANAGED_BACKEND_PARAMETERS,
+            backend_factory=backend_factory,
+        )
+    finally:
+        client.reset()
+
+
+def _execute_compiled_dataset(
+    *,
+    result_scenario: str,
+    output_scenario: str,
+    columns: dict[str, np.ndarray],
+    manifest: DatasetManifest,
+    outcome: str,
+    treatment: str,
+    instrument: str,
+    interventions: tuple[float, ...],
+    seed: int,
+    output_root: Path,
+    compilation: GeminiWebsiteCompilation,
+    backend_parameters: tuple[tuple[str, str], ...],
+    backend_factory: Any,
+) -> PortfolioDemoResult:
+    """Execute one compiled request through an injected deterministic backend."""
+    label_values = {
+        "low": interventions[0],
+        "center": interventions[len(interventions) // 2],
+        "high": interventions[-1],
+    }
+    request = CompilationRequest(
+        dataset_hash=manifest.dataset_hash,
+        outcome=outcome,
+        treatment=treatment,
+        instrument=instrument,
+        objective=compilation.objective,
+        intervention_grid=interventions,
+        x=label_values[compilation.x_label],
+        comparison_x=(
+            None
+            if compilation.comparison_x_label is None
+            else label_values[compilation.comparison_x_label]
+        ),
+        level=compilation.level,
+        units=f"{outcome}_units",
+        confirmed_by_user=True,
+        execution_profile=ExecutionProfile.LOCAL_DEVELOPMENT,
+        estimator_backend=EstimatorBackend.TABPFN,
+        evidence_status=EvidenceStatus.DEVELOPMENT_ONLY,
+        backend_parameters=backend_parameters,
+        seed=seed,
+    )
+    try:
         output_dir = _reserve_output_directory(Path(output_root), output_scenario, seed)
         engine = TabCFAnalysisEngine(backend_factory=backend_factory)
         tool = _WebsiteAnalysisTool(output_dir, engine)
-        response = CausalAgentRuntime(analysis_tool=tool).execute(
-            request,
-            columns,
-            manifest,
-        )
+        response = CausalAgentRuntime(analysis_tool=tool).execute(request, columns, manifest)
         visitor_plot_path = output_dir / "website_interventional_summary.png"
         if response.status == "completed":
             if tool.last_run is None:
@@ -801,18 +1003,16 @@ def _execute_managed_dataset(
         if "output_dir" in locals():
             _remove_empty_reservation(output_dir)
         raise
-    finally:
-        client.reset()
     if not any(output_dir.iterdir()):
         _remove_empty_reservation(output_dir)
     elif response.status == "completed":
-        write_compilation_trace(output_dir, llm_compilation.trace)
+        write_compilation_trace(output_dir, compilation.trace)
     return PortfolioDemoResult(
         scenario=result_scenario,
         response=response,
         plot_path=visitor_plot_path if visitor_plot_path.is_file() else None,
         output_dir=output_dir if output_dir.is_dir() else None,
-        llm_trace=llm_compilation.trace,
+        llm_trace=compilation.trace,
     )
 
 
@@ -1109,10 +1309,37 @@ def resolve_build_revision() -> str:
     )
 
 
+def portfolio_ui_updates(
+    formatted: tuple[str, str, str, str, str | None],
+    *,
+    buttons_enabled: bool,
+    archive_path: str | None = None,
+) -> tuple[Any, ...]:
+    """Map one visitor projection to Gradio component updates."""
+    import gradio as gr
+
+    status_value, state_value, answer_value, evidence_value, plot_value = formatted
+    return (
+        gr.update(value=answer_value, visible=bool(answer_value)),
+        gr.update(value=status_value, visible=bool(status_value)),
+        gr.update(value=state_value),
+        gr.update(value=evidence_value, visible=bool(evidence_value)),
+        gr.update(value=plot_value, visible=plot_value is not None),
+        gr.update(value=archive_path, visible=archive_path is not None),
+        gr.update(interactive=buttons_enabled),
+        gr.update(interactive=buttons_enabled),
+    )
+
+
 def build_app(
     *,
     output_root: Path = DEFAULT_OUTPUT_ROOT,
     build_revision: str | None = None,
+    deployment_mode: str = "managed_local",
+    space_authorize_handler: Any | None = None,
+    space_scenario_handler: Any | None = None,
+    space_csv_handler: Any | None = None,
+    space_csv_header_handler: Any | None = None,
 ) -> Any:
     """Build the optional website demo while keeping Gradio a lazy dependency."""
     try:
@@ -1122,17 +1349,55 @@ def build_app(
             "Install the website demo with: python -m pip install -r requirements-website-demo.lock"
         ) from exc
 
+    if deployment_mode not in {"managed_local", "zerogpu_canonical", "zerogpu_duplicate"}:
+        raise ValueError(f"Unsupported website deployment mode: {deployment_mode}")
+    is_space = deployment_mode.startswith("zerogpu_")
+    gemini_enabled = deployment_mode != "zerogpu_canonical"
+    csv_enabled = deployment_mode != "zerogpu_canonical"
+    if is_space and (
+        space_authorize_handler is None
+        or space_scenario_handler is None
+        or (csv_enabled and (space_csv_handler is None or space_csv_header_handler is None))
+    ):
+        raise ValueError("ZeroGPU deployment requires explicit authenticated event handlers.")
     scenario_choices = [(item.label, key) for key, item in SCENARIOS.items()]
     visible_revision = html.escape(build_revision or resolve_build_revision())
     with gr.Blocks(
         title="DCFA — auditable causal agent demo",
         analytics_enabled=False,
         fill_width=True,
+        delete_cache=(300, 900) if is_space else None,
     ) as app:
+        if is_space:
+            gr.LoginButton(value="Sign in with Hugging Face", size="sm")
+        environment_label = "ZeroGPU demo" if is_space else "Local demo"
+        privacy_summary = (
+            "Preset data stays inside this Hugging Face Space and uses local TabPFN v2."
+            if is_space
+            else (
+                "Question text goes to Google Gemini; approved CSV rows go separately "
+                "to Prior Labs."
+            )
+        )
+        privacy_detail = (
+            "Built-in examples are synthetic and use a frozen typed specification without a live "
+            "LLM call. In a duplicated Space with its own Gemini Secret, only question text goes "
+            "to Google; uploaded rows stay in the Hugging Face runtime. Do not upload sensitive "
+            "or confidential data."
+            if is_space
+            else "Built-in examples are synthetic. Gemini receives no data rows or actual "
+            "intervention values. A CSV leaves this machine only after explicit confirmation."
+        )
+        attribution = (
+            '<p class="demo-attribution"><strong>Built with PriorLabs-TabPFN</strong> · '
+            "TabPFN v2</p>"
+            if is_space
+            else ""
+        )
         gr.HTML(
             f"""
             <header class="demo-hero">
-              <p class="demo-eyebrow">DCFA · Local demo · Build {visible_revision}</p>
+              <p class="demo-eyebrow">DCFA · {environment_label} · Build {visible_revision}</p>
               <h1>Ask how outcomes change under treatment.</h1>
               <p class="demo-hero-copy">
                 Turn one bounded continuous-treatment question into an evidence-checked answer,
@@ -1145,13 +1410,11 @@ def build_app(
                 <a class="demo-primary-link" href="#guided-input">Try a guided example</a>
               </div>
               <details class="demo-privacy-summary" role="note">
-                <summary>Question text goes to Google Gemini; approved CSV rows go
-                separately to Prior Labs.</summary>
-                <p>Built-in examples are synthetic. Gemini receives no data rows or actual
-                intervention values. A CSV leaves this machine only after explicit confirmation.
-                This local result is development-only and cannot create an automatic real-world
-                causal claim.</p>
+                <summary>{privacy_summary}</summary>
+                <p>{privacy_detail} This result is development-only and cannot create an
+                automatic real-world causal claim.</p>
               </details>
+              {attribution}
             </header>
             """
         )
@@ -1171,20 +1434,28 @@ def build_app(
                         )
                         question = gr.Textbox(
                             value=scenario_question("strong_iv"),
-                            label=f"Natural-language question · compiled by {GEMINI_MODEL}",
+                            label=(
+                                f"Natural-language question · compiled by {GEMINI_MODEL}"
+                                if gemini_enabled
+                                else "Frozen preset question · no live LLM call"
+                            ),
                             info=(
                                 "Ask for a mean or median summary/contrast at low, center, or "
                                 "high treatment. Gemini receives the question, not data rows."
                             ),
                             lines=3,
-                            interactive=True,
+                            interactive=gemini_enabled,
                         )
                         gr.HTML(
                             '<div class="demo-transfer-note" role="note">'
-                            "<strong>Before you run:</strong> Your question text will be sent to "
-                            "Google Gemini. Do not enter private "
-                            "or sensitive information. Gemini receives no data rows or actual "
-                            "treatment values.</div>"
+                            + (
+                                "<strong>Before you run:</strong> Your question text will be sent "
+                                "to Google Gemini. Do not enter private or sensitive information. "
+                                "Gemini receives no data rows or actual treatment values.</div>"
+                                if gemini_enabled
+                                else "<strong>Canonical Space:</strong> this preset uses a frozen "
+                                "typed median contrast and makes no Gemini request.</div>"
+                            )
                         )
                         with gr.Accordion("Reproducibility controls", open=False):
                             rows = gr.Slider(
@@ -1206,29 +1477,52 @@ def build_app(
                             variant="primary",
                             elem_id="run-demo-button",
                         )
-                    with gr.Tab("Upload local CSV"):
+                    with gr.Tab("Upload CSV"):
                         gr.Markdown(
-                            f"Upload exactly three numeric columns and {MIN_UPLOAD_ROWS}–"
-                            f"{MAX_UPLOAD_ROWS} rows. Extra columns are rejected rather than "
-                            "silently treated as W. The file stays local until you confirm and "
-                            "run.",
+                            (
+                                f"Upload exactly three numeric columns and {MIN_UPLOAD_ROWS}–"
+                                f"{MAX_UPLOAD_ROWS} rows. The file is processed ephemerally by "
+                                "Hugging Face and local TabPFN v2; extra columns are rejected."
+                                if csv_enabled and is_space
+                                else (
+                                    "Duplicate this Space and add your own DCFA_GEMINI_API_KEY "
+                                    "Secret to enable authorized CSV analysis."
+                                    if is_space
+                                    else f"Upload exactly three numeric columns and "
+                                    f"{MIN_UPLOAD_ROWS}–{MAX_UPLOAD_ROWS} rows. Extra columns are "
+                                    "rejected rather than silently treated as W."
+                                )
+                            ),
                             elem_classes="demo-section-copy",
                         )
                         csv_file = gr.File(
-                            label="Local Y/X/Z CSV",
+                            label="Y/X/Z CSV",
                             file_types=[".csv"],
                             type="filepath",
+                            interactive=csv_enabled,
                         )
                         with gr.Row():
-                            csv_outcome = gr.Textbox(value="Y", label="Outcome Y column")
-                            csv_treatment = gr.Textbox(value="X", label="Treatment X column")
-                            csv_instrument = gr.Textbox(value="Z", label="Instrument Z column")
+                            if is_space:
+                                csv_outcome = gr.Dropdown(
+                                    label="Outcome Y column", interactive=csv_enabled
+                                )
+                                csv_treatment = gr.Dropdown(
+                                    label="Treatment X column", interactive=csv_enabled
+                                )
+                                csv_instrument = gr.Dropdown(
+                                    label="Instrument Z column", interactive=csv_enabled
+                                )
+                            else:
+                                csv_outcome = gr.Textbox(value="Y", label="Outcome Y column")
+                                csv_treatment = gr.Textbox(value="X", label="Treatment X column")
+                                csv_instrument = gr.Textbox(value="Z", label="Instrument Z column")
                         csv_seed = gr.Number(
                             value=20260813,
                             precision=0,
                             minimum=MIN_DEMO_SEED,
                             maximum=MAX_DEMO_SEED,
                             label="Analysis seed",
+                            interactive=csv_enabled,
                         )
                         csv_question = gr.Textbox(
                             value=(
@@ -1241,22 +1535,35 @@ def build_app(
                                 "not the selected CSV rows or actual intervention values."
                             ),
                             lines=3,
+                            interactive=csv_enabled,
                         )
                         csv_confirmed = gr.Checkbox(
                             value=False,
-                            label="I am authorized to use this data and approve both transfers.",
+                            label=(
+                                "I am authorized to upload this data to Hugging Face and send only "
+                                "the question text to Google Gemini."
+                                if is_space
+                                else "I am authorized to use this data and approve both transfers."
+                            ),
+                            interactive=csv_enabled,
                         )
                         gr.HTML(
                             '<div class="demo-transfer-note" role="note">'
-                            "<strong>Two separate transfers:</strong> the question text goes to "
-                            "Google Gemini with no CSV rows; the selected "
-                            "Y/X/Z rows go to Prior Labs for managed TabPFN inference. Do not use "
-                            "private or sensitive data in this local demo.</div>"
+                            + (
+                                "<strong>Data boundary:</strong> the question text goes to Google "
+                                "Gemini; CSV rows remain in the Hugging Face runtime and are "
+                                "deleted "
+                                "after processing. Never upload sensitive data.</div>"
+                                if is_space
+                                else "<strong>Two separate transfers:</strong> the question text "
+                                "goes to Google Gemini; selected Y/X/Z rows go to Prior Labs.</div>"
+                            )
                         )
                         csv_run_button = gr.Button(
                             "Run uploaded CSV",
                             variant="primary",
                             elem_id="run-csv-button",
+                            interactive=csv_enabled,
                         )
             with gr.Column(scale=5, elem_classes="demo-panel"):
                 gr.Markdown(
@@ -1281,6 +1588,7 @@ def build_app(
             label="Estimated outcome distributions and summaries",
             visible=False,
         )
+        artifact_download = gr.File(label="Verified run artifact", visible=False)
         gr.HTML(
             """
             <section class="demo-boundary" aria-labelledby="boundary-title">
@@ -1292,8 +1600,8 @@ def build_app(
                   <span>Non-empty baseline covariates are rejected before fitting.</span></div>
                 <div class="demo-boundary-item"><strong>Hillstrom stays separate</strong>
                   <span>The randomized-policy track is not TabCF validation.</span></div>
-                <div class="demo-boundary-item"><strong>Managed TabPFN</strong>
-                  <span>Service-traceable TabCF mechanics, not locked release evidence.</span></div>
+                <div class="demo-boundary-item"><strong>TabPFN development runtime</strong>
+                  <span>Mechanics only; this is not locked Track T release evidence.</span></div>
               </div>
             </section>
             """
@@ -1304,23 +1612,8 @@ def build_app(
             inputs=scenario,
             outputs=question,
             queue=False,
+            api_name=False,
         )
-
-        def ui_updates(
-            formatted: tuple[str, str, str, str, str | None],
-            *,
-            buttons_enabled: bool,
-        ) -> tuple[Any, ...]:
-            status_value, state_value, answer_value, evidence_value, plot_value = formatted
-            return (
-                gr.update(value=answer_value, visible=bool(answer_value)),
-                gr.update(value=status_value, visible=bool(status_value)),
-                gr.update(value=state_value),
-                gr.update(value=evidence_value, visible=bool(evidence_value)),
-                gr.update(value=plot_value, visible=plot_value is not None),
-                gr.update(interactive=buttons_enabled),
-                gr.update(interactive=buttons_enabled),
-            )
 
         def handle_run(
             selected_scenario: str,
@@ -1328,7 +1621,7 @@ def build_app(
             selected_rows: int,
             selected_seed: int,
         ):
-            yield ui_updates(_running_outputs(), buttons_enabled=False)
+            yield portfolio_ui_updates(_running_outputs(), buttons_enabled=False)
             try:
                 formatted = format_portfolio_result(
                     execute_portfolio_scenario(
@@ -1344,24 +1637,55 @@ def build_app(
                 formatted = _execution_error_outputs(exc)
             except (TypeError, ValueError) as exc:
                 formatted = _input_error_outputs(str(exc))
-            yield ui_updates(formatted, buttons_enabled=True)
+            yield portfolio_ui_updates(formatted, buttons_enabled=True)
 
-        run_button.click(
-            fn=handle_run,
-            inputs=(scenario, question, rows, seed),
-            outputs=(
-                answer,
-                status,
-                state_graph,
-                evidence,
-                plot,
-                run_button,
-                csv_run_button,
-            ),
-            scroll_to_output=True,
-            show_progress="hidden",
-            trigger_mode="once",
+        result_outputs = (
+            answer,
+            status,
+            state_graph,
+            evidence,
+            plot,
+            artifact_download,
+            run_button,
+            csv_run_button,
         )
+        if is_space:
+
+            def show_running() -> tuple[Any, ...]:
+                return portfolio_ui_updates(_running_outputs(), buttons_enabled=False)
+
+            authorized = run_button.click(
+                fn=space_authorize_handler,
+                inputs=None,
+                outputs=None,
+                queue=False,
+                api_name=False,
+            )
+            authorized.success(
+                fn=show_running,
+                inputs=None,
+                outputs=result_outputs,
+                queue=False,
+                api_name=False,
+            ).success(
+                fn=space_scenario_handler,
+                inputs=(scenario, question, rows, seed),
+                outputs=result_outputs,
+                scroll_to_output=True,
+                show_progress="hidden",
+                trigger_mode="once",
+                api_name=False,
+            )
+        else:
+            run_button.click(
+                fn=handle_run,
+                inputs=(scenario, question, rows, seed),
+                outputs=result_outputs,
+                scroll_to_output=True,
+                show_progress="hidden",
+                trigger_mode="once",
+                api_name=False,
+            )
 
         def handle_csv_run(
             selected_file: str | None,
@@ -1372,7 +1696,7 @@ def build_app(
             selected_question: str,
             selected_seed: int,
         ):
-            yield ui_updates(_running_outputs(), buttons_enabled=False)
+            yield portfolio_ui_updates(_running_outputs(), buttons_enabled=False)
             try:
                 if not selected_file:
                     raise ValueError("Choose a local CSV file before running the workflow.")
@@ -1393,32 +1717,57 @@ def build_app(
                 formatted = _execution_error_outputs(exc)
             except (OSError, TypeError, ValueError) as exc:
                 formatted = _input_error_outputs(str(exc))
-            yield ui_updates(formatted, buttons_enabled=True)
+            yield portfolio_ui_updates(formatted, buttons_enabled=True)
 
-        csv_run_button.click(
-            fn=handle_csv_run,
-            inputs=(
-                csv_file,
-                csv_outcome,
-                csv_treatment,
-                csv_instrument,
-                csv_confirmed,
-                csv_question,
-                csv_seed,
-            ),
-            outputs=(
-                answer,
-                status,
-                state_graph,
-                evidence,
-                plot,
-                run_button,
-                csv_run_button,
-            ),
-            scroll_to_output=True,
-            show_progress="hidden",
-            trigger_mode="once",
+        csv_inputs = (
+            csv_file,
+            csv_outcome,
+            csv_treatment,
+            csv_instrument,
+            csv_confirmed,
+            csv_question,
+            csv_seed,
         )
+        if is_space and csv_enabled:
+            csv_file.upload(
+                fn=space_csv_header_handler,
+                inputs=csv_file,
+                outputs=(csv_outcome, csv_treatment, csv_instrument),
+                queue=False,
+                api_name=False,
+            )
+            authorized_csv = csv_run_button.click(
+                fn=space_authorize_handler,
+                inputs=None,
+                outputs=None,
+                queue=False,
+                api_name=False,
+            )
+            authorized_csv.success(
+                fn=show_running,
+                inputs=None,
+                outputs=result_outputs,
+                queue=False,
+                api_name=False,
+            ).success(
+                fn=space_csv_handler,
+                inputs=csv_inputs,
+                outputs=result_outputs,
+                scroll_to_output=True,
+                show_progress="hidden",
+                trigger_mode="once",
+                api_name=False,
+            )
+        elif not is_space:
+            csv_run_button.click(
+                fn=handle_csv_run,
+                inputs=csv_inputs,
+                outputs=result_outputs,
+                scroll_to_output=True,
+                show_progress="hidden",
+                trigger_mode="once",
+                api_name=False,
+            )
     return app.queue(max_size=8, default_concurrency_limit=1)
 
 

@@ -11,6 +11,7 @@ from dcfa.canonical import dataset_sha256, is_sha256_digest
 from dcfa.constants import EstimatorBackend, EvidenceStatus, ExecutionProfile, Track
 from dcfa.errors import DCFAError, ErrorCode
 from dcfa.schemas import AnalysisSpecification, DatasetManifest
+from dcfa.tabcf_iv.local_tabpfn import LOCAL_TABPFN_V2_BACKEND_PARAMETERS
 from dcfa.tabcf_iv.managed_client import MANAGED_BACKEND_PARAMETERS
 
 
@@ -294,6 +295,23 @@ def validate_tabcf_specification(specification: AnalysisSpecification) -> None:
                 raise DCFAError(
                     ErrorCode.UNSUPPORTED_BACKEND_PROFILE,
                     "Managed TabPFN is restricted to local_development/development_only.",
+                    stage="specification.validation",
+                )
+            return
+        if parameters.get("access_mode") == "local_model":
+            if tuple(specification.backend_parameters) != LOCAL_TABPFN_V2_BACKEND_PARAMETERS:
+                raise DCFAError(
+                    ErrorCode.INVALID_SPECIFICATION,
+                    "Local TabPFN v2 requires the exact frozen deployment parameters.",
+                    stage="specification.validation",
+                )
+            if (
+                specification.execution_profile is not ExecutionProfile.LOCAL_DEVELOPMENT
+                or specification.evidence_status is not EvidenceStatus.DEVELOPMENT_ONLY
+            ):
+                raise DCFAError(
+                    ErrorCode.UNSUPPORTED_BACKEND_PROFILE,
+                    "Local TabPFN v2 is restricted to local_development/development_only.",
                     stage="specification.validation",
                 )
             return

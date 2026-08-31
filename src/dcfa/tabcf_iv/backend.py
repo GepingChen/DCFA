@@ -357,6 +357,12 @@ class TabPFNBackend:
         model_path: str = "auto",
         model_artifact_hash: str = "",
         runtime_image_digest: str = "",
+        model_version: str = "unspecified",
+        model_repo: str = "unspecified",
+        model_revision: str = "unspecified",
+        model_filename: str = "unspecified",
+        n_estimators: int = 1,
+        device: str = "auto",
     ) -> None:
         self.seed = int(seed)
         self.execution_profile = execution_profile
@@ -368,10 +374,35 @@ class TabPFNBackend:
         self.model_path = str(model_path)
         self.model_artifact_hash = str(model_artifact_hash)
         self.runtime_image_digest = str(runtime_image_digest)
+        self.model_version = str(model_version)
+        self.model_repo = str(model_repo)
+        self.model_revision = str(model_revision)
+        self.model_filename = str(model_filename)
+        self.n_estimators = int(n_estimators)
+        self.device = str(device)
         self.fit_calls = 0
+
+    def _validate_model_artifact(self) -> None:
+        if not self.model_artifact_hash:
+            return
+        if self.model_path.strip().lower() == "auto":
+            raise BackendError(
+                ErrorCode.UNSUPPORTED_BACKEND_PROFILE,
+                "A hashed TabPFN model requires an explicit model path.",
+                stage="backend.model_artifact",
+            )
+        model_path = Path(self.model_path)
+        if not model_path.is_file() or file_sha256(model_path) != self.model_artifact_hash:
+            raise BackendError(
+                ErrorCode.HASH_MISMATCH,
+                "TabPFN model artifact is missing or does not match its frozen hash.",
+                stage="backend.model_artifact",
+                context={"model_path": self.model_path},
+            )
 
     def _validate_locked_runtime(self) -> None:
         if self.execution_profile is not ExecutionProfile.LOCKED_EVALUATION:
+            self._validate_model_artifact()
             return
         missing: list[str] = []
         if self.model_path.strip().lower() == "auto":
@@ -398,14 +429,7 @@ class TabPFNBackend:
                     "observed": observed_runtime_digest or "unset",
                 },
             )
-        model_path = Path(self.model_path)
-        if not model_path.is_file() or file_sha256(model_path) != self.model_artifact_hash:
-            raise BackendError(
-                ErrorCode.HASH_MISMATCH,
-                "TabPFN model artifact is missing or does not match its frozen hash.",
-                stage="backend.locked_runtime",
-                context={"model_path": self.model_path},
-            )
+        self._validate_model_artifact()
 
     def _load_classes(self) -> tuple[Any, Any]:
         try:
@@ -431,6 +455,8 @@ class TabPFNBackend:
         kwargs: dict[str, Any] = {
             "random_state": self.seed,
             "ignore_pretraining_limits": True,
+            "n_estimators": self.n_estimators,
+            "device": self.device,
         }
         if self.model_path.strip().lower() != "auto":
             kwargs["model_path"] = self.model_path
@@ -459,7 +485,16 @@ class TabPFNBackend:
             evidence_status=self.evidence_status,
             model_class_mean="tabpfn.TabPFNRegressor(output_type='mean')",
             model_class_distribution="tabpfn.TabPFNRegressor(output_type='full')",
-            parameters=(("ignore_pretraining_limits", True), ("model_path", self.model_path)),
+            parameters=(
+                ("device", self.device),
+                ("ignore_pretraining_limits", True),
+                ("model_filename", self.model_filename),
+                ("model_path", self.model_path),
+                ("model_repo", self.model_repo),
+                ("model_revision", self.model_revision),
+                ("model_version", self.model_version),
+                ("n_estimators", self.n_estimators),
+            ),
             quantile_grid=(),
             seed=self.seed,
             package_versions=tuple(versions),

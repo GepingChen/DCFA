@@ -1,0 +1,8 @@
+# Exact direct dependencies for the Python 3.12.12 Hugging Face ZeroGPU deployment.
+# The Space requirements.txt additionally pins dcfa to one immutable Git commit.
+google-genai==2.18.1
+gradio[oauth]==6.22.0
+huggingface-hub==1.27.0
+spaces==0.51.2
+tabpfn==8.5.0
+torch==2.11.0

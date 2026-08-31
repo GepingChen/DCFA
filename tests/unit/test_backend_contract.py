@@ -10,6 +10,11 @@ import dcfa.tabcf_iv.backend as backend_module
 from dcfa.constants import ExecutionProfile
 from dcfa.errors import BackendError, ErrorCode
 from dcfa.tabcf_iv.backend import SklearnQuantileBackend, TabPFNBackend
+from dcfa.tabcf_iv.local_tabpfn import (
+    LOCAL_TABPFN_V2_MODEL_HASH,
+    LOCAL_TABPFN_V2_MODEL_REPO,
+    LOCAL_TABPFN_V2_MODEL_REVISION,
+)
 
 
 def test_fallback_is_deterministic() -> None:
@@ -103,3 +108,58 @@ def test_locked_tabpfn_requires_current_host_image_before_import(
     assert raised.value.code is ErrorCode.UNSUPPORTED_BACKEND_PROFILE
     assert calls == []
     assert backend.fit_calls == 0
+
+
+def test_local_tabpfn_hashed_model_fails_before_import_on_mismatch(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path,
+) -> None:
+    calls: list[str] = []
+
+    def record_import(name: str):
+        calls.append(name)
+        raise AssertionError("A mismatched local model must fail before import.")
+
+    model_path = tmp_path / "model.ckpt"
+    model_path.write_bytes(b"wrong-model")
+    monkeypatch.setattr(backend_module.importlib, "import_module", record_import)
+    backend = TabPFNBackend(
+        seed=1,
+        execution_profile=ExecutionProfile.LOCAL_DEVELOPMENT,
+        model_path=str(model_path),
+        model_artifact_hash=LOCAL_TABPFN_V2_MODEL_HASH,
+        model_version="v2",
+        model_repo=LOCAL_TABPFN_V2_MODEL_REPO,
+        model_revision=LOCAL_TABPFN_V2_MODEL_REVISION,
+        model_filename="tabpfn-v2-regressor-v2_default.ckpt",
+        n_estimators=1,
+        device="cuda",
+    )
+    with pytest.raises(BackendError) as raised:
+        backend.fit_distribution(np.ones((40, 1)), np.linspace(0.0, 1.0, 40))
+    assert raised.value.code is ErrorCode.HASH_MISMATCH
+    assert calls == []
+    assert backend.fit_calls == 0
+
+
+def test_local_tabpfn_manifest_records_frozen_runtime_settings(tmp_path) -> None:
+    model_path = tmp_path / "model.ckpt"
+    model_path.write_bytes(b"not-loaded-by-manifest")
+    backend = TabPFNBackend(
+        seed=7,
+        execution_profile=ExecutionProfile.LOCAL_DEVELOPMENT,
+        model_path=str(model_path),
+        model_artifact_hash=LOCAL_TABPFN_V2_MODEL_HASH,
+        model_version="v2",
+        model_repo=LOCAL_TABPFN_V2_MODEL_REPO,
+        model_revision=LOCAL_TABPFN_V2_MODEL_REVISION,
+        model_filename="tabpfn-v2-regressor-v2_default.ckpt",
+        n_estimators=1,
+        device="cuda",
+    )
+    parameters = dict(backend.manifest.parameters)
+    assert parameters["model_version"] == "v2"
+    assert parameters["model_repo"] == LOCAL_TABPFN_V2_MODEL_REPO
+    assert parameters["model_revision"] == LOCAL_TABPFN_V2_MODEL_REVISION
+    assert parameters["n_estimators"] == 1
+    assert parameters["device"] == "cuda"

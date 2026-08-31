@@ -725,3 +725,33 @@ Do not rewrite an accepted entry when it changes; append a superseding entry.
 - Source: Approved
   `plan/GitHub_Pages_Colab_Public_Demo_Release_Plan_ZH.md` v2.0 and user request to
   implement that plan on 2026-08-19.
+
+## D-033 — Permit a development-only public ZeroGPU template with local TabPFN v2
+
+- Date: 2026-08-30
+- Status: Accepted implementation direction; live ZeroGPU acceptance pending
+- Decision: Add a native Gradio Space that runs the permissively hosted TabPFN v2
+  regression checkpoint on Hugging Face ZeroGPU. The canonical public Space requires
+  Hugging Face login and exposes only three synthetic presets compiled from one frozen
+  typed median-contrast proposal, with no live LLM call. Natural-language compilation
+  and bounded CSV upload are enabled only after a visitor duplicates the Space and adds
+  their own `DCFA_GEMINI_API_KEY` Secret. CSV rows remain in the duplicated Hugging Face
+  runtime and are never sent to Prior Labs. Every run remains
+  `local_development / tabpfn / development_only`, fails closed, and uses no sklearn or
+  managed-client fallback.
+- Rationale: Free ZeroGPU now provides a bounded public execution path, while TabPFN
+  v2's Prior Labs License permits hosted use with prominent attribution. TabPFN 2.5 and
+  2.6 explicitly prohibit a hosted service without a separate commercial license and
+  are excluded. Requiring caller-owned Gemini Secrets avoids collecting keys in the
+  canonical browser or charging an owner key.
+- Affected tracks: TabCF Analyst public presentation only. This decision supersedes
+  D-032 only for the newly authorized live Space; the prepared replay and user-owned
+  Colab remain available and no Track T, H, or A evidence is created.
+- Verification impact: Pin and hash-check the public v2 checkpoint before import; pin
+  Python, Torch, TabPFN, Gradio, and the DCFA commit; require OAuth before GPU work;
+  independently verify every completed artifact; scan downloadable archives for the
+  Gemini Secret; delete uploaded files and uncompressed run directories; test the
+  canonical no-LLM mode separately from the duplicate BYOK mode; and retain the locked
+  runtime release gate because ZeroGPU supplies no immutable container image digest.
+- Source: User-approved ZeroGPU implementation plan and the inspected Prior Labs v2 and
+  v2.5 model licenses on 2026-08-30.

@@ -1,6 +1,6 @@
 # DCFA codebase map
 
-Last verified: 2026-08-19
+Last verified: 2026-08-30
 
 This map describes checked-in executable behavior. The integrated plan remains
 the authority for intended research behavior; code and tests are the authority
@@ -13,11 +13,11 @@ for current behavior.
 | `src/dcfa/schemas.py` | Immutable TabCF, policy, semi-synthetic, evidence, backend, and run contracts |
 | `src/dcfa/evidence.py` | Shared ledger validation and Track T/H release gates |
 | `src/dcfa/audit.py`, `cache.py`, `artifact_validation.py` | Typed audit, validated cache, and no-refit artifact verifier |
-| `src/dcfa/tabcf_iv/` | Isolated continuous-treatment IV adapter, local fallback, bounded managed-client demo/smoke, diagnostics, estimands, real-file loader, and locked runtime validator |
+| `src/dcfa/tabcf_iv/` | Isolated continuous-treatment IV adapter, local fallback, frozen local TabPFN v2 profile, bounded managed-client demo/smoke, diagnostics, estimands, real-file loader, and locked runtime validator |
 | `src/dcfa/hillstrom_policy/` | Isolated three-action RCT policy adapter, leakage gate, DR/IPW/direct estimators, policies, and four semi-synthetic DGPs |
 | `src/dcfa/agent/` | Explicit compiler/state/runtime, identical-recorded-tool harness, and bounded Gemini live-smoke adapter |
 | `src/dcfa/app.py` | Public TabCF-only lazy Gradio shell |
-| `src/dcfa_website_demo/` | Visitor-safe presentation mappings/plot, one-call Gemini compiler, strict local CSV ingress, and health-checkable ASGI wrapper over the typed public runtime; outside the statistical source hash |
+| `src/dcfa_website_demo/` | Visitor-safe presentation mappings/plot, one-call Gemini compiler, strict CSV ingress, native ZeroGPU wrapper, and health-checkable local ASGI wrapper; outside the statistical source hash |
 | `src/dcfa_showcase/` | Offline freeze/export/verifier for the hash-bound public prepared replay; outside the statistical source hash |
 | `src/dcfa_colab/` | Secret-scoped notebook adapter, local CSV preflight, verified archive export, and notebook static validator; outside the statistical source hash |
 | `showcase/prepared_demo_v1/` | Committed public-safe prompt, synthetic CSV, visitor projection, plot, and verification manifest |
@@ -26,7 +26,7 @@ for current behavior.
 | `evaluation/configs/` | Fail-closed locked TabPFN runtime template, frozen Gemini smoke manifest, and versioned website Gemini profile |
 | `tests/` | Unit, leakage, statistical, agent-behavior, and integration gates |
 | `third_party/TabCF` | Authoritative upstream source pinned at `76e0d3eb9e97cebca381d1540db0333c1ef1016e` |
-| `requirements-dev.lock`, `requirements-ui.lock`, `requirements-managed-client.lock`, `requirements-website-demo.lock`, `requirements-gemini.lock` | Verified Python 3.11 core, UI, managed-client, website-demo, and Gemini-smoke environments |
+| `requirements-dev.lock`, `requirements-ui.lock`, `requirements-managed-client.lock`, `requirements-website-demo.lock`, `requirements-gemini.lock`, `requirements-zerogpu.lock` | Python 3.11 local locks plus the exact direct Python 3.12 ZeroGPU dependencies |
 | `Dockerfile`, `compose.yaml`, `.dockerignore` | Non-root, single-worker local deployment package for the development-only website demo |
 
 Generated outputs go under ignored `artifacts/local/`. Raw/private data,
@@ -218,7 +218,7 @@ track.
 
 ## Unresolved inputs and decisions
 
-- real Torch/TabPFN image, exact package lock, checkpoint, and image digest;
+- immutable Torch/TabPFN container image and image digest for locked Track T evidence;
 - manuscript/predecessor artifacts for upstream `A*`/`B*` DGP mapping;
 - approved Fulton local data and usage/license note;
 - approved Hillstrom raw data, exact source/hash, and usage/license decision;

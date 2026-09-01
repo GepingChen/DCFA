@@ -85,9 +85,7 @@ current, pending, and blocked states do not imply work that has not happened;
 blocked runs identify the stopped visitor stage and a safe next action. Raw state
 events, reasons, and tool counts are not sent to the default browser DOM. During
 a run, the current stage is shown without a percentage and both submit buttons
-are disabled. On desktop, the input occupies the wider column while workflow
-state and results remain in one sticky companion panel; the two panels stack on
-narrow screens. Local and ZeroGPU launches use the same restrained theme and CSS.
+are disabled.
 
 The result view begins with a direction-aware natural-language answer projected
 from the validated `QueryResult` and the already validated symbolic Gemini

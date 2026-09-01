@@ -26,12 +26,10 @@ from dcfa.tabcf_iv.local_tabpfn import (
     LOCAL_TABPFN_V2_MODEL_REVISION,
 )
 from dcfa_website_demo.app import (
-    DEMO_CSS,
     _execution_error_outputs,
     _input_error_outputs,
     _log_operator_error,
     build_app,
-    build_demo_theme,
     execute_local_csv_upload,
     execute_local_portfolio_scenario,
     format_portfolio_result,
@@ -42,19 +40,6 @@ from dcfa_website_demo.csv_upload import inspect_csv_header
 DEFAULT_ZEROGPU_OUTPUT_ROOT = Path("/tmp/dcfa-zerogpu-runs")
 DEFAULT_GRADIO_TEMP_ROOT = Path("/tmp/gradio")
 DEFAULT_SECRET_ROOT = Path("/tmp/dcfa-zerogpu-secrets")
-
-
-def zerogpu_launch_kwargs() -> dict[str, Any]:
-    """Return the shared, fail-closed launch configuration for the Space entrypoint."""
-    return {
-        "blocked_paths": [str(DEFAULT_ZEROGPU_OUTPUT_ROOT), str(DEFAULT_SECRET_ROOT)],
-        "enable_monitoring": False,
-        "footer_links": [],
-        "max_file_size": "1mb",
-        "show_error": False,
-        "theme": build_demo_theme(),
-        "css": DEMO_CSS,
-    }
 
 
 def resolve_preloaded_model() -> Path:

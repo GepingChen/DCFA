@@ -161,11 +161,12 @@ Docker/Compose after dual-secret change                not verified; Docker CLI 
 Current ZeroGPU implementation checks:
 
 ```text
-.venv/bin/python -m pytest                             131 passed in 43.24s
+.venv/bin/python -m pytest                             132 passed in 73.55s
 .venv/bin/ruff check src tests                         passed
 .venv/bin/ruff format --check src tests                84 files already formatted
 .venv/bin/python -m pip check                          no broken requirements
-HF Space commit                                        f8b39f86206863736fa34052747dce67129cd6da
+HF Space commit                                        c4b4099214b460798d3e2d01d5f1022d1a97dd0a
+DCFA source pinned by Space                            238ba65d7478ad9c23c87b7ca7a78f27f11544c8
 HF runtime                                             RUNNING; current=zero-a10g
 strong preset                                          completed; median contrast +5.1
 weak preset                                            completed; weak-IV/support warnings preserved
@@ -175,6 +176,7 @@ live checkpoint SHA-256                                2ab5a07d...8c10736
 canonical Gemini requests/data rows                    0 / 0
 temporary-key UI                                       password input; CSV enabled; APIs hidden
 responsive checks                                      390 px and 1280 px; no overflow
+P0 visual acceptance                                   shared theme/CSS; 60/40 sticky desktop panel; stacked mobile panels
 ```
 
 The live downloadable run remained `development_only`; its backend manifest

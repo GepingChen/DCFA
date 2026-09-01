@@ -15,6 +15,7 @@ from dcfa_website_demo.app import (
     DEFAULT_OUTPUT_ROOT,
     DEMO_CSS,
     build_app,
+    build_demo_theme,
     gemini_api_key_file_from_environment,
     managed_token_file_from_environment,
 )
@@ -140,14 +141,7 @@ def build_service() -> Any:
         show_error=False,
         enable_monitoring=False,
         max_file_size="1mb",
-        theme=gr.themes.Base(
-            primary_hue="green",
-            secondary_hue="green",
-            neutral_hue="stone",
-            radius_size="sm",
-            font=("Inter", "ui-sans-serif", "system-ui", "sans-serif"),
-            font_mono=("IBM Plex Mono", "ui-monospace", "monospace"),
-        ),
+        theme=build_demo_theme(),
         css=DEMO_CSS,
     )
 

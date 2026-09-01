@@ -609,7 +609,7 @@ def test_bounded_controls_reject_invalid_values_before_allocating_output(
 
 def test_default_app_config_omits_machine_audit_payload_and_shows_build() -> None:
     app = build_app(build_revision="deadbee")
-    config = json.dumps(app.config, sort_keys=True)
+    config = json.dumps(app.config, sort_keys=True, ensure_ascii=False)
     component_ids = {
         component.get("props", {}).get("elem_id"): component["id"]
         for component in app.config["components"]
@@ -620,6 +620,9 @@ def test_default_app_config_omits_machine_audit_payload_and_shows_build() -> Non
     assert "Do not enter private or sensitive information" in config
     assert "I am authorized to use this data and approve both transfers" in config
     assert "Scope and limitations" in config
+    assert "2 · Follow the workflow and review" in config
+    assert "demo-input-column" in config
+    assert "demo-output-column" in config
     assert "Run a scenario to populate this panel" not in config
     assert "No run yet" not in config
     for forbidden in (

@@ -183,7 +183,11 @@ completed/current/pending/blocked states, locates blocked requests with a safe
 next action, and never exposes state reasons or tool counts. Gradio generator
 events hide native percentage progress, disable both submit buttons during a
 run, and use a live result status; the initial answer/detail components remain
-hidden rather than displaying duplicate placeholders.
+hidden rather than displaying duplicate placeholders. The input uses a wider
+desktop column while the workflow and result share one sticky companion panel;
+the columns stack without horizontal overflow on narrow viewports. The local
+service and native ZeroGPU entrypoint consume the same `build_demo_theme()` and
+`DEMO_CSS` launch configuration instead of maintaining separate visual defaults.
 
 `dcfa_website_demo.service` mounts the queued Gradio app on a single-worker
 FastAPI service and exposes `/healthz` plus output-path- and credential-aware

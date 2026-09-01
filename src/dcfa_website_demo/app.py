@@ -285,6 +285,19 @@ body,
   margin-top: 1.4rem;
 }
 
+.demo-input-column,
+.demo-output-column {
+  min-width: 0 !important;
+}
+
+@media (min-width: 48.01rem) {
+  .demo-output-column {
+    position: sticky !important;
+    top: 1rem;
+    align-self: flex-start;
+  }
+}
+
 #run-demo-button,
 #run-csv-button {
   min-height: 3rem;
@@ -512,6 +525,15 @@ body,
     padding: .8rem !important;
   }
 
+  .demo-controls {
+    flex-direction: column !important;
+  }
+
+  .demo-input-column,
+  .demo-output-column {
+    width: 100% !important;
+  }
+
   .demo-boundary-grid {
     grid-template-columns: 1fr 1fr;
   }
@@ -535,6 +557,24 @@ body,
   }
 }
 """
+
+
+def build_demo_theme() -> Any:
+    """Build the shared restrained theme for local and ZeroGPU launch surfaces."""
+    try:
+        import gradio as gr
+    except ImportError as exc:
+        raise RuntimeError(
+            "Install the website demo with: python -m pip install -r requirements-website-demo.lock"
+        ) from exc
+    return gr.themes.Base(
+        primary_hue="green",
+        secondary_hue="green",
+        neutral_hue="stone",
+        radius_size="sm",
+        font=("Inter", "ui-sans-serif", "system-ui", "sans-serif"),
+        font_mono=("IBM Plex Mono", "ui-monospace", "monospace"),
+    )
 
 
 class _WebsiteAnalysisTool:
@@ -1428,8 +1468,11 @@ def build_app(
             """
         )
         with gr.Row(elem_classes="demo-controls", elem_id="guided-input"):
-            with gr.Column(scale=5, elem_classes="demo-panel"):
-                gr.Markdown("### 1 · Choose an input", elem_classes="demo-section-heading")
+            with gr.Column(
+                scale=6,
+                elem_classes=["demo-panel", "demo-input-column"],
+            ):
+                gr.Markdown("## 1 · Choose an input", elem_classes="demo-section-heading")
                 with gr.Tabs():
                     with gr.Tab("Guided scenarios"):
                         gr.Markdown(
@@ -1589,9 +1632,12 @@ def build_app(
                             elem_id="run-csv-button",
                             interactive=csv_enabled,
                         )
-            with gr.Column(scale=5, elem_classes="demo-panel"):
+            with gr.Column(
+                scale=4,
+                elem_classes=["demo-panel", "demo-output-column"],
+            ):
                 gr.Markdown(
-                    "### 2 · Follow the workflow",
+                    "## 2 · Follow the workflow and review",
                     elem_classes="demo-section-heading",
                 )
                 gr.Markdown(
@@ -1601,22 +1647,21 @@ def build_app(
                 state_graph = gr.HTML(
                     '<div class="demo-status demo-status--idle">'
                     "<strong>Ready</strong>Choose a path and run the frozen workflow.</div>"
+                    + _progress_html(("current", "pending", "pending", "pending"))
                 )
-
-        gr.Markdown("## 3 · Review the answer", elem_classes="demo-section-heading")
-        answer = gr.Markdown("", visible=False, elem_classes="demo-panel demo-answer")
-        status = gr.HTML("", visible=False)
-        evidence = gr.HTML("", visible=False)
-        plot = gr.Image(
-            type="filepath",
-            label="Estimated outcome distributions and summaries",
-            visible=False,
-        )
-        artifact_download = gr.File(label="Verified run artifact", visible=False)
+                answer = gr.Markdown("", visible=False, elem_classes="demo-answer")
+                status = gr.HTML("", visible=False)
+                evidence = gr.HTML("", visible=False)
+                plot = gr.Image(
+                    type="filepath",
+                    label="Estimated outcome distributions and summaries",
+                    visible=False,
+                )
+                artifact_download = gr.File(label="Verified run artifact", visible=False)
         gr.HTML(
             """
             <section class="demo-boundary" aria-labelledby="boundary-title">
-              <p class="demo-eyebrow" id="boundary-title">Scope and limitations</p>
+              <h2 class="demo-eyebrow" id="boundary-title">Scope and limitations</h2>
               <div class="demo-boundary-grid">
                 <div class="demo-boundary-item"><strong>Not a general router</strong>
                   <span>Only the continuous-treatment IV contract is public.</span></div>

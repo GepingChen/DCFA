@@ -14,6 +14,7 @@ from dcfa.constants import EstimatorBackend
 from dcfa.tabcf_iv.backend import SklearnQuantileBackend
 from dcfa_website_demo.app import (
     DEFAULT_CSV_QUESTION,
+    DEMO_CSS,
     _input_error_outputs,
     build_app,
     execute_local_csv_upload,
@@ -21,6 +22,7 @@ from dcfa_website_demo.app import (
     portfolio_ui_updates,
 )
 from dcfa_website_demo.csv_upload import export_standard_demo_csv
+from dcfa_website_demo.zerogpu import zerogpu_launch_kwargs
 from tests.provider_fakes import FakeGeminiClient
 
 
@@ -196,6 +198,19 @@ def test_canonical_space_config_requires_login_and_enables_temporary_key(
     assert key_components[0]["props"]["interactive"] is True
     assert "not intentionally persisted by DCFA" in serialized
     assert DEFAULT_CSV_QUESTION in serialized
+
+
+def test_zerogpu_launch_configuration_includes_shared_theme_and_css() -> None:
+    launch_kwargs = zerogpu_launch_kwargs()
+
+    assert launch_kwargs["css"] == DEMO_CSS
+    assert isinstance(launch_kwargs["theme"], gr.themes.Base)
+    assert launch_kwargs["blocked_paths"] == [
+        "/tmp/dcfa-zerogpu-runs",
+        "/tmp/dcfa-zerogpu-secrets",
+    ]
+    assert launch_kwargs["enable_monitoring"] is False
+    assert launch_kwargs["show_error"] is False
 
 
 def test_duplicate_space_keeps_secret_mode_and_hides_browser_key(tmp_path: Path) -> None:

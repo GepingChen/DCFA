@@ -186,12 +186,12 @@ body,
 }
 
 .demo-hero h1 {
-  max-width: 21ch;
-  margin: 0 0 .75rem;
-  color: var(--demo-ink);
-  font-size: clamp(2rem, 5vw, 3.6rem);
-  line-height: 1.02;
-  letter-spacing: -.045em;
+  max-width: 21ch !important;
+  margin: 0 0 .75rem !important;
+  color: var(--demo-ink) !important;
+  font-size: clamp(2rem, 5vw, 3.6rem) !important;
+  line-height: 1.02 !important;
+  letter-spacing: -.045em !important;
 }
 
 .demo-hero-copy {

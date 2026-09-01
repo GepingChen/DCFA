@@ -20,6 +20,7 @@ from dcfa.artifact_validation import verify_run_directory
 from dcfa.errors import DCFAError, ErrorCode
 from dcfa.tabcf_iv.managed_client import MANAGED_CLIENT_VERSION
 from dcfa_website_demo.app import (
+    DEMO_CSS,
     MAX_DEMO_ROWS,
     MAX_DEMO_SEED,
     _execution_error_outputs,
@@ -623,6 +624,7 @@ def test_default_app_config_omits_machine_audit_payload_and_shows_build() -> Non
     assert "2 · Follow the workflow and review" in config
     assert "demo-input-column" in config
     assert "demo-output-column" in config
+    assert "font-size: clamp(2rem, 5vw, 3.6rem) !important" in DEMO_CSS
     assert "Run a scenario to populate this panel" not in config
     assert "No run yet" not in config
     for forbidden in (

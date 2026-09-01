@@ -165,7 +165,7 @@ Current ZeroGPU implementation checks:
 .venv/bin/ruff check src tests                         passed
 .venv/bin/ruff format --check src tests                84 files already formatted
 .venv/bin/python -m pip check                          no broken requirements
-HF Space commit                                        c8e0c304a6615bf7d09002f198b398907e8e8a06
+HF Space commit                                        f8b39f86206863736fa34052747dce67129cd6da
 HF runtime                                             RUNNING; current=zero-a10g
 strong preset                                          completed; median contrast +5.1
 weak preset                                            completed; weak-IV/support warnings preserved

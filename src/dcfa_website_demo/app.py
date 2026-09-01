@@ -65,6 +65,12 @@ MAX_DEMO_SEED = 2**32 - 1
 _OUTPUT_RESERVATION_LOCK = threading.Lock()
 _BUILD_REVISION_PATTERN = re.compile(r"^[0-9a-f]{7,12}$")
 _LOGGER = logging.getLogger(__name__)
+DEFAULT_CSV_QUESTION = (
+    "Using Y as the continuous outcome, X as the continuous treatment, and Z as the scalar "
+    "instrument, estimate the median outcome contrast for a high supported level of X versus a "
+    "low supported level of X. Preserve all weak-instrument and support warnings, and return no "
+    "numerical estimate if either intervention is outside observed support."
+)
 _FROZEN_PRESET_PROPOSAL = {
     "decision": "analyze",
     "reason": "Use the published preset median contrast specification.",
@@ -704,10 +710,7 @@ def execute_csv_upload(
         outcome=dataset.outcome,
         treatment=dataset.treatment,
         instrument=dataset.instrument,
-        question=(
-            question
-            or "Estimate the median outcome contrast at high treatment versus low treatment."
-        ),
+        question=(question or DEFAULT_CSV_QUESTION),
         interventions=interventions,
         seed=seed,
         output_root=output_root,
@@ -1548,10 +1551,7 @@ def build_app(
                             interactive=csv_enabled,
                         )
                         csv_question = gr.Textbox(
-                            value=(
-                                "Estimate the median outcome contrast at high treatment versus "
-                                "low treatment."
-                            ),
+                            value=DEFAULT_CSV_QUESTION,
                             label=f"Natural-language question · compiled by {GEMINI_MODEL}",
                             info=(
                                 "Use Y, X, and Z as conceptual roles. Gemini receives this text, "

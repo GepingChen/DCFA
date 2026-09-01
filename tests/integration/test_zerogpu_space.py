@@ -13,6 +13,7 @@ from dcfa.artifact_validation import verify_run_directory
 from dcfa.constants import EstimatorBackend
 from dcfa.tabcf_iv.backend import SklearnQuantileBackend
 from dcfa_website_demo.app import (
+    DEFAULT_CSV_QUESTION,
     _input_error_outputs,
     build_app,
     execute_local_csv_upload,
@@ -194,6 +195,7 @@ def test_canonical_space_config_requires_login_and_enables_temporary_key(
     assert key_components[0]["props"]["type"] == "password"
     assert key_components[0]["props"]["interactive"] is True
     assert "not intentionally persisted by DCFA" in serialized
+    assert DEFAULT_CSV_QUESTION in serialized
 
 
 def test_duplicate_space_keeps_secret_mode_and_hides_browser_key(tmp_path: Path) -> None:

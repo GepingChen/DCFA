@@ -2,26 +2,91 @@
 
 These instructions apply to the entire repository. A more deeply nested
 `AGENTS.md`, if one is added later, may refine local implementation details but
-must not weaken the research-integrity, evidence, leakage, or safety rules here.
+must not weaken the explicit release, leakage, privacy, or security boundaries
+here. The proportional-safeguards rules below control how broadly those
+boundaries may be applied during ordinary development.
 
 ## Start every task here
 
 1. Run `git status --short --branch` and preserve unrelated or uncommitted work.
-2. Read `README.md`, this file, and the relevant part of
-   `plan/TabCF_Agent_Integrated_Research_Plan_ZH.md`.
-3. Read `docs/IDENTIFICATION_BOUNDARIES.md`, `docs/CODEBASE_MAP.md`, and
-   `docs/DECISIONS.md` when the task touches research design, architecture, data,
-   evaluation, or claims.
-4. Inspect the actual code, tests, dependency files, and public APIs before
+2. Read this file and inspect only the source, tests, and documentation relevant
+   to the requested change. Read the integrated plan or broader project docs only
+   when the task touches their research design, architecture, data, evaluation,
+   public-claim, or release boundary.
+3. Inspect the actual code, tests, dependency files, and public APIs before
    proposing an implementation. Never invent a `tabcf_core` class, function,
    file layout, dataset location, or command from the plan.
-5. Name the affected evidence track and define a small, verifiable success
-   criterion before editing.
+4. Define the smallest verifiable success criterion before editing. Name an
+   evidence track only when the request actually affects one.
 
 Authority for intended research behavior is the integrated plan plus any later
 explicitly frozen protocol manifest. Authority for current executable behavior
-is the checked-in code and tests. If they disagree, stop, document the mismatch,
-and ask for a protocol decision; do not silently make one source match the other.
+is the checked-in code and tests. If they disagree on a frozen estimand, held-out
+evaluation, public claim, security boundary, or release decision, stop, document
+the mismatch, and ask for a protocol decision. For ordinary implementation drift,
+follow the inspected executable source, make the requested scoped change, and
+record the discrepancy without creating a new gate.
+
+## Proportional safeguards and execution priority
+
+These rules govern every later reference in this file to hashes, contracts,
+baselines, freezes, invariants, validation, evidence, or gates.
+
+Here, a prohibited default "baseline" means an added snapshot, golden-output,
+or acceptance barrier. A statistical comparator explicitly required by the
+research question is an experiment arm and may be implemented without treating
+it as a safety gate.
+
+- Default to no new hash, frozen contract, baseline, invariant, manifest layer,
+  approval step, or gate. Do not introduce one merely because it would make the
+  system feel more auditable, deterministic, safe, or future-proof.
+- Before adding one, name the concrete failure scenario it prevents, identify the
+  irreversible, cross-system, security/privacy, held-out-evaluation, or formal-
+  release boundary involved, and explain why Git identity, a version number, a
+  run ID or primary key, transactions, uniqueness constraints, types, schemas,
+  and ordinary tests do not already prevent or reveal that failure.
+- Prefer one canonical identity per boundary. Do not stack a Git commit, source-
+  tree hash, config hash, prompt hash, per-file hashes, and aggregate hash for the
+  same purpose. A second identity mechanism requires a distinct failure scenario.
+- A dirty working tree alone is not a reason to invent a source-tree hash. Either
+  use the checked-in commit, record the diff as ordinary run metadata, or require
+  a clean tree only at a formal release boundary.
+- Hash externally downloaded artifacts only when their bytes are not controlled
+  by Git and substitution would change execution or a formal claim. A provider
+  model version or immutable build ID is sufficient when exact bytes are neither
+  available nor required by the stated evidence level.
+- Use frozen research protocols only after the task explicitly enters a named
+  threshold/final evaluation or publication phase. Development configs, UI
+  examples, exploratory runs, and smoke tests remain editable and versioned by
+  normal Git history unless the user explicitly requests a freeze.
+- Put hard gates only at irreversible actions, external publication/deployment,
+  secret or private-data handling, unsupported causal execution, held-out test
+  access, or formal result promotion. Use ordinary validation and clear errors
+  for reversible local work.
+- Preserve existing safeguards unless the user explicitly requests a reviewed
+  simplification. Do not duplicate or extend them automatically. When touching
+  an existing safeguard, keep its current scope instead of propagating it to new
+  development paths.
+- Complete all safe, reversible, in-scope work before asking for clarification or
+  approval. Ask only when the missing choice would materially change a research
+  protocol, external side effect, security/privacy posture, or public claim.
+
+Classify work before choosing verification:
+
+- **Development:** implement the requested behavior, run the smallest meaningful
+  test or smoke, and stop once it passes. Do not run the full repository suite,
+  regenerate frozen artifacts, or re-hash unrelated assets for a local UI,
+  documentation, refactor, or isolated bug fix.
+- **Research measurement:** prioritize the actual simulation or measurement.
+  Before a long run, provide durable logging, incremental progress or checkpoints,
+  and a restart path. Preflight work must not consume the task while the required
+  run remains unstarted. Engineering acceptance is not a scientific result.
+- **Release/security:** run the applicable full checks and existing release gates.
+  Add new safeguards only under the concrete-failure test above.
+
+Do not repeat a passed test, status check, diff check, hash computation, or
+artifact verification unless code changed afterward, the previous result was
+incomplete, or a newly observed failure justifies repetition.
 
 ## Project identity and scope lock
 
@@ -84,12 +149,17 @@ contract.
 ## Evidence and claim rules
 
 - No numerical causal claim may appear without a resolvable evidence ID.
-- An evidence record must bind the value to the exact data hash, immutable
-  specification, tool and model version, result bundle, unrounded value, units,
-  support status, warnings, and source artifact.
+- For a final or publicly promoted numerical claim, an evidence record must bind
+  the value to the applicable immutable external inputs, specification version,
+  tool and model version, result bundle, unrounded value, units, support status,
+  warnings, and source artifact. Development and exploratory outputs may use a
+  run ID, Git commit, configuration, and explicit evidence-status label; they do
+  not require new hashes merely to exist.
 - Text, tables, cards, and plots must be derived from the same validated result
   bundle. Never read a headline number from a plot or copy it manually.
-- Evidence validation failure blocks the numerical answer or release.
+- Evidence validation failure blocks promotion of the affected numerical answer
+  or release. It must remain visible during local debugging and must not prevent
+  unrelated computation needed to diagnose the failure.
 - Preserve support, weak-IV, uncertainty, cost, and identification warnings
   through every transformation and report.
 - Describe relevance, residual-dependence, rank, and support checks as empirical
@@ -102,7 +172,9 @@ contract.
 ## Data, splits, and protocol freezes
 
 - Treat raw or licensed data as immutable inputs. Record provenance, license or
-  access notes, hashes, schemas, and transformation versions in manifests.
+  access notes, schemas, and transformation versions. Require a content hash when
+  the data crosses systems or enters a final evaluation/release manifest, not for
+  every temporary or generated development fixture.
 - Keep secrets, tokens, private data, local model caches, and sensitive traces out
   of Git. Use ignored local paths and commit only schemas, tiny public fixtures,
   manifests, or explicitly approved derived artifacts.
@@ -134,9 +206,11 @@ contract.
   contracts. Avoid speculative abstractions and compatibility layers.
 - Keep random-number generation explicit and seeded. Pass generators or seeds
   through configuration rather than relying on ambient global state.
-- Fail closed on unsupported treatments, missing roles, outside-support
-  interventions, stale IDs, hash mismatches, evidence mismatches, leakage risk,
-  or ambiguous high-consequence requests.
+- Fail closed on unsupported treatments, missing causal roles, outside-support
+  interventions, leakage risk, security/privacy violations, or ambiguous high-
+  consequence requests. Scope stale-ID, hash, and evidence-mismatch blocking to
+  the artifact or release boundary that relies on that identity; do not stop an
+  unrelated local workflow.
 - Do not silently fall back between statistical models, from GPU to CPU, from a
   real backend to a fake backend, or from a failed estimator to a heuristic.
 - Keep generated outputs separate from source. Do not commit datasets,
@@ -145,10 +219,13 @@ contract.
 
 ## Verification expectations
 
-Run the smallest relevant checks during development, then the full available
-suite for the affected boundary. Until a dependency file and stable commands are
-checked in, do not invent canonical commands; update this section and
-`docs/CODEBASE_MAP.md` when they become real.
+Run the smallest relevant checks during development. Run the full available suite
+only when the change crosses a shared statistical/runtime boundary or is being
+promoted for release. Once a relevant check passes, broaden or repeat it only
+after new changes, failures, or unresolved evidence justify doing so. Until a
+dependency file and stable commands are checked in, do not invent canonical
+commands; update `docs/CODEBASE_MAP.md` only when a stable entry point, dependency,
+or data flow actually changes.
 
 Required test categories as implementation appears:
 
@@ -215,8 +292,10 @@ test results.
 
 ## Definition of done
 
-A change is complete only when its requested behavior is implemented, relevant
-tests pass, evidence and warning invariants hold, leakage and scope boundaries are
-unchanged or explicitly versioned, documentation matches current behavior, and
-the handoff states what was not verified. Favor an honest blocked or negative
-result over a plausible but unsupported claim.
+A development change is complete when its requested behavior is implemented and
+the smallest relevant verification passes. A research result additionally needs
+the requested simulation or measurement artifact. A release additionally needs
+its existing release gates, evidence and warning invariants, matching
+documentation, and an explicit statement of what was not verified. Favor an
+honest blocked or negative result over a plausible but unsupported claim, while
+continuing all safe work that does not depend on the blocked boundary.

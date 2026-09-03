@@ -814,3 +814,22 @@ Do not rewrite an accepted entry when it changes; append a superseding entry.
   continue to validate against their recorded v1 profile rather than the active v2.
 - Source: User-reported Space dropdown error and requested prompt-first role mapping on
   2026-09-03.
+
+## D-036 — Follow the platform-owned ZeroGPU `spaces` version at 0.51.3
+
+- Date: 2026-09-03
+- Status: Accepted after failed Space build and package inspection
+- Decision: Update the ZeroGPU dependency profile from `spaces==0.51.1` to
+  `spaces==0.51.3`, matching the version now injected by the Hugging Face builder.
+- Rationale: The Space build failed dependency resolution because the platform now
+  requires 0.51.3. The downloaded 0.51.3 wheel retains the same public `spaces.GPU`
+  decorator implementation and supports the existing `duration=120` contract; the
+  package diff is confined to internal ZeroGPU client and Torch helpers.
+- Affected tracks: ZeroGPU development deployment only. Statistical code, Gemini role
+  mapping, evidence identities, Track T/H/A, and the pinned TabPFN checkpoint are
+  unchanged.
+- Verification impact: Run the ZeroGPU integration suite with 0.51.3 installed, require
+  a successful live build on the platform-injected version, and keep the runtime
+  `development_only` because this does not provide an immutable image digest.
+- Source: Hugging Face build error for Space commit `f2c9b79` and direct comparison of
+  the published 0.51.3 wheel with the previously installed 0.51.1 package.

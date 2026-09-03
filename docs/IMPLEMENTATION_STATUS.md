@@ -162,13 +162,14 @@ Docker/Compose after dual-secret change                not verified; Docker CLI 
 Current ZeroGPU implementation checks:
 
 ```text
-.venv/bin/python -m pytest                             138 passed in 69.43s
+.venv/bin/python -m pytest                             138 passed in 69.50s
 .venv/bin/ruff check src tests                         passed
 .venv/bin/ruff format --check src tests                84 files already formatted
 .venv/bin/python -m pip check                          no broken requirements
-HF Space commit                                        c74f210c6657d31fd706bddd75e6b5a1954bf112
-DCFA source pinned by Space                            da17c048bef37bc7181817e214496250b66ca20f
+HF Space commit                                        cc54f224ce1a164fb47adbbcf8fe704e6c7b229a
+DCFA source pinned by Space                            b8a9d488d5992ebc889d2020b7191696a9f49020
 HF runtime                                             RUNNING; current=zero-a10g
+HF-injected ZeroGPU package                            spaces 0.51.3
 strong preset                                          completed; median contrast +5.1
 weak preset                                            completed; weak-IV/support warnings preserved
 outside-support preset                                 blocked; no number, plot, or artifact
@@ -177,8 +178,8 @@ live checkpoint SHA-256                                2ab5a07d...8c10736
 canonical Gemini requests/data rows                    0 / 0
 temporary-key UI                                       password input; CSV enabled; APIs hidden
 responsive checks                                      390 px and 1280 px; no overflow
-P0 visual acceptance                                   local shared theme/CSS; 60/40 sticky desktop panel; stacked mobile panels
-prompt-first CSV roles                                 local/fake-provider passed; live deployment pending
+P0 visual acceptance                                   live shared theme/CSS; 60/40 sticky desktop panel; stacked mobile panels
+prompt-first CSV roles                                 live controls/config passed; fake-provider execution passed; live provider pending
 ```
 
 The live downloadable run remained `development_only`; its backend manifest

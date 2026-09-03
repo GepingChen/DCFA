@@ -31,12 +31,13 @@ Hugging Face or Google, so the UI recommends a separate restricted key.
 
 A visitor who prefers server-side secret storage can instead duplicate the Space
 and add `DCFA_GEMINI_API_KEY` as their own Space Secret; that mode hides the
-browser key field. In either mode, Gemini receives question text and symbolic
-roles but no rows or actual intervention values; CSV rows remain in the Hugging
-Face runtime and are not sent to Prior Labs. Uploads must be authorized,
-non-sensitive three-column Y/X/Z data. Completed runs are independently verified,
-made available as a path-safe ZIP, and removed from uncompressed server storage;
-Gradio cache files expire after fifteen minutes.
+browser key field. In either mode, Gemini receives the question text, exactly
+three header names, optional role overrides, and symbolic intervention labels,
+but no rows or actual intervention values. CSV rows remain in the Hugging Face
+runtime and are not sent to Prior Labs. Uploads must be authorized, non-sensitive
+three-column data. Completed runs are independently verified, made available as
+a path-safe ZIP, and removed from uncompressed server storage; Gradio cache files
+expire after fifteen minutes.
 
 The ZeroGPU runtime is `development_only`. Its package, model revision, model
 hash, Space commit, and DCFA commit are recorded, but it has no immutable
@@ -69,15 +70,17 @@ The demo provides three synthetic paths:
   causal answer.
 
 It also provides a local CSV tab for a bounded first-version workflow. The file
-must have exactly three numeric columns, 120–256 data rows, and explicit mappings
-for continuous outcome Y, continuous treatment X, and scalar instrument Z. Extra
-columns are rejected instead of being silently dropped as W. Before execution,
-the user sees separate transfer summaries and must confirm data authorization:
-question text goes to Google Gemini, and selected rows go to Prior Labs. The
-guided question field likewise states before submission that its text goes to
-Gemini and warns against private or sensitive information. Uploading the file
-into the local page alone calls neither service; checking the box and clicking
-**Run uploaded CSV** does.
+must have exactly three numeric columns and 120–256 data rows. By default, the
+question states which header is the continuous outcome, continuous treatment,
+and scalar instrument. Three optional text overrides can pin any role to an exact
+header name. Gemini returns one role mapping constrained to the supplied headers;
+local deterministic validation rejects missing, invented, duplicate, or
+override-conflicting roles before TabPFN. Extra columns are rejected instead of
+being silently dropped as W. Before execution, the user sees separate transfer
+summaries and must confirm data authorization: question text, header names, and
+optional overrides go to Google Gemini, while selected rows go to Prior Labs.
+Uploading the file into the local page alone calls neither service; checking the
+box and clicking **Run uploaded CSV** does.
 
 The visitor progress summary is an explicit four-stage projection: understand
 the question, check the data, run the analysis, and verify the result. Completed,
@@ -85,7 +88,9 @@ current, pending, and blocked states do not imply work that has not happened;
 blocked runs identify the stopped visitor stage and a safe next action. Raw state
 events, reasons, and tool counts are not sent to the default browser DOM. During
 a run, the current stage is shown without a percentage and both submit buttons
-are disabled.
+are disabled. On desktop, the input occupies the wider column while workflow
+state and results remain in one sticky companion panel; the two panels stack on
+narrow screens. Local and ZeroGPU launches use the same restrained theme and CSS.
 
 The result view begins with a direction-aware natural-language answer projected
 from the validated `QueryResult` and the already validated symbolic Gemini
@@ -102,9 +107,10 @@ path uses the official
 managed TabPFN distribution output for both control-function stages. No Client
 failure can select sklearn.
 
-Gemini receives the question, generic Y/X/Z role contract, and symbolic
-intervention labels. It receives zero data rows and zero actual intervention
-values. A successful run stores a non-secret `gemini_compilation.json` trace with
+For a CSV run, Gemini receives the question, three bounded header names, optional
+role overrides, the generic Y/X/Z role contract, and symbolic intervention
+labels. It receives zero data rows and zero actual intervention values. A
+successful run stores a non-secret `gemini_compilation.json` trace with
 the versioned config hash, request/prompt hashes, proposal, interaction ID, token
 usage, and latency. The presets contain generated synthetic `Y/X/Z` rows. The
 local CSV route sends only its selected Y/X/Z rows and prediction grids to Prior
@@ -204,7 +210,7 @@ Supported settings:
 | `DCFA_OUTPUT_ROOT` | `artifacts/local/website-demo` | Ignored local directory for immutable result bundles |
 | `DCFA_TABPFN_TOKEN_FILE` | `~/.config/dcfa/tabpfn_api_key` | External mode-600 Prior Labs token file |
 | `DCFA_GEMINI_API_KEY_FILE` | `~/.config/dcfa/gemini_api_key` | External mode-600 Gemini API key file |
-| `DCFA_WEBSITE_GEMINI_CONFIG_FILE` | repository profile | Versioned prompt/model/schema JSON; container defaults to `/app/evaluation/configs/website_demo_gemini_v1.json` |
+| `DCFA_WEBSITE_GEMINI_CONFIG_FILE` | repository profile | Versioned prompt/model/schema JSON; container defaults to `/app/evaluation/configs/website_demo_gemini_v2.json` |
 | `DCFA_BUILD_REVISION` | current checkout or `unknown` | Seven-to-twelve character Git revision shown on the page; set explicitly for an image build |
 | `DCFA_ACCESS_LOG` | `0` | Set to `1` only when request logs are operationally required |
 

@@ -47,8 +47,9 @@ Many causal-agent demos blur together language-model reasoning, statistical
 estimation, and presentation. TabCF-Agent keeps those responsibilities separate:
 
 1. **A bounded compiler** turns a natural-language request into an immutable,
-   typed analysis specification. Gemini sees symbolic treatment labels and the
-   Y/X/Z role contract—not data rows or actual intervention values.
+   typed analysis specification. For an uploaded CSV, Gemini sees the question,
+   three header names, optional role overrides, and symbolic treatment labels—not
+   data rows or actual intervention values.
 2. **An explicit runtime** validates roles, state transitions, approvals, and
    failures. Unsupported requests fail closed instead of silently changing the
    estimand or model.
@@ -85,7 +86,7 @@ Choose the path that matches what you want to inspect:
 
 | Path | What happens | Providers and data boundary |
 |---|---|---|
-| **[Live ZeroGPU demo](https://huggingface.co/spaces/GPChen01/dcfa-zerogpu)** | Runs authenticated presets or a bounded Y/X/Z CSV with pinned local TabPFN v2 | Presets make no provider call; temporary-key CSV sends only the question to Gemini; development-only |
+| **[Live ZeroGPU demo](https://huggingface.co/spaces/GPChen01/dcfa-zerogpu)** | Runs authenticated presets or a bounded Y/X/Z CSV with pinned local TabPFN v2 | Presets make no provider call; temporary-key CSV sends the question, three header names, and optional role overrides to Gemini; development-only |
 | **[Prepared demo](https://gepingchen.github.io/projects/dcfa/)** | Replays one hash-bound, independently verified synthetic result | Static GitHub Pages; no provider call at view time |
 | **[Colab workflow](https://colab.research.google.com/github/GepingChen/DCFA/blob/main/notebooks/DCFA_Custom_Analysis_Colab.ipynb)** | Runs one bounded custom CSV analysis in your own ephemeral runtime | Your question goes to Google; only separately authorized Y/X/Z rows and prediction grids go to Prior Labs |
 | **Local operator demo** | Runs the guided Gradio workflow and preserves full audit artifacts | Uses your repository-external Gemini and TabPFN Client credentials |

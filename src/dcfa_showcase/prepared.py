@@ -44,9 +44,9 @@ from dcfa_website_demo.csv_upload import (
 )
 from dcfa_website_demo.gemini import (
     GEMINI_MODEL,
+    PROTOCOL_VERSION,
     validate_website_gemini_config,
 )
-from dcfa_website_demo.gemini import PROTOCOL_VERSION as GEMINI_PROTOCOL_VERSION
 from dcfa_website_demo.presentation import (
     answer_sentence,
     display_value,
@@ -55,6 +55,11 @@ from dcfa_website_demo.presentation import (
 )
 
 PREPARED_DEMO_ID = "prepared_demo_v1"
+_CONFIG_ROOT = Path(__file__).resolve().parents[2] / "evaluation/configs"
+PREPARED_GEMINI_CONFIGS = {
+    "website_demo_gemini_v1": _CONFIG_ROOT / "website_demo_gemini_v1.json",
+    "website_demo_gemini_v2": _CONFIG_ROOT / "website_demo_gemini_v2.json",
+}
 MANIFEST_SCHEMA = "dcfa_prepared_demo_manifest_v1"
 VISITOR_SCHEMA = "dcfa_prepared_visitor_v1"
 VERIFICATION_SCHEMA = "dcfa_prepared_verification_v1"
@@ -119,7 +124,7 @@ def freeze_prepared_demo(directory: Path, *, release_commit: str) -> dict[str, A
             "intervention_labels": ["low", "center", "high"],
         },
         "gemini_profile": {
-            "profile_id": GEMINI_PROTOCOL_VERSION,
+            "profile_id": PROTOCOL_VERSION,
             "profile_sha256": gemini_config_hash,
             "model": GEMINI_MODEL,
             "request_limit": 1,
@@ -182,7 +187,17 @@ def _validate_manifest(root: Path) -> dict[str, Any]:
         raise ValueError("Prepared CSV row contract changed.")
     if input_contract.get("seed") != STANDARD_DEMO_SEED:
         raise ValueError("Prepared synthetic seed changed.")
-    if manifest.get("gemini_profile", {}).get("profile_sha256") != validate_website_gemini_config():
+    profile_id = manifest.get("gemini_profile", {}).get("profile_id")
+    if not isinstance(profile_id, str):
+        raise ValueError("Prepared Gemini profile is missing.")
+    profile_path = PREPARED_GEMINI_CONFIGS.get(profile_id)
+    if profile_path is None:
+        raise ValueError("Prepared Gemini profile is unsupported.")
+    prepared_config_hash = validate_website_gemini_config(
+        profile_path,
+        expected_version=profile_id,
+    )
+    if manifest.get("gemini_profile", {}).get("profile_sha256") != prepared_config_hash:
         raise ValueError("Prepared Gemini profile hash mismatch.")
     if manifest.get("managed_tabpfn_profile", {}).get("profile_sha256") != sha256_digest(
         dict(MANAGED_BACKEND_PARAMETERS)
@@ -357,7 +372,7 @@ def export_prepared_showcase(directory: Path, *, source_run_directory: Path) -> 
         observed_backend_parameters.get(name) != value for name, value in MANAGED_BACKEND_PARAMETERS
     ):
         raise ValueError("Prepared run does not use the frozen managed-TabPFN profile.")
-    if gemini_payload.get("protocol_version") != GEMINI_PROTOCOL_VERSION:
+    if gemini_payload.get("protocol_version") != manifest["gemini_profile"]["profile_id"]:
         raise ValueError("Prepared run does not use the frozen Gemini profile.")
     if gemini_payload.get("data_rows_sent_to_gemini") != 0:
         raise ValueError("Prepared run sent data rows to Gemini.")

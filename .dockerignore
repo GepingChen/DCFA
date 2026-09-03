@@ -20,6 +20,7 @@ evaluation/*
 !evaluation/configs/
 evaluation/configs/*
 !evaluation/configs/website_demo_gemini_v1.json
+!evaluation/configs/website_demo_gemini_v2.json
 logs
 models
 plan

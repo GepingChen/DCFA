@@ -18,6 +18,7 @@ MIN_UPLOAD_ROWS = 120
 MAX_UPLOAD_ROWS = 256
 MAX_UPLOAD_BYTES = 1_000_000
 MIN_CONTINUOUS_VALUES = 20
+MAX_COLUMN_NAME_CHARS = 120
 STANDARD_DEMO_ROWS = 128
 STANDARD_DEMO_SEED = 20260813
 
@@ -40,6 +41,21 @@ class UploadedIVDataset:
     instrument: str
 
 
+@dataclass(frozen=True)
+class ValidatedCSVColumns:
+    """Authorized numeric CSV columns before causal roles are assigned."""
+
+    columns: dict[str, np.ndarray]
+    data_boundary: CSVDataBoundary
+
+    @property
+    def header(self) -> tuple[str, str, str]:
+        names = tuple(self.columns)
+        if len(names) != 3:  # pragma: no cover - constructor is module-private in practice
+            raise RuntimeError("Validated CSV columns lost the three-column contract.")
+        return names[0], names[1], names[2]
+
+
 def _role_names(outcome: str, treatment: str, instrument: str) -> tuple[str, str, str]:
     roles = tuple(str(value).strip() for value in (outcome, treatment, instrument))
     if any(not role for role in roles):
@@ -49,51 +65,43 @@ def _role_names(outcome: str, treatment: str, instrument: str) -> tuple[str, str
     return roles
 
 
-def inspect_csv_header(path: str | Path) -> tuple[str, str, str]:
-    """Read only the bounded CSV header for explicit role selection."""
-    csv_path = Path(path)
-    if not csv_path.is_file():
-        raise ValueError("Choose a readable CSV file before selecting roles.")
-    if csv_path.stat().st_size > MAX_UPLOAD_BYTES:
-        raise ValueError(f"CSV files are limited to {MAX_UPLOAD_BYTES // 1_000_000} MB.")
-    try:
-        with csv_path.open("r", encoding="utf-8-sig", newline="") as stream:
-            header = next(csv.reader(stream, strict=True), None)
-    except (OSError, UnicodeError, csv.Error) as exc:
+def _validate_column_names(header: list[str]) -> None:
+    if any(
+        len(name) > MAX_COLUMN_NAME_CHARS
+        or any(ord(character) < 32 or ord(character) == 127 for character in name)
+        for name in header
+    ):
         raise ValueError(
-            "The selected file could not be read as a UTF-8 comma-separated CSV."
-        ) from exc
-    if header is None:
-        raise ValueError("The CSV is empty and has no header row.")
-    if any(not name or name != name.strip() for name in header):
-        raise ValueError("CSV headers must be non-empty and have no surrounding whitespace.")
-    if len(header) != len(set(header)):
-        raise ValueError("CSV headers must be unique.")
-    if len(header) != 3:
-        raise ValueError("The public workflow accepts exactly three Y/X/Z columns.")
-    return header[0], header[1], header[2]
+            f"CSV column names must be at most {MAX_COLUMN_NAME_CHARS} characters and "
+            "contain no control characters."
+        )
 
 
-def load_authorized_csv(
-    path: str | Path,
-    *,
-    outcome: str,
-    treatment: str,
-    instrument: str,
+def require_csv_authorization(
     confirmed: bool,
-    data_boundary: CSVDataBoundary = CSVDataBoundary.MANAGED_PRIOR_LABS,
-) -> UploadedIVDataset:
-    """Load an explicitly authorized, exactly-three-column numeric IV CSV."""
+    data_boundary: CSVDataBoundary,
+) -> None:
+    """Require explicit authorization before any CSV-backed provider request."""
     if not isinstance(data_boundary, CSVDataBoundary):
         raise ValueError("CSV data boundary must be selected explicitly.")
-    if not confirmed:
-        destination = (
-            "Prior Labs transmission"
-            if data_boundary is CSVDataBoundary.MANAGED_PRIOR_LABS
-            else "Hugging Face processing"
-        )
-        raise ValueError(f"Confirm authorization and {destination} before running uploaded data.")
-    outcome, treatment, instrument = _role_names(outcome, treatment, instrument)
+    if confirmed:
+        return
+    destination = (
+        "Prior Labs transmission"
+        if data_boundary is CSVDataBoundary.MANAGED_PRIOR_LABS
+        else "Hugging Face processing"
+    )
+    raise ValueError(f"Confirm authorization and {destination} before running uploaded data.")
+
+
+def read_authorized_csv_columns(
+    path: str | Path,
+    *,
+    confirmed: bool,
+    data_boundary: CSVDataBoundary = CSVDataBoundary.MANAGED_PRIOR_LABS,
+) -> ValidatedCSVColumns:
+    """Validate authorized numeric CSV contents before assigning causal roles."""
+    require_csv_authorization(confirmed, data_boundary)
     csv_path = Path(path)
     if not csv_path.is_file():
         raise ValueError("Choose a readable local CSV file before running the workflow.")
@@ -112,8 +120,8 @@ def load_authorized_csv(
                 )
             if len(header) != len(set(header)):
                 raise ValueError("CSV headers must be unique.")
-            selected = {outcome, treatment, instrument}
-            if len(header) != 3 or set(header) != selected:
+            _validate_column_names(header)
+            if len(header) != 3:
                 raise ValueError(
                     "The local demo accepts exactly the three selected Y/X/Z columns; "
                     "remove extra columns instead of silently treating them as W."
@@ -142,15 +150,34 @@ def load_authorized_csv(
             "The selected file could not be read as a UTF-8 comma-separated CSV."
         ) from exc
 
-    row_count = len(values[outcome])
+    row_count = len(values[header[0]])
     if not MIN_UPLOAD_ROWS <= row_count <= MAX_UPLOAD_ROWS:
         raise ValueError(
             f"Uploaded CSVs must contain {MIN_UPLOAD_ROWS}–{MAX_UPLOAD_ROWS} data rows."
         )
     arrays = {name: np.asarray(column, dtype=float) for name, column in values.items()}
-    for name in (outcome, treatment, instrument):
+    for name in header:
         if float(np.ptp(arrays[name])) == 0.0:
             raise ValueError(f"Column {name} is constant.")
+    return ValidatedCSVColumns(columns=arrays, data_boundary=data_boundary)
+
+
+def assign_csv_roles(
+    validated: ValidatedCSVColumns,
+    *,
+    outcome: str,
+    treatment: str,
+    instrument: str,
+) -> UploadedIVDataset:
+    """Assign and validate one explicit Y/X/Z mapping on preflighted columns."""
+    outcome, treatment, instrument = _role_names(outcome, treatment, instrument)
+    arrays = validated.columns
+    if set(arrays) != {outcome, treatment, instrument}:
+        raise ValueError(
+            "The local demo accepts exactly the three selected Y/X/Z columns; "
+            "remove extra columns instead of silently treating them as W."
+        )
+    row_count = len(arrays[outcome])
     for name, role in ((outcome, "outcome Y"), (treatment, "treatment X")):
         if np.unique(arrays[name]).size < MIN_CONTINUOUS_VALUES:
             raise ValueError(
@@ -163,7 +190,7 @@ def load_authorized_csv(
         outcome: arrays[outcome],
     }
     digest = dataset_sha256(role_columns)
-    if data_boundary is CSVDataBoundary.MANAGED_PRIOR_LABS:
+    if validated.data_boundary is CSVDataBoundary.MANAGED_PRIOR_LABS:
         source = "user_authorized_local_csv_upload"
         license_note = (
             "User confirmed authorization to send the selected Y/X/Z rows to Prior Labs; "
@@ -195,6 +222,29 @@ def load_authorized_csv(
     return UploadedIVDataset(
         columns=role_columns,
         manifest=manifest,
+        outcome=outcome,
+        treatment=treatment,
+        instrument=instrument,
+    )
+
+
+def load_authorized_csv(
+    path: str | Path,
+    *,
+    outcome: str,
+    treatment: str,
+    instrument: str,
+    confirmed: bool,
+    data_boundary: CSVDataBoundary = CSVDataBoundary.MANAGED_PRIOR_LABS,
+) -> UploadedIVDataset:
+    """Load an explicitly authorized, exactly-three-column numeric IV CSV."""
+    validated = read_authorized_csv_columns(
+        path,
+        confirmed=confirmed,
+        data_boundary=data_boundary,
+    )
+    return assign_csv_roles(
+        validated,
         outcome=outcome,
         treatment=treatment,
         instrument=instrument,

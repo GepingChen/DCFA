@@ -41,7 +41,8 @@ Current protocols:
 - recorded Track A: `track_a_recorded_v4` with case manifest
   `track_a_cases_v1`;
 - Gemini live smoke: `track_a_gemini_live_smoke_v1`.
-- website Gemini compiler: `website_demo_gemini_v1`.
+- website Gemini compiler: `website_demo_gemini_v2` (v1 retained for historical
+  prepared-demo verification).
 - local ZeroGPU backend: `local_tabpfn_v2_zerogpu_v1`;
 - prepared public replay: `prepared_demo_v1` / `dcfa_prepared_visitor_v1`;
 - Colab custom workflow: DCFA release commit
@@ -54,8 +55,8 @@ Current protocols:
 | Shared runtime | Immutable typed schemas, typed errors, content-addressed evidence, append-only audit, validated cache, atomic output, immutable result paths, source hashing, and independent artifact verification | No release claim follows from mechanics alone |
 | TabCF scope | Exactly one continuous treatment, one continuous outcome, one scalar IV, and no `W`; unsupported treatments, role conflicts, unconfirmed specs, malformed grids, data/manifest hash mismatches, and nonempty `W` fail before backend construction or fit | Conditional `W` extension and general method routing are intentionally absent |
 | TabCF deterministic slice | Explicit fallback or TabPFN backend selection; Stage 1 control rank; empirical diagnostics; whole-grid strict support gate before Stage 2; Stage 2 distribution/mean paths; CDF, means, quantiles, risks, and directed contrasts from one core | Local sklearn output is `development_only`, is not TabCF, and cannot enter locked Track T |
-| Managed TabPFN demo | Exact `tabpfn-client==0.3.3` profile; fixed synthetic and confirmed exact-Y/X/Z CSV website routes; default one-call Gemini compiler; strict 120–256-row/no-W gates; batched predictions; service/LLM trace metadata; transport-safe CDF; evidence-linked immutable artifacts | `development_only`; question text goes to Google and selected CSV rows go separately to Prior Labs; no LLM or sklearn fallback; service checkpoint/image hashes are unavailable, so this cannot enter locked Track T |
-| ZeroGPU local TabPFN v2 | Public login-gated canonical Space; exact v2 model repo/revision/SHA-256; Python 3.12.12, Torch 2.11.0, TabPFN 8.5.0, CUDA, one estimator; frozen no-LLM presets; temporary-key or duplicate-Secret CSV; verified ZIP export and ephemeral cleanup | `development_only`; ZeroGPU has no immutable image digest. Both Gemini/CSV credential paths are automated-test complete but not live-provider success verified |
+| Managed TabPFN demo | Exact `tabpfn-client==0.3.3` profile; fixed synthetic and confirmed exactly-three-column CSV website routes; prompt-first role mapping with optional exact-name overrides; default one-call Gemini compiler; strict 120–256-row/no-W gates; batched predictions; service/LLM trace metadata; transport-safe CDF; evidence-linked immutable artifacts | `development_only`; question text, header names, and optional overrides go to Google while selected CSV rows go separately to Prior Labs; no LLM or sklearn fallback; service checkpoint/image hashes are unavailable, so this cannot enter locked Track T |
+| ZeroGPU local TabPFN v2 | Public login-gated canonical Space; exact v2 model repo/revision/SHA-256; Python 3.12.12, Torch 2.11.0, TabPFN 8.5.0, CUDA, one estimator; frozen no-LLM presets; temporary-key or duplicate-Secret CSV; optional role overrides without upload-triggered dropdown mutation; verified ZIP export and ephemeral cleanup | `development_only`; ZeroGPU has no immutable image digest. The v2 prompt/header role route is automated-test complete but not live-provider success verified |
 | Locked TabPFN boundary | Lazy imports, no automatic fallback, pinned upstream commit, exact model/image SHA-256 validation, current-host image-digest check, package/runtime manifest validator, and release rejection of fallback evidence | No working local Torch/TabPFN/checkpoint/image is available; the bounded probe was not repeated |
 | Track T development evaluation | Strong/weak engineering scenarios, exact DCFA-fixture oracle metrics, three frozen seeds in the current artifact, seed-level aggregation, warnings, assumptions, evidence, and independent recomputation | Not mapped to manuscript DGP codes; not a locked 12-cell study, estimator ranking, diagnostic calibration, or publishable TabCF result |
 | Fulton | Provenance-required 97-row schema loader and development-only workflow command | No approved local CSV or usage decision was supplied; no Fulton result was run |
@@ -161,11 +162,12 @@ Docker/Compose after dual-secret change                not verified; Docker CLI 
 Current ZeroGPU implementation checks:
 
 ```text
-.venv/bin/python -m pytest                             131 passed in 43.24s
+.venv/bin/python -m pytest                             138 passed in 69.43s
 .venv/bin/ruff check src tests                         passed
 .venv/bin/ruff format --check src tests                84 files already formatted
 .venv/bin/python -m pip check                          no broken requirements
-HF Space commit                                        f8b39f86206863736fa34052747dce67129cd6da
+HF Space commit                                        c74f210c6657d31fd706bddd75e6b5a1954bf112
+DCFA source pinned by Space                            da17c048bef37bc7181817e214496250b66ca20f
 HF runtime                                             RUNNING; current=zero-a10g
 strong preset                                          completed; median contrast +5.1
 weak preset                                            completed; weak-IV/support warnings preserved
@@ -175,6 +177,8 @@ live checkpoint SHA-256                                2ab5a07d...8c10736
 canonical Gemini requests/data rows                    0 / 0
 temporary-key UI                                       password input; CSV enabled; APIs hidden
 responsive checks                                      390 px and 1280 px; no overflow
+P0 visual acceptance                                   local shared theme/CSS; 60/40 sticky desktop panel; stacked mobile panels
+prompt-first CSV roles                                 local/fake-provider passed; live deployment pending
 ```
 
 The live downloadable run remained `development_only`; its backend manifest

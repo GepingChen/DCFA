@@ -14,6 +14,7 @@ from dcfa.constants import EstimatorBackend
 from dcfa.tabcf_iv.backend import SklearnQuantileBackend
 from dcfa_website_demo.app import (
     DEFAULT_CSV_QUESTION,
+    DEMO_CSS,
     _input_error_outputs,
     build_app,
     execute_local_csv_upload,
@@ -21,6 +22,7 @@ from dcfa_website_demo.app import (
     portfolio_ui_updates,
 )
 from dcfa_website_demo.csv_upload import export_standard_demo_csv
+from dcfa_website_demo.zerogpu import zerogpu_launch_kwargs
 from tests.provider_fakes import FakeGeminiClient
 
 
@@ -87,6 +89,35 @@ def test_duplicate_csv_uses_local_boundary_and_one_gemini_call(tmp_path: Path) -
     assert manifest["source_kind"] == "user_authorized_hf_zerogpu_csv_upload"
     assert "Prior Labs" not in manifest["license_note"]
     assert verify_run_directory(result.output_dir)["status"] == "valid"
+
+
+def test_zerogpu_csv_uses_prompt_roles_when_overrides_are_blank(tmp_path: Path) -> None:
+    csv_path = export_standard_demo_csv(tmp_path / "standard.csv")
+    gemini_key = tmp_path / "gemini-key"
+    gemini_key.write_text("test_gemini_key_that_is_not_a_real_secret", encoding="utf-8")
+    gemini_key.chmod(0o600)
+    client = FakeGeminiClient()
+
+    result = execute_local_csv_upload(
+        csv_path,
+        None,
+        None,
+        None,
+        True,
+        20260813,
+        model_path=tmp_path / "unused-fake-model.ckpt",
+        question=DEFAULT_CSV_QUESTION,
+        output_root=tmp_path / "runs",
+        gemini_api_key_file=gemini_key,
+        gemini_client=client,
+        gemini_sdk_version="2.18.1",
+    )
+
+    assert result.response.status == "completed"
+    model_input = json.loads(client.interactions.calls[0]["input"])
+    assert model_input["available_columns"] == ["Y", "X", "Z"]
+    assert model_input["optional_role_overrides"] == {}
+    assert result.llm_trace["data_rows_sent_to_gemini"] == 0
 
 
 def test_archive_is_path_safe_and_secret_scan_blocks_leak(tmp_path: Path) -> None:
@@ -160,10 +191,6 @@ def test_canonical_space_config_requires_login_and_enables_temporary_key(
         del args
         return ()
 
-    def header_handler(*args):
-        del args
-        return ()
-
     app = build_app(
         output_root=tmp_path,
         build_revision="12345678",
@@ -172,7 +199,6 @@ def test_canonical_space_config_requires_login_and_enables_temporary_key(
         space_csv_authorize_handler=authorize_csv,
         space_scenario_handler=scenario_handler,
         space_csv_handler=csv_handler,
-        space_csv_header_handler=header_handler,
     )
     config = app.get_config_file()
     assert any(
@@ -196,6 +222,31 @@ def test_canonical_space_config_requires_login_and_enables_temporary_key(
     assert key_components[0]["props"]["interactive"] is True
     assert "not intentionally persisted by DCFA" in serialized
     assert DEFAULT_CSV_QUESTION in serialized
+    assert "Optional column overrides" in serialized
+    assert "three column names" in serialized
+    for label in ("Outcome override", "Treatment override", "Instrument override"):
+        component = next(
+            item for item in config["components"] if item.get("props", {}).get("label") == label
+        )
+        assert component["type"] == "textbox"
+        assert component["props"]["value"] == ""
+    assert not any(
+        any(target[1] == "upload" for target in dependency["targets"])
+        for dependency in config["dependencies"]
+    )
+
+
+def test_zerogpu_launch_configuration_includes_shared_theme_and_css() -> None:
+    launch_kwargs = zerogpu_launch_kwargs()
+
+    assert launch_kwargs["css"] == DEMO_CSS
+    assert isinstance(launch_kwargs["theme"], gr.themes.Base)
+    assert launch_kwargs["blocked_paths"] == [
+        "/tmp/dcfa-zerogpu-runs",
+        "/tmp/dcfa-zerogpu-secrets",
+    ]
+    assert launch_kwargs["enable_monitoring"] is False
+    assert launch_kwargs["show_error"] is False
 
 
 def test_duplicate_space_keeps_secret_mode_and_hides_browser_key(tmp_path: Path) -> None:
@@ -207,7 +258,6 @@ def test_duplicate_space_keeps_secret_mode_and_hides_browser_key(tmp_path: Path)
         space_csv_authorize_handler=lambda _key: None,
         space_scenario_handler=lambda *_args: (),
         space_csv_handler=lambda *_args: (),
-        space_csv_header_handler=lambda *_args: (),
     )
     config = app.get_config_file()
     key_component = next(

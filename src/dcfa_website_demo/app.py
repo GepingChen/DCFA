@@ -40,7 +40,8 @@ from dcfa_website_demo.csv_upload import (
     MAX_UPLOAD_ROWS,
     MIN_UPLOAD_ROWS,
     CSVDataBoundary,
-    load_authorized_csv,
+    assign_csv_roles,
+    read_authorized_csv_columns,
 )
 from dcfa_website_demo.gemini import (
     GEMINI_MODEL,
@@ -66,9 +67,9 @@ _OUTPUT_RESERVATION_LOCK = threading.Lock()
 _BUILD_REVISION_PATTERN = re.compile(r"^[0-9a-f]{7,12}$")
 _LOGGER = logging.getLogger(__name__)
 DEFAULT_CSV_QUESTION = (
-    "Using Y as the continuous outcome, X as the continuous treatment, and Z as the scalar "
-    "instrument, estimate the median outcome contrast for a high supported level of X versus a "
-    "low supported level of X. Preserve all weak-instrument and support warnings, and return no "
+    "The outcome column is Y. The continuous treatment column is X. The scalar instrument column "
+    "is Z. Estimate the median outcome contrast for a high supported level of X versus a low "
+    "supported level of X. Preserve all weak-instrument and support warnings, and return no "
     "numerical estimate if either intervention is outside observed support."
 )
 _FROZEN_PRESET_PROPOSAL = {
@@ -186,12 +187,12 @@ body,
 }
 
 .demo-hero h1 {
-  max-width: 21ch;
-  margin: 0 0 .75rem;
-  color: var(--demo-ink);
-  font-size: clamp(2rem, 5vw, 3.6rem);
-  line-height: 1.02;
-  letter-spacing: -.045em;
+  max-width: 21ch !important;
+  margin: 0 0 .75rem !important;
+  color: var(--demo-ink) !important;
+  font-size: clamp(2rem, 5vw, 3.6rem) !important;
+  line-height: 1.02 !important;
+  letter-spacing: -.045em !important;
 }
 
 .demo-hero-copy {
@@ -283,6 +284,19 @@ body,
 
 .demo-controls {
   margin-top: 1.4rem;
+}
+
+.demo-input-column,
+.demo-output-column {
+  min-width: 0 !important;
+}
+
+@media (min-width: 48.01rem) {
+  .demo-output-column {
+    position: sticky !important;
+    top: 1rem;
+    align-self: flex-start;
+  }
 }
 
 #run-demo-button,
@@ -512,6 +526,15 @@ body,
     padding: .8rem !important;
   }
 
+  .demo-controls {
+    flex-direction: column !important;
+  }
+
+  .demo-input-column,
+  .demo-output-column {
+    width: 100% !important;
+  }
+
   .demo-boundary-grid {
     grid-template-columns: 1fr 1fr;
   }
@@ -535,6 +558,24 @@ body,
   }
 }
 """
+
+
+def build_demo_theme() -> Any:
+    """Build the shared restrained theme for local and ZeroGPU launch surfaces."""
+    try:
+        import gradio as gr
+    except ImportError as exc:
+        raise RuntimeError(
+            "Install the website demo with: python -m pip install -r requirements-website-demo.lock"
+        ) from exc
+    return gr.themes.Base(
+        primary_hue="green",
+        secondary_hue="green",
+        neutral_hue="stone",
+        radius_size="sm",
+        font=("Inter", "ui-sans-serif", "system-ui", "sans-serif"),
+        font_mono=("IBM Plex Mono", "ui-monospace", "monospace"),
+    )
 
 
 class _WebsiteAnalysisTool:
@@ -670,9 +711,9 @@ def execute_portfolio_scenario(
 
 def execute_csv_upload(
     csv_file: str | Path,
-    outcome: str,
-    treatment: str,
-    instrument: str,
+    outcome: str | None,
+    treatment: str | None,
+    instrument: str | None,
     confirmed: bool,
     seed: int,
     *,
@@ -689,13 +730,30 @@ def execute_csv_upload(
     seed = int(seed)
     if not MIN_DEMO_SEED <= seed <= MAX_DEMO_SEED:
         raise ValueError(f"Demo seed must be between {MIN_DEMO_SEED} and {MAX_DEMO_SEED}.")
-    dataset = load_authorized_csv(
+    boundary = CSVDataBoundary.MANAGED_PRIOR_LABS
+    validated = read_authorized_csv_columns(
         csv_file,
-        outcome=outcome,
-        treatment=treatment,
-        instrument=instrument,
         confirmed=bool(confirmed),
-        data_boundary=CSVDataBoundary.MANAGED_PRIOR_LABS,
+        data_boundary=boundary,
+    )
+    selected_question = question or DEFAULT_CSV_QUESTION
+    compilation = compile_website_question(
+        selected_question,
+        api_key_file=gemini_api_key_file or gemini_api_key_file_from_environment(),
+        client=gemini_client,
+        sdk_version=gemini_sdk_version,
+        available_columns=validated.header,
+        role_overrides={
+            "outcome": outcome,
+            "treatment": treatment,
+            "instrument": instrument,
+        },
+    )
+    dataset = assign_csv_roles(
+        validated,
+        outcome=compilation.outcome,
+        treatment=compilation.treatment,
+        instrument=compilation.instrument,
     )
     interventions = tuple(
         float(value)
@@ -710,7 +768,7 @@ def execute_csv_upload(
         outcome=dataset.outcome,
         treatment=dataset.treatment,
         instrument=dataset.instrument,
-        question=(question or DEFAULT_CSV_QUESTION),
+        question=selected_question,
         interventions=interventions,
         seed=seed,
         output_root=output_root,
@@ -720,6 +778,7 @@ def execute_csv_upload(
         gemini_api_key_file=gemini_api_key_file,
         gemini_client=gemini_client,
         gemini_sdk_version=gemini_sdk_version,
+        compilation=compilation,
     )
 
 
@@ -744,6 +803,9 @@ def _frozen_preset_compilation(question: str) -> GeminiWebsiteCompilation:
         "proposal": dict(_FROZEN_PRESET_PROPOSAL),
     }
     return GeminiWebsiteCompilation(
+        outcome="Y",
+        treatment="X",
+        instrument="Z",
         objective="quantile_contrast",
         x_label="high",
         comparison_x_label="low",
@@ -817,9 +879,9 @@ def execute_local_portfolio_scenario(
 
 def execute_local_csv_upload(
     csv_file: str | Path,
-    outcome: str,
-    treatment: str,
-    instrument: str,
+    outcome: str | None,
+    treatment: str | None,
+    instrument: str | None,
     confirmed: bool,
     seed: int,
     *,
@@ -834,23 +896,33 @@ def execute_local_csv_upload(
     seed = int(seed)
     if not MIN_DEMO_SEED <= seed <= MAX_DEMO_SEED:
         raise ValueError(f"Demo seed must be between {MIN_DEMO_SEED} and {MAX_DEMO_SEED}.")
-    dataset = load_authorized_csv(
+    boundary = CSVDataBoundary.HF_ZEROGPU_LOCAL
+    validated = read_authorized_csv_columns(
         csv_file,
-        outcome=outcome,
-        treatment=treatment,
-        instrument=instrument,
         confirmed=bool(confirmed),
-        data_boundary=CSVDataBoundary.HF_ZEROGPU_LOCAL,
-    )
-    interventions = tuple(
-        float(value)
-        for value in np.quantile(dataset.columns[dataset.treatment], (0.1, 0.3, 0.5, 0.7, 0.9))
+        data_boundary=boundary,
     )
     compilation = compile_website_question(
         question,
         api_key_file=gemini_api_key_file,
         client=gemini_client,
         sdk_version=gemini_sdk_version,
+        available_columns=validated.header,
+        role_overrides={
+            "outcome": outcome,
+            "treatment": treatment,
+            "instrument": instrument,
+        },
+    )
+    dataset = assign_csv_roles(
+        validated,
+        outcome=compilation.outcome,
+        treatment=compilation.treatment,
+        instrument=compilation.instrument,
+    )
+    interventions = tuple(
+        float(value)
+        for value in np.quantile(dataset.columns[dataset.treatment], (0.1, 0.3, 0.5, 0.7, 0.9))
     )
     digest_suffix = dataset.manifest.dataset_hash.split(":", maxsplit=1)[1][:12]
     return _execute_compiled_dataset(
@@ -891,6 +963,7 @@ def _execute_managed_dataset(
     gemini_api_key_file: Path | None,
     gemini_client: Any | None,
     gemini_sdk_version: str | None,
+    compilation: GeminiWebsiteCompilation | None = None,
 ) -> PortfolioDemoResult:
     """Run one already-validated no-W dataset through the shared managed profile."""
     credential = read_managed_token_file(token_file or managed_token_file_from_environment())
@@ -908,7 +981,7 @@ def _execute_managed_dataset(
         )
 
     try:
-        llm_compilation = compile_website_question(
+        llm_compilation = compilation or compile_website_question(
             question,
             api_key_file=gemini_api_key_file or gemini_api_key_file_from_environment(),
             client=gemini_client,
@@ -960,6 +1033,16 @@ def _execute_compiled_dataset(
     backend_factory: Any,
 ) -> PortfolioDemoResult:
     """Execute one compiled request through an injected deterministic backend."""
+    if (outcome, treatment, instrument) != (
+        compilation.outcome,
+        compilation.treatment,
+        compilation.instrument,
+    ):
+        raise DCFAError(
+            ErrorCode.LLM_OUTPUT_INVALID,
+            "The compiled role mapping does not match the validated dataset mapping.",
+            stage="website_demo.gemini_output",
+        )
     label_values = {
         "low": interventions[0],
         "center": interventions[len(interventions) // 2],
@@ -1345,7 +1428,6 @@ def build_app(
     space_csv_authorize_handler: Any | None = None,
     space_scenario_handler: Any | None = None,
     space_csv_handler: Any | None = None,
-    space_csv_header_handler: Any | None = None,
 ) -> Any:
     """Build the optional website demo while keeping Gradio a lazy dependency."""
     try:
@@ -1366,7 +1448,6 @@ def build_app(
         or space_csv_authorize_handler is None
         or space_scenario_handler is None
         or space_csv_handler is None
-        or space_csv_header_handler is None
     ):
         raise ValueError("ZeroGPU deployment requires explicit authenticated event handlers.")
     scenario_choices = [(item.label, key) for key, item in SCENARIOS.items()]
@@ -1384,15 +1465,15 @@ def build_app(
             "Preset data stays inside this Hugging Face Space and uses local TabPFN v2."
             if is_space
             else (
-                "Question text goes to Google Gemini; approved CSV rows go separately "
-                "to Prior Labs."
+                "Question text and CSV header names go to Google Gemini; approved CSV rows "
+                "go separately to Prior Labs."
             )
         )
         privacy_detail = (
             "Built-in examples are synthetic and use a frozen typed specification without a live "
-            "LLM call. In a duplicated Space with its own Gemini Secret, only question text goes "
-            "to Google; uploaded rows stay in the Hugging Face runtime. Do not upload sensitive "
-            "or confidential data."
+            "LLM call. For an uploaded CSV, only question text, the three header names, and any "
+            "optional role overrides go to Google; uploaded rows stay in the Hugging Face "
+            "runtime. Do not upload sensitive or confidential data."
             if is_space
             else "Built-in examples are synthetic. Gemini receives no data rows or actual "
             "intervention values. A CSV leaves this machine only after explicit confirmation."
@@ -1428,8 +1509,11 @@ def build_app(
             """
         )
         with gr.Row(elem_classes="demo-controls", elem_id="guided-input"):
-            with gr.Column(scale=5, elem_classes="demo-panel"):
-                gr.Markdown("### 1 · Choose an input", elem_classes="demo-section-heading")
+            with gr.Column(
+                scale=6,
+                elem_classes=["demo-panel", "demo-input-column"],
+            ):
+                gr.Markdown("## 1 · Choose an input", elem_classes="demo-section-heading")
                 with gr.Tabs():
                     with gr.Tab("Guided scenarios"):
                         gr.Markdown(
@@ -1491,12 +1575,15 @@ def build_app(
                             (
                                 f"Upload exactly three numeric columns and {MIN_UPLOAD_ROWS}–"
                                 f"{MAX_UPLOAD_ROWS} rows. The file is processed ephemerally by "
-                                "Hugging Face and local TabPFN v2; extra columns are rejected."
+                                "Hugging Face and local TabPFN v2. Describe the outcome, "
+                                "treatment, and instrument columns in your question; extra "
+                                "columns are rejected."
                                 if is_space
                                 else (
                                     f"Upload exactly three numeric columns and "
                                     f"{MIN_UPLOAD_ROWS}–{MAX_UPLOAD_ROWS} rows. Extra columns are "
-                                    "rejected rather than silently treated as W."
+                                    "rejected rather than silently treated as W. Describe the "
+                                    "outcome, treatment, and instrument columns in your question."
                                 )
                             ),
                             elem_classes="demo-section-copy",
@@ -1507,21 +1594,31 @@ def build_app(
                             type="filepath",
                             interactive=csv_enabled,
                         )
-                        with gr.Row():
-                            if is_space:
-                                csv_outcome = gr.Dropdown(
-                                    label="Outcome Y column", interactive=csv_enabled
+                        with gr.Accordion("Optional column overrides", open=False):
+                            gr.Markdown(
+                                "Leave these blank to let Gemini map the three CSV headers from "
+                                "your question. An override must exactly match a header name.",
+                                elem_classes="demo-section-copy",
+                            )
+                            with gr.Row():
+                                csv_outcome = gr.Textbox(
+                                    value="",
+                                    label="Outcome override",
+                                    placeholder="Optional exact column name",
+                                    interactive=csv_enabled,
                                 )
-                                csv_treatment = gr.Dropdown(
-                                    label="Treatment X column", interactive=csv_enabled
+                                csv_treatment = gr.Textbox(
+                                    value="",
+                                    label="Treatment override",
+                                    placeholder="Optional exact column name",
+                                    interactive=csv_enabled,
                                 )
-                                csv_instrument = gr.Dropdown(
-                                    label="Instrument Z column", interactive=csv_enabled
+                                csv_instrument = gr.Textbox(
+                                    value="",
+                                    label="Instrument override",
+                                    placeholder="Optional exact column name",
+                                    interactive=csv_enabled,
                                 )
-                            else:
-                                csv_outcome = gr.Textbox(value="Y", label="Outcome Y column")
-                                csv_treatment = gr.Textbox(value="X", label="Treatment X column")
-                                csv_instrument = gr.Textbox(value="Z", label="Instrument Z column")
                         csv_api_key = gr.Textbox(
                             value="",
                             type="password",
@@ -1554,8 +1651,9 @@ def build_app(
                             value=DEFAULT_CSV_QUESTION,
                             label=f"Natural-language question · compiled by {GEMINI_MODEL}",
                             info=(
-                                "Use Y, X, and Z as conceptual roles. Gemini receives this text, "
-                                "not the selected CSV rows or actual intervention values."
+                                "State which header is the outcome, continuous treatment, and "
+                                "instrument. Gemini receives this text and the three header names, "
+                                "not CSV rows or actual intervention values."
                             ),
                             lines=3,
                             interactive=csv_enabled,
@@ -1564,7 +1662,8 @@ def build_app(
                             value=False,
                             label=(
                                 "I am authorized to upload this data to Hugging Face and send only "
-                                "the question text and temporary API credential to Google Gemini."
+                                "the question text, three column names, optional role overrides, "
+                                "and temporary API credential to Google Gemini."
                                 if is_space
                                 else "I am authorized to use this data and approve both transfers."
                             ),
@@ -1573,14 +1672,15 @@ def build_app(
                         gr.HTML(
                             '<div class="demo-transfer-note" role="note">'
                             + (
-                                "<strong>Data boundary:</strong> the question text goes to Google "
-                                "Gemini; the temporary key passes through the Hugging Face runtime "
-                                "but is not intentionally persisted by DCFA. CSV rows remain in "
-                                "the runtime and are deleted after processing. Never upload "
-                                "sensitive data.</div>"
+                                "<strong>Data boundary:</strong> the question, three header names, "
+                                "and optional role overrides go to Google Gemini; the temporary "
+                                "key passes through Hugging Face. It is not intentionally "
+                                "persisted by DCFA. CSV rows remain in the runtime and are deleted "
+                                "after processing. Never upload sensitive data.</div>"
                                 if is_space
                                 else "<strong>Two separate transfers:</strong> the question text "
-                                "goes to Google Gemini; selected Y/X/Z rows go to Prior Labs.</div>"
+                                "and three header names go to Google Gemini; selected Y/X/Z rows "
+                                "go to Prior Labs.</div>"
                             )
                         )
                         csv_run_button = gr.Button(
@@ -1589,9 +1689,12 @@ def build_app(
                             elem_id="run-csv-button",
                             interactive=csv_enabled,
                         )
-            with gr.Column(scale=5, elem_classes="demo-panel"):
+            with gr.Column(
+                scale=4,
+                elem_classes=["demo-panel", "demo-output-column"],
+            ):
                 gr.Markdown(
-                    "### 2 · Follow the workflow",
+                    "## 2 · Follow the workflow and review",
                     elem_classes="demo-section-heading",
                 )
                 gr.Markdown(
@@ -1601,22 +1704,21 @@ def build_app(
                 state_graph = gr.HTML(
                     '<div class="demo-status demo-status--idle">'
                     "<strong>Ready</strong>Choose a path and run the frozen workflow.</div>"
+                    + _progress_html(("current", "pending", "pending", "pending"))
                 )
-
-        gr.Markdown("## 3 · Review the answer", elem_classes="demo-section-heading")
-        answer = gr.Markdown("", visible=False, elem_classes="demo-panel demo-answer")
-        status = gr.HTML("", visible=False)
-        evidence = gr.HTML("", visible=False)
-        plot = gr.Image(
-            type="filepath",
-            label="Estimated outcome distributions and summaries",
-            visible=False,
-        )
-        artifact_download = gr.File(label="Verified run artifact", visible=False)
+                answer = gr.Markdown("", visible=False, elem_classes="demo-answer")
+                status = gr.HTML("", visible=False)
+                evidence = gr.HTML("", visible=False)
+                plot = gr.Image(
+                    type="filepath",
+                    label="Estimated outcome distributions and summaries",
+                    visible=False,
+                )
+                artifact_download = gr.File(label="Verified run artifact", visible=False)
         gr.HTML(
             """
             <section class="demo-boundary" aria-labelledby="boundary-title">
-              <p class="demo-eyebrow" id="boundary-title">Scope and limitations</p>
+              <h2 class="demo-eyebrow" id="boundary-title">Scope and limitations</h2>
               <div class="demo-boundary-grid">
                 <div class="demo-boundary-item"><strong>Not a general router</strong>
                   <span>Only the continuous-treatment IV contract is public.</span></div>
@@ -1718,9 +1820,9 @@ def build_app(
 
         def handle_csv_run(
             selected_file: str | None,
-            selected_outcome: str,
-            selected_treatment: str,
-            selected_instrument: str,
+            selected_outcome: str | None,
+            selected_treatment: str | None,
+            selected_instrument: str | None,
             selected_confirmation: bool,
             selected_question: str,
             selected_seed: int,
@@ -1771,13 +1873,6 @@ def build_app(
             )
         )
         if is_space and csv_enabled:
-            csv_file.upload(
-                fn=space_csv_header_handler,
-                inputs=csv_file,
-                outputs=(csv_outcome, csv_treatment, csv_instrument),
-                queue=False,
-                api_name=False,
-            )
             authorized_csv = csv_run_button.click(
                 fn=space_csv_authorize_handler,
                 inputs=csv_api_key,

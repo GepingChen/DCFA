@@ -20,6 +20,7 @@ from dcfa.artifact_validation import verify_run_directory
 from dcfa.errors import DCFAError, ErrorCode
 from dcfa.tabcf_iv.managed_client import MANAGED_CLIENT_VERSION
 from dcfa_website_demo.app import (
+    DEMO_CSS,
     MAX_DEMO_ROWS,
     MAX_DEMO_SEED,
     _execution_error_outputs,
@@ -193,10 +194,10 @@ def test_container_package_includes_gemini_profile_and_both_secrets() -> None:
     dockerignore = Path(".dockerignore").read_text(encoding="utf-8")
     compose = Path("compose.yaml").read_text(encoding="utf-8")
 
-    assert "COPY evaluation/configs/website_demo_gemini_v1.json" in dockerfile
+    assert "COPY evaluation/configs/website_demo_gemini_v2.json" in dockerfile
     assert "ARG DCFA_BUILD_REVISION=unknown" in dockerfile
     assert "DCFA_BUILD_REVISION=${DCFA_BUILD_REVISION}" in dockerfile
-    assert "!evaluation/configs/website_demo_gemini_v1.json" in dockerignore
+    assert "!evaluation/configs/website_demo_gemini_v2.json" in dockerignore
     assert "DCFA_GEMINI_API_KEY_FILE=/run/secrets/gemini_api_key" in dockerfile
     assert "DCFA_WEBSITE_GEMINI_CONFIG_FILE=/app/evaluation/configs/" in dockerfile
     assert "/run/secrets/gemini_api_key:ro" in compose
@@ -235,6 +236,7 @@ def test_supported_website_scenario_returns_real_state_trace_and_evidence(
     assert set(model_input) == {
         "available_roles",
         "baseline_covariates",
+        "fixed_role_mapping",
         "intervention_labels",
         "supported_summaries",
         "user_question",
@@ -319,7 +321,16 @@ def test_authorized_csv_upload_runs_managed_tabpfn_and_binds_manifest(
     assert result.response.status == "completed"
     assert result.response.final_state is AgentState.COMPLETED
     assert result.response.queries[0].evidence_id.startswith("evidence_")
+    assert result.llm_trace["protocol_version"] == "website_demo_gemini_v2"
     assert result.llm_trace["proposal"]["objective"] == "quantile_contrast"
+    model_call = managed_client["gemini_client"].interactions.calls[0]
+    model_input = json.loads(model_call["input"])
+    assert model_input["available_columns"] == ["Y", "X", "Z"]
+    assert model_input["optional_role_overrides"] == {
+        "instrument": "Z",
+        "outcome": "Y",
+        "treatment": "X",
+    }
     assert result.output_dir is not None
     assert result.output_dir.parent.parent.name.startswith("csv-upload-")
     assert FakeClientRegressor.prediction_calls == 3
@@ -329,6 +340,162 @@ def test_authorized_csv_upload_runs_managed_tabpfn_and_binds_manifest(
     assert manifest["row_count"] == STANDARD_DEMO_ROWS
     assert manifest["estimator_backend"] == "tabpfn"
     assert manifest["evidence_status"] == "development_only"
+
+
+def test_csv_prompt_maps_custom_headers_when_optional_overrides_are_blank(
+    tmp_path: Path,
+    managed_client: dict[str, Any],
+) -> None:
+    original_path = export_standard_demo_csv(tmp_path / "standard-demo.csv")
+    with original_path.open("r", encoding="utf-8", newline="") as stream:
+        rows = list(csv.reader(stream))
+    rows[0] = ["response", "dose", "encouragement"]
+    csv_path = tmp_path / "custom-roles.csv"
+    with csv_path.open("w", encoding="utf-8", newline="") as stream:
+        writer = csv.writer(stream)
+        writer.writerows(rows)
+    gemini_client = FakeGeminiClient(
+        _valid_gemini_proposal(
+            outcome="response",
+            treatment="dose",
+            instrument="encouragement",
+        )
+    )
+
+    result = execute_csv_upload(
+        csv_path,
+        None,
+        "",
+        None,
+        True,
+        20260813,
+        question=(
+            "The outcome column is response, the continuous treatment column is dose, "
+            "and the scalar instrument column is encouragement. Compare high versus low dose."
+        ),
+        output_root=tmp_path / "runs",
+        **{**managed_client, "gemini_client": gemini_client},
+    )
+
+    assert result.response.status == "completed"
+    model_call = gemini_client.interactions.calls[0]
+    model_input = json.loads(model_call["input"])
+    assert model_input["available_columns"] == ["response", "dose", "encouragement"]
+    assert model_input["optional_role_overrides"] == {}
+    role_schema = model_call["response_format"]["schema"]["properties"]
+    assert role_schema["outcome"]["enum"] == ["response", "dose", "encouragement"]
+    manifest = json.loads((result.output_dir / "dataset_manifest.json").read_text())
+    assert manifest["columns"] == ["encouragement", "dose", "response"]
+    assert result.llm_trace["data_sent_to_gemini"] == [
+        "user_question",
+        "csv_column_names",
+        "optional_role_overrides",
+        "Y_X_Z_schema_contract",
+        "symbolic_intervention_labels",
+    ]
+    assert result.llm_trace["data_rows_sent_to_gemini"] == 0
+
+
+def test_invalid_optional_csv_role_override_stops_before_gemini(
+    tmp_path: Path,
+    managed_client: dict[str, Any],
+) -> None:
+    csv_path = export_standard_demo_csv(tmp_path / "standard-demo.csv")
+
+    with pytest.raises(ValueError, match="optional outcome override"):
+        execute_csv_upload(
+            csv_path,
+            "missing-column",
+            None,
+            None,
+            True,
+            20260813,
+            output_root=tmp_path / "runs",
+            **managed_client,
+        )
+
+    assert managed_client["gemini_client"].interactions.calls == []
+    assert not (tmp_path / "runs").exists()
+
+
+def test_oversized_csv_header_stops_before_gemini(
+    tmp_path: Path,
+    managed_client: dict[str, Any],
+) -> None:
+    csv_path = tmp_path / "oversized-header.csv"
+    with csv_path.open("w", encoding="utf-8", newline="") as stream:
+        writer = csv.writer(stream)
+        writer.writerow(("Y" * 121, "X", "Z"))
+        writer.writerows((index / 7, index / 10, index / 20) for index in range(120))
+
+    with pytest.raises(ValueError, match="at most 120 characters"):
+        execute_csv_upload(
+            csv_path,
+            None,
+            None,
+            None,
+            True,
+            20260813,
+            output_root=tmp_path / "runs",
+            **managed_client,
+        )
+
+    assert managed_client["gemini_client"].interactions.calls == []
+
+
+def test_invalid_csv_value_stops_before_gemini(
+    tmp_path: Path,
+    managed_client: dict[str, Any],
+) -> None:
+    csv_path = tmp_path / "invalid-value.csv"
+    with csv_path.open("w", encoding="utf-8", newline="") as stream:
+        writer = csv.writer(stream)
+        writer.writerow(("Y", "X", "Z"))
+        writer.writerows(
+            ("not-a-number" if index == 4 else index / 7, index / 10, index / 20)
+            for index in range(120)
+        )
+
+    with pytest.raises(ValueError, match="column Y is not numeric"):
+        execute_csv_upload(
+            csv_path,
+            None,
+            None,
+            None,
+            True,
+            20260813,
+            output_root=tmp_path / "runs",
+            **managed_client,
+        )
+
+    assert managed_client["gemini_client"].interactions.calls == []
+
+
+def test_conflicting_gemini_csv_role_mapping_stops_before_tabpfn(
+    tmp_path: Path,
+    managed_client: dict[str, Any],
+) -> None:
+    csv_path = export_standard_demo_csv(tmp_path / "standard-demo.csv")
+    gemini_client = FakeGeminiClient(
+        _valid_gemini_proposal(outcome="Y", treatment="Y", instrument="Z")
+    )
+    FakeClientRegressor.prediction_calls = 0
+
+    with pytest.raises(DCFAError, match="invalid or conflicting CSV role mapping"):
+        execute_csv_upload(
+            csv_path,
+            None,
+            None,
+            None,
+            True,
+            20260813,
+            output_root=tmp_path / "runs",
+            **{**managed_client, "gemini_client": gemini_client},
+        )
+
+    assert len(gemini_client.interactions.calls) == 1
+    assert FakeClientRegressor.prediction_calls == 0
+    assert not (tmp_path / "runs").exists()
 
 
 def test_csv_upload_requires_confirmation_before_client_or_output(tmp_path: Path) -> None:
@@ -609,7 +776,7 @@ def test_bounded_controls_reject_invalid_values_before_allocating_output(
 
 def test_default_app_config_omits_machine_audit_payload_and_shows_build() -> None:
     app = build_app(build_revision="deadbee")
-    config = json.dumps(app.config, sort_keys=True)
+    config = json.dumps(app.config, sort_keys=True, ensure_ascii=False)
     component_ids = {
         component.get("props", {}).get("elem_id"): component["id"]
         for component in app.config["components"]
@@ -620,6 +787,10 @@ def test_default_app_config_omits_machine_audit_payload_and_shows_build() -> Non
     assert "Do not enter private or sensitive information" in config
     assert "I am authorized to use this data and approve both transfers" in config
     assert "Scope and limitations" in config
+    assert "2 · Follow the workflow and review" in config
+    assert "demo-input-column" in config
+    assert "demo-output-column" in config
+    assert "font-size: clamp(2rem, 5vw, 3.6rem) !important" in DEMO_CSS
     assert "Run a scenario to populate this panel" not in config
     assert "No run yet" not in config
     for forbidden in (

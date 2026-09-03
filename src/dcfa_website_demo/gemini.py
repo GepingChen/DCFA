@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 import os
 import time
+from copy import deepcopy
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from pathlib import Path
@@ -18,7 +19,7 @@ from dcfa.agent.gemini_live import (
 from dcfa.canonical import content_id, file_sha256, sha256_digest, to_primitive
 from dcfa.errors import DCFAError, ErrorCode
 
-PROTOCOL_VERSION = "website_demo_gemini_v1"
+PROTOCOL_VERSION = "website_demo_gemini_v2"
 GEMINI_MODEL = "gemini-3.6-flash"
 TRACE_FILENAME = "gemini_compilation.json"
 SUPPORTED_OBJECTIVES = frozenset({"mean", "quantile", "mean_contrast", "quantile_contrast"})
@@ -29,7 +30,7 @@ def _repository_root() -> Path:
     return Path(__file__).resolve().parents[2]
 
 
-DEFAULT_CONFIG_PATH = _repository_root() / "evaluation/configs/website_demo_gemini_v1.json"
+DEFAULT_CONFIG_PATH = _repository_root() / "evaluation/configs/website_demo_gemini_v2.json"
 
 
 def website_gemini_config_file_from_environment() -> Path:
@@ -39,6 +40,9 @@ def website_gemini_config_file_from_environment() -> Path:
 
 @dataclass(frozen=True)
 class GeminiWebsiteCompilation:
+    outcome: str
+    treatment: str
+    instrument: str
     objective: str
     x_label: str
     comparison_x_label: str | None
@@ -46,7 +50,11 @@ class GeminiWebsiteCompilation:
     trace: dict[str, Any]
 
 
-def _load_config(path: Path) -> tuple[dict[str, Any], Path]:
+def _load_config(
+    path: Path,
+    *,
+    expected_version: str = PROTOCOL_VERSION,
+) -> tuple[dict[str, Any], Path]:
     try:
         resolved = path.expanduser().resolve(strict=True)
         config = json.loads(resolved.read_text(encoding="utf-8"))
@@ -58,7 +66,7 @@ def _load_config(path: Path) -> tuple[dict[str, Any], Path]:
             context={"exception_type": type(exc).__name__},
         ) from exc
     required = {
-        "version": PROTOCOL_VERSION,
+        "version": expected_version,
         "provider": "google_gemini_developer_api",
         "sdk_package": "google-genai",
         "sdk_version": GOOGLE_GENAI_VERSION,
@@ -92,31 +100,94 @@ def _load_config(path: Path) -> tuple[dict[str, Any], Path]:
     return config, resolved
 
 
-def validate_website_gemini_config(path: Path | None = None) -> str:
+def validate_website_gemini_config(
+    path: Path | None = None,
+    *,
+    expected_version: str = PROTOCOL_VERSION,
+) -> str:
     """Validate the configured profile without importing the SDK or making a request."""
-    _, resolved = _load_config(path or website_gemini_config_file_from_environment())
+    _, resolved = _load_config(
+        path or website_gemini_config_file_from_environment(),
+        expected_version=expected_version,
+    )
     return file_sha256(resolved)
 
 
-def _model_input(question: str) -> str:
+def _role_context(
+    available_columns: tuple[str, str, str] | None,
+    role_overrides: dict[str, str | None] | None,
+) -> tuple[tuple[str, str, str], dict[str, str], bool]:
+    if available_columns is None:
+        if role_overrides and any(value for value in role_overrides.values()):
+            raise ValueError("Column role overrides require an uploaded CSV header.")
+        return ("Y", "X", "Z"), {}, False
+    columns = tuple(str(value).strip() for value in available_columns)
+    if len(columns) != 3 or any(not value for value in columns) or len(set(columns)) != 3:
+        raise ValueError("The CSV must provide exactly three distinct column names.")
+    allowed_roles = {"outcome", "treatment", "instrument"}
+    supplied = role_overrides or {}
+    if set(supplied) - allowed_roles:
+        raise ValueError("Column role overrides contain an unsupported role.")
+    normalized: dict[str, str] = {}
+    for role, raw_value in supplied.items():
+        if raw_value is None or not str(raw_value).strip():
+            continue
+        value = str(raw_value).strip()
+        if value not in columns:
+            raise ValueError(f"The optional {role} override does not match a CSV column.")
+        normalized[role] = value
+    if len(set(normalized.values())) != len(normalized):
+        raise ValueError("Optional role overrides must refer to distinct CSV columns.")
+    return columns, normalized, True
+
+
+def _model_input(
+    question: str,
+    *,
+    columns: tuple[str, str, str],
+    role_overrides: dict[str, str],
+    csv_mode: bool,
+) -> str:
     normalized = question.strip()
     if not 8 <= len(normalized) <= 1000 or "\x00" in normalized:
         raise ValueError("The analysis question must contain 8–1000 plain-text characters.")
-    return json.dumps(
-        {
-            "available_roles": {
-                "Y": "continuous outcome",
-                "X": "continuous treatment",
-                "Z": "scalar instrument",
-            },
-            "baseline_covariates": [],
-            "intervention_labels": ["low", "center", "high"],
-            "supported_summaries": ["mean", "median quantile"],
-            "user_question": normalized,
+    payload: dict[str, Any] = {
+        "available_roles": {
+            "outcome": "continuous outcome",
+            "treatment": "continuous treatment",
+            "instrument": "scalar instrument",
         },
-        separators=(",", ":"),
-        sort_keys=True,
-    )
+        "baseline_covariates": [],
+        "intervention_labels": ["low", "center", "high"],
+        "supported_summaries": ["mean", "median quantile"],
+        "user_question": normalized,
+    }
+    if csv_mode:
+        payload["available_columns"] = list(columns)
+        payload["optional_role_overrides"] = role_overrides
+    else:
+        payload["fixed_role_mapping"] = {
+            "outcome": "Y",
+            "treatment": "X",
+            "instrument": "Z",
+        }
+    return json.dumps(payload, separators=(",", ":"), sort_keys=True)
+
+
+def _response_schema(
+    configured_schema: dict[str, Any],
+    *,
+    columns: tuple[str, str, str],
+    role_overrides: dict[str, str],
+    csv_mode: bool,
+) -> dict[str, Any]:
+    schema = deepcopy(configured_schema)
+    if csv_mode:
+        for role in ("outcome", "treatment", "instrument"):
+            schema["properties"][role]["enum"] = (
+                [role_overrides[role]] if role in role_overrides else list(columns)
+            )
+    return schema
 
 
 def _parse_proposal(output_text: Any) -> dict[str, str]:
@@ -159,7 +230,13 @@ def _parse_proposal(output_text: Any) -> dict[str, str]:
     return proposal
 
 
-def _validate_proposal(proposal: dict[str, str]) -> tuple[str, str, str | None, float | None]:
+def _validate_proposal(
+    proposal: dict[str, str],
+    *,
+    columns: tuple[str, str, str],
+    role_overrides: dict[str, str],
+    csv_mode: bool,
+) -> tuple[str, str, str, str, str, str | None, float | None]:
     decision = proposal["decision"]
     reason = proposal["reason"].strip()
     if (
@@ -185,16 +262,28 @@ def _validate_proposal(proposal: dict[str, str]) -> tuple[str, str, str | None, 
             stage="website_demo.gemini_decision",
             context={"decision": decision},
         )
-    exact_roles = {
-        "outcome": "Y",
-        "treatment": "X",
-        "instrument": "Z",
-        "treatment_type": "continuous",
-    }
-    if any(proposal[key] != value for key, value in exact_roles.items()):
+    role_mapping = tuple(proposal[role] for role in ("outcome", "treatment", "instrument"))
+    if proposal["treatment_type"] != "continuous":
         raise DCFAError(
             ErrorCode.LLM_OUTPUT_INVALID,
-            "Gemini changed the fixed Y/X/Z continuous-treatment contract.",
+            "Gemini changed the continuous-treatment contract.",
+            stage="website_demo.gemini_output",
+        )
+    if csv_mode:
+        if (
+            any(value not in columns for value in role_mapping)
+            or len(set(role_mapping)) != 3
+            or any(proposal[role] != value for role, value in role_overrides.items())
+        ):
+            raise DCFAError(
+                ErrorCode.LLM_OUTPUT_INVALID,
+                "Gemini returned an invalid or conflicting CSV role mapping.",
+                stage="website_demo.gemini_output",
+            )
+    elif role_mapping != ("Y", "X", "Z"):
+        raise DCFAError(
+            ErrorCode.LLM_OUTPUT_INVALID,
+            "Gemini changed the fixed Y/X/Z role mapping.",
             stage="website_demo.gemini_output",
         )
     objective = proposal["objective"]
@@ -231,7 +320,15 @@ def _validate_proposal(proposal: dict[str, str]) -> tuple[str, str, str | None, 
             "Gemini returned an objective and summary level that do not agree.",
             stage="website_demo.gemini_output",
         )
-    return objective, x_label, comparison, 0.5 if is_quantile else None
+    return (
+        proposal["outcome"],
+        proposal["treatment"],
+        proposal["instrument"],
+        objective,
+        x_label,
+        comparison,
+        0.5 if is_quantile else None,
+    )
 
 
 def _usage_payload(interaction: Any) -> dict[str, int]:
@@ -260,12 +357,29 @@ def compile_website_question(
     client: Any | None = None,
     sdk_version: str | None = None,
     config_path: Path | None = None,
+    available_columns: tuple[str, str, str] | None = None,
+    role_overrides: dict[str, str | None] | None = None,
 ) -> GeminiWebsiteCompilation:
-    """Compile one bounded question with one Gemini call and no data rows."""
+    """Compile one bounded question and optional CSV roles with no data rows."""
     config, resolved_config = _load_config(
         config_path or website_gemini_config_file_from_environment()
     )
-    model_input = _model_input(question)
+    columns, normalized_overrides, csv_mode = _role_context(
+        available_columns,
+        role_overrides,
+    )
+    model_input = _model_input(
+        question,
+        columns=columns,
+        role_overrides=normalized_overrides,
+        csv_mode=csv_mode,
+    )
+    response_schema = _response_schema(
+        config["response_schema"],
+        columns=columns,
+        role_overrides=normalized_overrides,
+        csv_mode=csv_mode,
+    )
     api_key = read_gemini_api_key(api_key_file)
     if client is None:
         client, observed_sdk_version = load_gemini_client(api_key)
@@ -289,7 +403,7 @@ def compile_website_question(
             response_format={
                 "type": "text",
                 "mime_type": "application/json",
-                "schema": config["response_schema"],
+                "schema": response_schema,
             },
             generation_config=config["generation_config"],
             input=model_input,
@@ -326,7 +440,20 @@ def compile_website_question(
         raw_interaction_id if isinstance(raw_interaction_id, str) and raw_interaction_id else None
     )
     proposal = _parse_proposal(getattr(interaction, "output_text", None))
-    objective, x_label, comparison_label, level = _validate_proposal(proposal)
+    (
+        outcome,
+        treatment,
+        instrument,
+        objective,
+        x_label,
+        comparison_label,
+        level,
+    ) = _validate_proposal(
+        proposal,
+        columns=columns,
+        role_overrides=normalized_overrides,
+        csv_mode=csv_mode,
+    )
     trace_body = {
         "protocol_version": PROTOCOL_VERSION,
         "provider": config["provider"],
@@ -347,20 +474,33 @@ def compile_website_question(
             {
                 "system_instruction": config["system_instruction"],
                 "model_input": model_input,
-                "response_schema": config["response_schema"],
+                "response_schema": response_schema,
             }
         ),
         "request_hash": sha256_digest(model_input),
-        "data_sent_to_gemini": [
-            "user_question",
-            "Y_X_Z_schema_contract",
-            "symbolic_intervention_labels",
-        ],
+        "data_sent_to_gemini": (
+            [
+                "user_question",
+                "csv_column_names",
+                "optional_role_overrides",
+                "Y_X_Z_schema_contract",
+                "symbolic_intervention_labels",
+            ]
+            if csv_mode
+            else [
+                "user_question",
+                "Y_X_Z_schema_contract",
+                "symbolic_intervention_labels",
+            ]
+        ),
         "data_rows_sent_to_gemini": 0,
         "actual_intervention_values_sent_to_gemini": 0,
         "proposal": proposal,
     }
     return GeminiWebsiteCompilation(
+        outcome=outcome,
+        treatment=treatment,
+        instrument=instrument,
         objective=objective,
         x_label=x_label,
         comparison_x_label=comparison_label,

@@ -785,3 +785,32 @@ Do not rewrite an accepted entry when it changes; append a superseding entry.
   live with a real credential without action-time user authorization.
 - Source: User request to replace duplicate-only access with a non-persistent temporary
   key input while retaining the safer Duplicate + Secret option on 2026-08-31.
+
+## D-035 — Make CSV role controls optional and compile header mappings from the question
+
+- Date: 2026-09-03
+- Status: Accepted implementation; live provider success pending
+- Decision: Replace the ZeroGPU upload-triggered Y/X/Z dropdown mutation with three
+  optional exact-name text overrides. By default, the visitor states in the natural-
+  language question which of the exactly three CSV headers is the continuous outcome,
+  continuous treatment, and scalar instrument. The versioned
+  `website_demo_gemini_v2` compiler receives only that question, the three bounded
+  header names, optional overrides, and symbolic intervention labels. Its response
+  schema restricts each role to an available header, and deterministic local checks
+  reject missing, invented, duplicate, or override-conflicting mappings before TabPFN.
+- Rationale: The Gradio upload event could leave the three dropdown controls in an
+  `error` state before analysis. Role mapping belongs with the bounded specification
+  compile, while optional overrides provide a deterministic escape hatch when prose is
+  ambiguous. Removing the upload-side mutation also avoids performing an authenticated
+  event merely to populate controls.
+- Affected tracks: TabCF Analyst development presentation only. The three-role/no-W
+  contract, statistical estimator, evidence gates, support behavior, and Track T/H/A
+  protocols are unchanged.
+- Verification impact: Preserve explicit authorization before any provider request;
+  disclose header-name and override transfer to Google; bound header names; prove that
+  blank overrides can compile custom headers; prove invalid overrides stop before
+  Gemini and conflicting LLM mappings stop before TabPFN; retain zero row/value transfer
+  to Gemini and all temporary-key cleanup gates. Historical prepared-demo manifests
+  continue to validate against their recorded v1 profile rather than the active v2.
+- Source: User-reported Space dropdown error and requested prompt-first role mapping on
+  2026-09-03.

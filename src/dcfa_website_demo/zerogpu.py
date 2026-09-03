@@ -26,20 +26,34 @@ from dcfa.tabcf_iv.local_tabpfn import (
     LOCAL_TABPFN_V2_MODEL_REVISION,
 )
 from dcfa_website_demo.app import (
+    DEMO_CSS,
     _execution_error_outputs,
     _input_error_outputs,
     _log_operator_error,
     build_app,
+    build_demo_theme,
     execute_local_csv_upload,
     execute_local_portfolio_scenario,
     format_portfolio_result,
     portfolio_ui_updates,
 )
-from dcfa_website_demo.csv_upload import inspect_csv_header
 
 DEFAULT_ZEROGPU_OUTPUT_ROOT = Path("/tmp/dcfa-zerogpu-runs")
 DEFAULT_GRADIO_TEMP_ROOT = Path("/tmp/gradio")
 DEFAULT_SECRET_ROOT = Path("/tmp/dcfa-zerogpu-secrets")
+
+
+def zerogpu_launch_kwargs() -> dict[str, Any]:
+    """Return the shared, fail-closed launch configuration for the Space entrypoint."""
+    return {
+        "blocked_paths": [str(DEFAULT_ZEROGPU_OUTPUT_ROOT), str(DEFAULT_SECRET_ROOT)],
+        "enable_monitoring": False,
+        "footer_links": [],
+        "max_file_size": "1mb",
+        "show_error": False,
+        "theme": build_demo_theme(),
+        "css": DEMO_CSS,
+    }
 
 
 def resolve_preloaded_model() -> Path:
@@ -194,23 +208,6 @@ def build_zerogpu_app(*, build_revision: str) -> Any:
         del temporary_api_key
         _require_login(profile)
 
-    def inspect_header(
-        csv_path: str | None,
-        profile: gr.OAuthProfile | None,
-    ) -> tuple[Any, Any, Any]:
-        _require_login(profile)
-        if not csv_path:
-            raise gr.Error("Choose a CSV file before selecting roles.")
-        try:
-            columns = list(inspect_csv_header(csv_path))
-        except ValueError as exc:
-            raise gr.Error(str(exc)) from exc
-        return (
-            gr.Dropdown(choices=columns, value=None),
-            gr.Dropdown(choices=columns, value=None),
-            gr.Dropdown(choices=columns, value=None),
-        )
-
     @spaces.GPU(duration=120)
     def run_scenario(
         scenario: str,
@@ -252,9 +249,9 @@ def build_zerogpu_app(*, build_revision: str) -> Any:
     def run_csv(
         csv_path: str | None,
         temporary_api_key: str | None,
-        outcome: str,
-        treatment: str,
-        instrument: str,
+        outcome: str | None,
+        treatment: str | None,
+        instrument: str | None,
         confirmed: bool,
         question: str,
         seed: int,
@@ -298,5 +295,4 @@ def build_zerogpu_app(*, build_revision: str) -> Any:
         space_csv_authorize_handler=authorize_csv,
         space_scenario_handler=run_scenario,
         space_csv_handler=run_csv,
-        space_csv_header_handler=inspect_header,
     )

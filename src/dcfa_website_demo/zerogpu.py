@@ -32,8 +32,8 @@ from dcfa_website_demo.app import (
     _log_operator_error,
     build_app,
     build_demo_theme,
-    execute_local_csv_upload,
     execute_local_portfolio_scenario,
+    execute_prepared_local_csv,
     format_portfolio_result,
     portfolio_ui_updates,
 )
@@ -245,47 +245,39 @@ def build_zerogpu_app(*, build_revision: str) -> Any:
         except (OSError, RuntimeError, TypeError, ValueError) as exc:
             return portfolio_ui_updates(_input_error_outputs(str(exc)), buttons_enabled=True)
 
+    def chat_csv(history, columns, overrides, temporary_key, on_request):
+        from dcfa_website_demo.dialogue import compile_csv_turn
+
+        request_secret = _request_gemini_key(secret, temporary_key)
+        with _temporary_gemini_file(request_secret) as secret_file:
+            return compile_csv_turn(
+                history,
+                columns,
+                overrides,
+                api_key_file=secret_file,
+                on_request=on_request,
+            )
+
     @spaces.GPU(duration=120)
-    def run_csv(
-        csv_path: str | None,
-        temporary_api_key: str | None,
-        outcome: str | None,
-        treatment: str | None,
-        instrument: str | None,
-        confirmed: bool,
-        question: str,
-        seed: int,
-        profile: gr.OAuthProfile | None,
-    ) -> tuple[Any, ...]:
+    def run_csv(validated, compilation, seed, profile: gr.OAuthProfile | None):
         _require_login(profile)
-        request_secret: str | None = None
-        try:
-            if not csv_path:
-                raise ValueError("Choose a CSV file before running the workflow.")
-            request_secret = _request_gemini_key(secret, temporary_api_key)
-            with _temporary_gemini_file(request_secret) as secret_file:
-                result = execute_local_csv_upload(
-                    csv_path,
-                    outcome,
-                    treatment,
-                    instrument,
-                    confirmed,
-                    seed,
-                    model_path=model_path,
-                    question=question,
-                    output_root=output_root,
-                    gemini_api_key_file=secret_file,
-                )
-            return _verified_projection(result, request_secret)
-        except DCFAError as exc:
-            _log_operator_error(exc)
-            return portfolio_ui_updates(_execution_error_outputs(exc), buttons_enabled=True)
-        except (OSError, RuntimeError, TypeError, ValueError) as exc:
-            return portfolio_ui_updates(_input_error_outputs(str(exc)), buttons_enabled=True)
-        finally:
-            request_secret = None
-            temporary_api_key = None
-            _safe_unlink_upload(csv_path)
+        result = execute_prepared_local_csv(
+            validated,
+            compilation,
+            seed,
+            model_path=model_path,
+            output_root=output_root,
+        )
+        from dcfa_website_demo.dialogue import plan_html
+
+        card = plan_html(compilation)
+        if result.output_dir is not None:
+            # A separate report appendix preserves the existing statistical report identities.
+            (result.output_dir / "confirmed_plan.html").write_text(card, encoding="utf-8")
+        projected = list(_verified_projection(result, secret))
+        projected[0]["value"] = card + "\n\n" + projected[0].get("value", "")
+        projected[0]["visible"] = True
+        return tuple(projected)
 
     return build_app(
         output_root=output_root,
@@ -295,4 +287,5 @@ def build_zerogpu_app(*, build_revision: str) -> Any:
         space_csv_authorize_handler=authorize_csv,
         space_scenario_handler=run_scenario,
         space_csv_handler=run_csv,
+        space_csv_chat_handler=chat_csv,
     )

@@ -849,3 +849,28 @@ Do not rewrite an accepted entry when it changes; append a superseding entry.
   providers and UI paths were not verified; existing demo environments remain.
 - Scope: Documentation and local development only; no statistical implementation,
   dependency lock, frozen protocol, or release requirement changed.
+
+## D-038 — Separate Space CSV dialogue from confirmed statistical execution
+
+- Date: 2026-09-20
+- Decision: Add multi-turn, row-free Gemini clarification only to canonical and
+  Duplicate Space CSV inputs. Show the original column positions, role names,
+  user-quoted definitions and analysis direction before an explicit button click.
+  Data-transfer consent remains separate from approval of the final analysis plan.
+- Execution: Compile on CPU with a separate editable `space_csv_dialogue_v1`
+  profile. Confirmation executes the stored proposal through the existing local
+  TabPFN path, with no extra Gemini request. Ordinary session revisions reject
+  stale confirmation clicks; no new hash, freeze, or release gate is introduced.
+- Credentials/privacy: The user approved retaining the temporary key in the
+  password field during the current conversation. Do not place keys in conversation
+  state or artifacts. Retain request-scoped credential-file cleanup; clear the
+  field on generation/reset/idle expiry. Only messages, headers and role overrides
+  go to Gemini. Definitions must quote user text; omitted meanings remain explicit.
+- Compatibility: Preserve presets, v2 single-turn compilation, managed-local and
+  Colab behavior, the statistical core, and existing support/evidence safeguards.
+  Preserve statistical report identities by exporting the confirmed plan as a
+  separate HTML appendix and rendering it with the report in the Space UI.
+- Verification: Exercise multi-turn clarification/correction, invalid output,
+  authorization, stale/repeated confirmation, expiry, isolation, and artifact
+  validation with fake providers. Local browser QA uses synthetic data and a fake
+  backend. Real Gemini/ZeroGPU execution and HF deployment are separate boundaries.

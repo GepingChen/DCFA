@@ -210,7 +210,7 @@ def test_canonical_space_config_requires_login_and_enables_temporary_key(
         or str(dependency.get("api_name", "")).startswith("false")
         for dependency in config["dependencies"]
     )
-    serialized = json.dumps(config, ensure_ascii=False)
+    serialized = json.dumps(config, ensure_ascii=False, default=str)
     assert "Frozen preset question · no live LLM call" in serialized
     key_components = [
         component
@@ -221,7 +221,8 @@ def test_canonical_space_config_requires_login_and_enables_temporary_key(
     assert key_components[0]["props"]["type"] == "password"
     assert key_components[0]["props"]["interactive"] is True
     assert "not intentionally persisted by DCFA" in serialized
-    assert DEFAULT_CSV_QUESTION in serialized
+    assert "Confirm and generate report" in serialized
+    assert "Prepare your analysis" in serialized
     assert "Optional column overrides" in serialized
     assert "three column names" in serialized
     for label in ("Outcome override", "Treatment override", "Instrument override"):
@@ -266,4 +267,4 @@ def test_duplicate_space_keeps_secret_mode_and_hides_browser_key(tmp_path: Path)
         if component.get("props", {}).get("label") == "Temporary Gemini API key"
     )
     assert key_component["props"]["visible"] is False
-    assert "owner-provided" in json.dumps(config, ensure_ascii=False)
+    assert "owner-provided" in json.dumps(config, ensure_ascii=False, default=str)

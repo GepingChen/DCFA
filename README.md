@@ -47,7 +47,7 @@ Many causal-agent demos blur together language-model reasoning, statistical
 estimation, and presentation. TabCF-Agent keeps those responsibilities separate:
 
 1. **A bounded compiler** turns a natural-language request into an immutable,
-   typed analysis specification. For an uploaded CSV, Gemini sees the question,
+   typed analysis specification. For an uploaded CSV, Gemini sees the question or conversation,
    three header names, optional role overrides, and symbolic treatment labels—not
    data rows or actual intervention values.
 2. **An explicit runtime** validates roles, state transitions, approvals, and
@@ -90,6 +90,30 @@ Choose the path that matches what you want to inspect:
 | **[Prepared demo](https://gepingchen.github.io/projects/dcfa/)** | Replays one hash-bound, independently verified synthetic result | Static GitHub Pages; no provider call at view time |
 | **[Colab workflow](https://colab.research.google.com/github/GepingChen/DCFA/blob/main/notebooks/DCFA_Custom_Analysis_Colab.ipynb)** | Runs one bounded custom CSV analysis in your own ephemeral runtime | Your question goes to Google; only separately authorized Y/X/Z rows and prediction grids go to Prior Labs |
 | **Local operator demo** | Runs the guided Gradio workflow and preserves full audit artifacts | Uses your repository-external Gemini and TabPFN Client credentials |
+
+### Space CSV conversation (repository implementation)
+
+Upload a permitted three-column CSV, authorize processing, and describe the analysis.
+Use **Send message** to answer any missing-role or objective questions. The review card
+shows X/Y/Z column names, original one-based column positions, user-provided meanings
+(or “Not provided”), and the directed analysis objective. You can correct it through
+another message or the optional role overrides. Only **Confirm and generate report**
+starts local TabPFN; typing confirmation in chat never executes the analysis.
+
+The temporary Gemini key stays in the current page's password field between turns;
+it is cleared when generation starts, on reset, or after 15 idle minutes. Duplicate
+Spaces still use their owner's Secret. Each turn sends conversation text, headers,
+and overrides to Gemini, never CSV rows or actual intervention values. Do not put
+credentials, sensitive data, or data rows into the conversation. There is one
+provider request per submitted turn, no automatic retry, and no fixed mandatory
+number of turns. Invalid replies retain the completed conversation for correction.
+
+The final report view includes the reviewed plan; the ZIP includes its
+`confirmed_plan.html` appendix and the final role definitions/request count in
+`gemini_compilation.json`, without exporting the full conversation. Reset to start
+another analysis; report follow-up chat is not included. This source update does
+not itself deploy the linked live Space. Presets and the local/Colab single-turn
+workflow retain their existing behavior.
 
 The ZeroGPU, Colab, and local managed-service paths are `development_only`. Provider
 availability, quotas, charges, and Colab resources are not guaranteed. Do not use

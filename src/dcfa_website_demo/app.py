@@ -40,6 +40,7 @@ from dcfa_website_demo.csv_upload import (
     MAX_UPLOAD_ROWS,
     MIN_UPLOAD_ROWS,
     CSVDataBoundary,
+    ValidatedCSVColumns,
     assign_csv_roles,
     read_authorized_csv_columns,
 )
@@ -432,6 +433,20 @@ body,
 .demo-answer code {
   overflow-wrap: anywhere;
   white-space: normal;
+}
+
+.demo-confirmation-plan table {
+  width: 100%;
+  table-layout: fixed;
+  font-size: .82rem;
+  overflow-wrap: anywhere;
+}
+
+.demo-confirmation-plan p {
+  margin: .65rem 0 !important;
+  font-family: inherit;
+  font-size: .9rem;
+  line-height: 1.5;
 }
 
 .demo-warning-list {
@@ -914,6 +929,27 @@ def execute_local_csv_upload(
             "instrument": instrument,
         },
     )
+    return execute_prepared_local_csv(
+        validated,
+        compilation,
+        seed,
+        model_path=model_path,
+        output_root=output_root,
+    )
+
+
+def execute_prepared_local_csv(
+    validated: ValidatedCSVColumns,
+    compilation: GeminiWebsiteCompilation,
+    seed: int,
+    *,
+    model_path: Path,
+    output_root: Path = DEFAULT_OUTPUT_ROOT,
+) -> PortfolioDemoResult:
+    """Execute an already reviewed CSV proposal without another provider request."""
+    seed = int(seed)
+    if not MIN_DEMO_SEED <= seed <= MAX_DEMO_SEED:
+        raise ValueError(f"Demo seed must be between {MIN_DEMO_SEED} and {MAX_DEMO_SEED}.")
     dataset = assign_csv_roles(
         validated,
         outcome=compilation.outcome,
@@ -1428,6 +1464,7 @@ def build_app(
     space_csv_authorize_handler: Any | None = None,
     space_scenario_handler: Any | None = None,
     space_csv_handler: Any | None = None,
+    space_csv_chat_handler: Any | None = None,
 ) -> Any:
     """Build the optional website demo while keeping Gradio a lazy dependency."""
     try:
@@ -1471,7 +1508,7 @@ def build_app(
         )
         privacy_detail = (
             "Built-in examples are synthetic and use a frozen typed specification without a live "
-            "LLM call. For an uploaded CSV, only question text, the three header names, and any "
+            "LLM call. For an uploaded CSV, only conversation text, three header names, and any "
             "optional role overrides go to Google; uploaded rows stay in the Hugging Face "
             "runtime. Do not upload sensitive or confidential data."
             if is_space
@@ -1624,9 +1661,9 @@ def build_app(
                             type="password",
                             label="Temporary Gemini API key",
                             info=(
-                                "Used only for this request by the Hugging Face backend, then "
-                                "cleared. DCFA does not write it to files, logs, state, or "
-                                "artifacts."
+                                "Retained in this password field during the conversation. "
+                                "Cleared on report generation, reset, or after 15 idle minutes. "
+                                "Never included in chat history, logs, or reports."
                             ),
                             lines=1,
                             max_lines=1,
@@ -1648,7 +1685,8 @@ def build_app(
                             interactive=csv_enabled,
                         )
                         csv_question = gr.Textbox(
-                            value=DEFAULT_CSV_QUESTION,
+                            value="" if is_space else DEFAULT_CSV_QUESTION,
+                            placeholder="Describe your variables and the analysis you want.",
                             label=f"Natural-language question · compiled by {GEMINI_MODEL}",
                             info=(
                                 "State which header is the outcome, continuous treatment, and "
@@ -1662,7 +1700,7 @@ def build_app(
                             value=False,
                             label=(
                                 "I am authorized to upload this data to Hugging Face and send only "
-                                "the question text, three column names, optional role overrides, "
+                                "conversation text, three column names, optional role overrides, "
                                 "and temporary API credential to Google Gemini."
                                 if is_space
                                 else "I am authorized to use this data and approve both transfers."
@@ -1672,7 +1710,7 @@ def build_app(
                         gr.HTML(
                             '<div class="demo-transfer-note" role="note">'
                             + (
-                                "<strong>Data boundary:</strong> the question, three header names, "
+                                "<strong>Data boundary:</strong> conversation, three header names, "
                                 "and optional role overrides go to Google Gemini; the temporary "
                                 "key passes through Hugging Face. It is not intentionally "
                                 "persisted by DCFA. CSV rows remain in the runtime and are deleted "
@@ -1684,11 +1722,27 @@ def build_app(
                             )
                         )
                         csv_run_button = gr.Button(
-                            "Run uploaded CSV",
+                            "Send message" if is_space else "Run uploaded CSV",
                             variant="primary",
                             elem_id="run-csv-button",
                             interactive=csv_enabled,
                         )
+                        if is_space:
+                            csv_chat = gr.Chatbot(
+                                label="Prepare your analysis",
+                                render_markdown=False,
+                                buttons=[],
+                                height=300,
+                            )
+                            csv_plan = gr.HTML("")
+                            csv_notice = gr.Markdown("")
+                            csv_generate = gr.Button(
+                                "Confirm and generate report",
+                                interactive=False,
+                                variant="primary",
+                            )
+                            csv_reset = gr.Button("Reset conversation")
+
             with gr.Column(
                 scale=4,
                 elem_classes=["demo-panel", "demo-output-column"],
@@ -1873,27 +1927,31 @@ def build_app(
             )
         )
         if is_space and csv_enabled:
-            authorized_csv = csv_run_button.click(
-                fn=space_csv_authorize_handler,
-                inputs=csv_api_key,
-                outputs=None,
-                queue=False,
-                api_name=False,
-            )
-            authorized_csv.success(
-                fn=show_running,
-                inputs=None,
-                outputs=result_outputs,
-                queue=False,
-                api_name=False,
-            ).success(
-                fn=space_csv_handler,
-                inputs=csv_inputs,
-                outputs=result_outputs,
-                scroll_to_output=True,
-                show_progress="hidden",
-                trigger_mode="once",
-                api_name=False,
+            from dcfa_website_demo.dialogue_ui import bind_csv_dialogue
+
+            bind_csv_dialogue(
+                app=app,
+                authorize=space_authorize_handler,
+                chat_handler=space_csv_chat_handler,
+                execute_handler=space_csv_handler,
+                components=(
+                    csv_file,
+                    csv_api_key,
+                    csv_outcome,
+                    csv_treatment,
+                    csv_instrument,
+                    csv_confirmed,
+                    csv_question,
+                    csv_seed,
+                    csv_run_button,
+                    csv_chat,
+                    csv_plan,
+                    csv_notice,
+                    csv_generate,
+                    csv_reset,
+                ),
+                result_outputs=result_outputs,
+                temporary_key_enabled=temporary_key_enabled,
             )
         elif not is_space:
             csv_run_button.click(

@@ -18,7 +18,7 @@ for current behavior.
 | `src/dcfa/hillstrom_policy/` | Isolated three-action RCT policy adapter, leakage gate, DR/IPW/direct estimators, policies, and four semi-synthetic DGPs |
 | `src/dcfa/agent/` | Explicit compiler/state/runtime, identical-recorded-tool harness, and bounded Gemini live-smoke adapter |
 | `src/dcfa/app.py` | Public TabCF-only lazy Gradio shell |
-| `src/dcfa_website_demo/` | Visitor-safe presentation mappings/plot, one-call Gemini compiler, strict CSV ingress, native ZeroGPU wrapper, and health-checkable local ASGI wrapper; outside the statistical source hash |
+| `src/dcfa_website_demo/` | Visitor-safe presentation mappings/plot, single-turn Gemini compiler, Space-only multi-turn CSV dialogue, strict CSV ingress, native ZeroGPU wrapper, and health-checkable local ASGI wrapper; outside the statistical source hash |
 | `src/dcfa_showcase/` | Offline freeze/export/verifier for the hash-bound public prepared replay; outside the statistical source hash |
 | `src/dcfa_colab/` | Secret-scoped notebook adapter, local CSV preflight, verified archive export, and notebook static validator; outside the statistical source hash |
 | `showcase/prepared_demo_v1/` | Committed public-safe prompt, synthetic CSV, visitor projection, plot, and verification manifest |
@@ -163,6 +163,29 @@ symbolic intervention labels. The validated proposal selects a mean or median
 summary/contrast; local deterministic code maps labels to actual values, and
 Gemini never sees rows or calculates the result. Clarification, block, API,
 schema, or credential failures stop with no retry or non-LLM fallback.
+
+The Space CSV UI now uses `dialogue.py` and `dialogue_ui.py` with the separate
+`evaluation/configs/space_csv_dialogue_v1.json` profile. `compile_csv_turn` accepts
+row-free conversation history and returns clarification/block text or a validated
+`GeminiWebsiteCompilation`. `CSVConversation` keeps ephemeral per-session columns,
+history, ownership, request count and an editable-plan revision. That revision
+prevents a queued click on an old card from executing a newer, unseen proposal.
+`execute_prepared_local_csv` consumes the reviewed columns/proposal without Gemini;
+only its caller in `zerogpu.py` allocates a GPU. No shared statistical or research
+protocol changed. Existing single-turn entry points still use v2.
+
+The password input persists across dialogue turns; request-scoped credential files
+are still deleted after each call. Generation/reset/15-minute idle expiry clear
+the input. The timer clears visible state, and Gradio's 15-minute state TTL provides
+server cleanup when the page is no longer active. Completed runs include the
+reviewed definition index as an HTML appendix alongside the unchanged verified
+statistical report. Full chat history is not exported.
+
+Focused verification (fake providers/backends, not live Gemini/ZeroGPU evidence):
+
+```bash
+.venv/bin/python -m pytest tests/integration/test_csv_dialogue.py tests/integration/test_zerogpu_space.py tests/integration/test_website_demo.py
+```
 
 The local demo accepts synthetic TabCF-IV scenarios plus a strictly bounded, locally
 selected Y/X/Z CSV and uses the managed `tabpfn-client` profile. Its explicit

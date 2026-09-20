@@ -97,6 +97,11 @@ sensitive, confidential, personally identifiable, or otherwise unshareable data.
 
 ### Local setup
 
+For everyday core development, you can reuse an existing compatible Conda
+environment without creating `.venv` or installing DCFA into that environment.
+See [shared local environments](docs/LOCAL_ENVIRONMENTS.md) for commands,
+compatibility limits, and the distinction from the pinned setup below.
+
 Clone the pinned TabCF submodule and install the core development environment:
 
 ```bash

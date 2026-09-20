@@ -833,3 +833,19 @@ Do not rewrite an accepted entry when it changes; append a superseding entry.
   `development_only` because this does not provide an immutable image digest.
 - Source: Hugging Face build error for Space commit `f2c9b79` and direct comparison of
   the published 0.51.3 wheel with the previously installed 0.51.1 package.
+
+## D-037 — Reuse compatible local environments for core development
+
+- Date: 2026-09-19
+- Decision: Document direct use of an existing Conda interpreter with a
+  command-scoped `PYTHONPATH` for core development. A repository-local venv is
+  optional for this workflow; shared environments need no persistent DCFA install.
+- Rationale: Avoid duplicating numerical dependencies across compatible projects
+  without modifying environments owned by other projects or replacing locked
+  evaluation profiles.
+- Verification: The existing native ARM64 Anaconda environment passed the TabCF
+  vertical-slice and CLI-negative-path integration tests (11 passed). Its Python
+  and pytest versions differ from the pinned development setup. Optional live
+  providers and UI paths were not verified; existing demo environments remain.
+- Scope: Documentation and local development only; no statistical implementation,
+  dependency lock, frozen protocol, or release requirement changed.

@@ -10,6 +10,7 @@ for current behavior.
 
 | Path | Current role |
 |---|---|
+| `docs/LOCAL_ENVIRONMENTS.md` | Shared Conda core-development commands using command-scoped `PYTHONPATH`, without a persistent project install |
 | `src/dcfa/schemas.py` | Immutable TabCF, policy, semi-synthetic, evidence, backend, and run contracts |
 | `src/dcfa/evidence.py` | Shared ledger validation and Track T/H release gates |
 | `src/dcfa/audit.py`, `cache.py`, `artifact_validation.py` | Typed audit, validated cache, and no-refit artifact verifier |

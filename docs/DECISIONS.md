@@ -874,3 +874,18 @@ Do not rewrite an accepted entry when it changes; append a superseding entry.
   authorization, stale/repeated confirmation, expiry, isolation, and artifact
   validation with fake providers. Local browser QA uses synthetic data and a fake
   backend. Real Gemini/ZeroGPU execution and HF deployment are separate boundaries.
+
+## D-039 — Resolve deployment profiles externally and budget complete dialogue replies
+
+- Date: 2026-09-20
+- Evidence: A real Gemini clarification consumed 979 thought tokens and returned
+  only 29 output tokens with status `incomplete` under the 1024-token budget.
+  The response remained non-executable. The Space installs a Python wheel that
+  does not include repository-level evaluation configuration files.
+- Decision: Use 4096 output tokens and low thinking in the editable Space dialogue
+  profile, retaining the same Gemini model and no automatic retries. Allow the
+  Space entrypoint to specify `DCFA_SPACE_CSV_DIALOGUE_CONFIG_FILE`, like the
+  existing single-turn profile override. Upload this profile with the entrypoint.
+- Scope: Space dialogue only; no estimator, frozen research profile, or core
+  statistical behavior changes. Use the existing repository-external credential
+  for the user-authorized synthetic live smoke; never publish the credential.

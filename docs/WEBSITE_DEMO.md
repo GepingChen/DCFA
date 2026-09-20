@@ -21,23 +21,35 @@ It preloads and hash-checks `Prior-Labs/TabPFN-v2-reg` at revision
 `4972a65a1b30806315c6f92499959ffbfc69a673`, uses one CUDA estimator, and
 prominently displays the required `Built with PriorLabs-TabPFN` attribution.
 
-For a one-time bounded CSV analysis, a logged-in visitor may enter a temporary
-Gemini API key in the canonical password field. DCFA passes it through the
-Hugging Face backend for that request, materializes it only in a mode-600
-temporary file, clears the field after success or failure, and scans the result
-tree before export. It is not written to state, environment variables, logs,
-traces, artifacts, or ZIPs. This is no guarantee about transient processing by
-Hugging Face or Google, so the UI recommends a separate restricted key.
+For a bounded CSV conversation, a logged-in visitor may enter a temporary Gemini
+API key in the canonical password field. Each message clarifies the variable roles
+and supported objective; no model fitting starts until **Confirm and generate
+report** is clicked on the final definition index. The card includes original
+one-based column positions and user-provided variable meanings. Textual confirmation
+in chat does not execute analysis. Changing the inputs invalidates the old card.
+
+The key remains in the password field for the current conversation, and is cleared
+on generation, reset, or fifteen minutes of inactivity. For each request DCFA
+materializes it in a mode-600 temporary file and removes that file afterward. It is
+excluded from conversation state, logs, traces, artifacts and ZIPs. CSV rows stay
+inside the Hugging Face runtime and are never sent to Prior Labs.
 
 A visitor who prefers server-side secret storage can instead duplicate the Space
-and add `DCFA_GEMINI_API_KEY` as their own Space Secret; that mode hides the
-browser key field. In either mode, Gemini receives the question text, exactly
-three header names, optional role overrides, and symbolic intervention labels,
-but no rows or actual intervention values. CSV rows remain in the Hugging Face
-runtime and are not sent to Prior Labs. Uploads must be authorized, non-sensitive
-three-column data. Completed runs are independently verified, made available as
-a path-safe ZIP, and removed from uncompressed server storage; Gradio cache files
-expire after fifteen minutes.
+and add `DCFA_GEMINI_API_KEY` as their own Space Secret; that mode hides the browser
+key field. Gemini receives conversation text, three header names and optional role
+overrides, but no rows or actual intervention values. Completed runs retain the
+verified statistical report plus a `confirmed_plan.html` appendix; full chat
+history is not exported. Uploads must be authorized, non-sensitive three-column
+data. Results are available as a path-safe ZIP and uncompressed run directories
+are removed. Existing cache cleanup and session expiry clear temporary data.
+
+The Space installs DCFA from a pinned Git commit. Its entrypoint must set both
+`DCFA_WEBSITE_GEMINI_CONFIG_FILE` (existing single-turn presets) and
+`DCFA_SPACE_CSV_DIALOGUE_CONFIG_FILE` (Space CSV dialogue) to the corresponding
+JSON files uploaded beside `app.py`; these repository-level profiles are not
+included in the installed Python wheel. The dialogue profile reserves 4096
+output tokens with low thinking because the previous 1024-token medium-thinking
+budget was exhausted by a live clarification response, returning incomplete JSON.
 
 The ZeroGPU runtime is `development_only`. Its package, model revision, model
 hash, Space commit, and DCFA commit are recorded, but it has no immutable

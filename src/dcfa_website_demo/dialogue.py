@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import html
 import json
+import os
 import threading
 import time
 from dataclasses import dataclass, field
@@ -90,7 +91,10 @@ def compile_csv_turn(
     client: Any | None = None,
 ) -> tuple[str, GeminiWebsiteCompilation | None]:
     """Make one structured request, counting even failed provider calls; never retry."""
-    config, _ = _load_config(DIALOGUE_CONFIG, expected_version=DIALOGUE_VERSION)
+    config, _ = _load_config(
+        Path(os.environ.get("DCFA_SPACE_CSV_DIALOGUE_CONFIG_FILE", str(DIALOGUE_CONFIG))),
+        expected_version=DIALOGUE_VERSION,
+    )
     columns, normalized, _ = _role_context(columns, overrides)
     schema = config["response_schema"]
     proposal_schema = schema["properties"]["proposal"]["anyOf"][0]

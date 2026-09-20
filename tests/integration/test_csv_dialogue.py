@@ -115,6 +115,33 @@ def test_provider_failure_counts_once_and_does_not_retry(fixture):
     assert f.session.history == [] and not f.session.busy
 
 
+def test_installed_space_can_load_external_dialogue_profile(fixture, monkeypatch, tmp_path):
+    import dcfa_website_demo.dialogue as dialogue
+
+    profile = dialogue.DIALOGUE_CONFIG
+    monkeypatch.setattr(dialogue, "DIALOGUE_CONFIG", tmp_path / "not-in-wheel.json")
+    monkeypatch.setenv("DCFA_SPACE_CSV_DIALOGUE_CONFIG_FILE", str(profile))
+    fixture.client.interactions.output_text = json.dumps(fixture.ready)
+    turn(fixture)
+    assert fixture.session.status == "ready"
+
+
+def test_incomplete_live_style_reply_never_becomes_ready(fixture):
+    f = fixture
+    original = f.client.interactions.create
+
+    def truncated(**kwargs):
+        response = original(**kwargs)
+        response.status = "incomplete"
+        response.output_text = '{"decision": "clarify", "message":'
+        return response
+
+    f.client.interactions.create = truncated
+    with pytest.raises(DCFAError, match="invalid"):
+        turn(f)
+    assert f.session.compilation is None and not f.session.busy
+
+
 def test_quoted_definition_and_escaped_card(fixture):
     f = fixture
     f.ready["definitions"]["outcome"] = "crop <yield>"

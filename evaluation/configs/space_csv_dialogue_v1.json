@@ -1,9 +1,9 @@
 {
   "api_version": "v1beta",
   "generation_config": {
-    "max_output_tokens": 1024,
+    "max_output_tokens": 4096,
     "seed": 20260815,
-    "thinking_level": "medium",
+    "thinking_level": "low",
     "thinking_summaries": "none"
   },
   "model": "gemini-3.6-flash",

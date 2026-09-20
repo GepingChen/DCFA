@@ -1,6 +1,36 @@
 # DCFA implementation status
 
-Last updated: 2026-08-30
+Last updated: 2026-09-20
+
+## Space dialogue deployment update (2026-09-20)
+
+The canonical Space is running source commit `895b88d43ab9c8b0f144e0742e2c7775ba1171aa`
+at HF commit `986b820af6c83a51457e8e7e586a32535b8156ab`, with `zero-a10g`
+hardware and `spaces 0.51.3`. The live page shows build `895B88D` and the new
+CSV conversation, optional role overrides, plan card, and confirmation button.
+The versioned `space_csv_dialogue_v1` profile is uploaded alongside the Space
+entrypoint and resolved through `DCFA_SPACE_CSV_DIALOGUE_CONFIG_FILE`.
+
+Verification for this update:
+
+- Full local regression: `153 passed`; Ruff, formatting, `pip check`, and
+  `git diff --check` passed.
+- Real Gemini, using an existing repository-external credential: two synthetic
+  conversation turns produced clarification followed by a ready plan with correct
+  roles, definitions, and original CSV column positions. An initially truncated
+  response was rejected; the editable profile now has sufficient output budget.
+- Deployed ZeroGPU supported preset: report, plot, and ZIP completed. Independent
+  `verify_run_directory` returned `valid` for `run_e6c1a6d121b1c488a3639ef9`;
+  backend metadata records TabPFN 8.5.0, Torch 2.11.0, CUDA, and one estimator.
+- The synthetic CSV uploaded successfully through the native file chooser.
+  Full live CSV conversation-to-report verification is pending manual password
+  entry: browser automation redacts password fields, so the attempted local key
+  transfer yielded an empty value and stopped before a Gemini request. No key was
+  published or added as a shared Space Secret. Duplicate-Secret execution remains
+  unverified against the live provider.
+
+These are development mechanics checks, not estimator validation or a paired
+Track A evaluation. Historical verification below retains its original scope.
 
 ## Overall status
 
@@ -19,8 +49,10 @@ profile has since completed authenticated analysis. A hash-bound prepared replay
 and a user-owned Colab workflow are implemented outside the statistical source
 boundary. A public canonical Hugging Face Space now runs three login-gated
 synthetic presets with hash-pinned local TabPFN v2 on ZeroGPU and no live LLM;
-the temporary-key and duplicate-Secret Gemini/CSV paths are implemented and
-contract-tested but have not received live-provider success validation.
+the Space CSV path now uses multi-turn clarification and explicit button
+confirmation. Real Gemini dialogue and deployed ZeroGPU preset checks passed
+separately; the combined live CSV report path and Duplicate-Secret route remain
+pending.
 Publishable Track T,
 real-data Track T/H, and the paired live-model Track A comparison remain
 explicitly blocked on the external inputs listed below.
@@ -43,6 +75,7 @@ Current protocols:
 - Gemini live smoke: `track_a_gemini_live_smoke_v1`.
 - website Gemini compiler: `website_demo_gemini_v2` (v1 retained for historical
   prepared-demo verification).
+- Space CSV dialogue: `space_csv_dialogue_v1` (editable development profile);
 - local ZeroGPU backend: `local_tabpfn_v2_zerogpu_v1`;
 - prepared public replay: `prepared_demo_v1` / `dcfa_prepared_visitor_v1`;
 - Colab custom workflow: DCFA release commit
@@ -56,7 +89,7 @@ Current protocols:
 | TabCF scope | Exactly one continuous treatment, one continuous outcome, one scalar IV, and no `W`; unsupported treatments, role conflicts, unconfirmed specs, malformed grids, data/manifest hash mismatches, and nonempty `W` fail before backend construction or fit | Conditional `W` extension and general method routing are intentionally absent |
 | TabCF deterministic slice | Explicit fallback or TabPFN backend selection; Stage 1 control rank; empirical diagnostics; whole-grid strict support gate before Stage 2; Stage 2 distribution/mean paths; CDF, means, quantiles, risks, and directed contrasts from one core | Local sklearn output is `development_only`, is not TabCF, and cannot enter locked Track T |
 | Managed TabPFN demo | Exact `tabpfn-client==0.3.3` profile; fixed synthetic and confirmed exactly-three-column CSV website routes; prompt-first role mapping with optional exact-name overrides; default one-call Gemini compiler; strict 120–256-row/no-W gates; batched predictions; service/LLM trace metadata; transport-safe CDF; evidence-linked immutable artifacts | `development_only`; question text, header names, and optional overrides go to Google while selected CSV rows go separately to Prior Labs; no LLM or sklearn fallback; service checkpoint/image hashes are unavailable, so this cannot enter locked Track T |
-| ZeroGPU local TabPFN v2 | Public login-gated canonical Space; exact v2 model repo/revision/SHA-256; Python 3.12.12, Torch 2.11.0, TabPFN 8.5.0, CUDA, one estimator; frozen no-LLM presets; temporary-key or duplicate-Secret CSV; optional role overrides without upload-triggered dropdown mutation; verified ZIP export and ephemeral cleanup | `development_only`; ZeroGPU has no immutable image digest. The v2 prompt/header role route is automated-test complete but not live-provider success verified |
+| ZeroGPU local TabPFN v2 | Public login-gated canonical Space; exact v2 model repo/revision/SHA-256; Python 3.12.12, Torch 2.11.0, TabPFN 8.5.0, CUDA, one estimator; frozen no-LLM presets; temporary-key or duplicate-Secret CSV; optional role overrides without upload-triggered dropdown mutation; verified ZIP export and ephemeral cleanup | `development_only`; ZeroGPU has no immutable image digest. The multi-turn dialogue passed a real Gemini two-turn check; the full live CSV report path and Duplicate-Secret execution remain pending |
 | Locked TabPFN boundary | Lazy imports, no automatic fallback, pinned upstream commit, exact model/image SHA-256 validation, current-host image-digest check, package/runtime manifest validator, and release rejection of fallback evidence | No working local Torch/TabPFN/checkpoint/image is available; the bounded probe was not repeated |
 | Track T development evaluation | Strong/weak engineering scenarios, exact DCFA-fixture oracle metrics, three frozen seeds in the current artifact, seed-level aggregation, warnings, assumptions, evidence, and independent recomputation | Not mapped to manuscript DGP codes; not a locked 12-cell study, estimator ranking, diagnostic calibration, or publishable TabCF result |
 | Fulton | Provenance-required 97-row schema loader and development-only workflow command | No approved local CSV or usage decision was supplied; no Fulton result was run |
@@ -64,7 +97,7 @@ Current protocols:
 | Track H policy | Training-only fit, validation-only best-uniform/threshold selection, train+validation refit, immutable policy freeze before test access, DR primary plus IPW/direct sensitivity, paired contrasts, randomized-arm effects, costs/capacity/allocation, 95% influence-score intervals, warnings, assumptions, and release gate | No approved real file, final one-time test run, real held-out policy value, or individual oracle claim |
 | H semi-synthetic | Four prespecified DGPs, training-covariate resampling, same-constraint oracle, 50 replications per scenario, value/regret/accuracy/confusion/abstention/selective-regret/fallback/calibration/constraint metrics, and 84 evidence records | Covariates come from a development fixture, so the result is explicitly not Hillstrom-calibrated |
 | Track A | Explicit state machine/compiler/runtime; 24-case recorded benchmark; bounded Gemini 3.6 Flash clean-case implementation; frozen prompt/model/schema; no-row symbolic input; token/latency/list-price trace contract; evidence agreement verifier | The first live request failed before analysis on a removed API field; corrected serialization is offline-only, and no paired live fixed/full comparison exists |
-| Public UI | Local Gradio operator shell, released hash-bound static replay, pinned user-owned Colab notebook, and live canonical ZeroGPU Space; canonical presets use local TabPFN v2 without Gemini/Prior Labs | Static replay, Colab CTA, and canonical ZeroGPU presets are live. Temporary-key and duplicate-Secret Gemini/CSV plus a fresh credentialed clean-Colab execution remain unverified |
+| Public UI | Local Gradio operator shell, released hash-bound static replay, pinned user-owned Colab notebook, and live canonical ZeroGPU Space; canonical presets use local TabPFN v2 without Gemini/Prior Labs | Static replay, Colab CTA, and canonical ZeroGPU presets are live. Real Gemini dialogue and ZeroGPU presets were verified separately; combined CSV-to-report, Duplicate-Secret, and fresh credentialed clean-Colab execution remain unverified |
 
 The independent artifact verifier now checks saved file hashes and also
 recomputes protocol versions, marker contracts, source identity,
@@ -159,7 +192,7 @@ Colab notebook static validation                       output-free; exact releas
 Docker/Compose after dual-secret change                not verified; Docker CLI unavailable
 ```
 
-Current ZeroGPU implementation checks:
+Historical ZeroGPU implementation checks (before the September dialogue update):
 
 ```text
 .venv/bin/python -m pytest                             138 passed in 69.50s
@@ -238,9 +271,11 @@ optimal treatment. Negative, null, deferred, and blocked results remain visible.
 
 For the public website tool, the canonical ZeroGPU Space is live with three
 authenticated local-TabPFN v2 presets, while the repository, notebook, and Colab
-URL remain anonymously readable. A visitor must duplicate the Space and add their
-own Gemini Secret, or use the disclosed temporary password field, before the
-natural-language CSV route can receive live-provider verification. The static
+URL remain anonymously readable. For the pending combined live CSV check, enter
+the existing local Gemini key in the disclosed temporary password field and
+complete the prepared two-turn
+synthetic conversation followed by button confirmation. Duplicate mode continues
+to use the owner-provided Space Secret. The static
 GitHub Pages replay remains deployed and historically
 hash-bound. For a comparative live Track A result, the
 next step remains a frozen paired Gemini

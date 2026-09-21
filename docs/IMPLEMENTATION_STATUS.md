@@ -4,14 +4,15 @@ Last updated: 2026-09-20
 
 ## Space dialogue deployment update (2026-09-20)
 
-The canonical Space is running source commit `895b88d43ab9c8b0f144e0742e2c7775ba1171aa`
-at HF commit `986b820af6c83a51457e8e7e586a32535b8156ab`, with `zero-a10g`
-hardware and `spaces 0.51.3`. The live page shows build `895B88D` and the new
+The canonical Space is running source commit `40853b131964dcbcc159c7e6dece87e882a47d9a`
+at HF commit `90b8d7a747053c20491e4adc4b909f3b4a41e504`, with `zero-a10g`
+hardware and `spaces 0.51.3`. The live page shows build `40853B1` and the new
 CSV conversation, optional role overrides, plan card, and confirmation button.
 The versioned `space_csv_dialogue_v1` profile is uploaded alongside the Space
 entrypoint and resolved through `DCFA_SPACE_CSV_DIALOGUE_CONFIG_FILE`.
 
-Verification for this update:
+Verification for this update (live dialogue/preset checks used build `895B88D`;
+the subsequent failure-presentation fix is deployed as `40853B1`):
 
 - Full local regression: `154 passed`; Ruff, formatting, `pip check`, and
   `git diff --check` passed.

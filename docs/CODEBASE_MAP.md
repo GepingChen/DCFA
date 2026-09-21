@@ -231,9 +231,13 @@ completed/current/pending/blocked states, locates blocked requests with a safe
 next action, and never exposes state reasons or tool counts. Gradio generator
 events hide native percentage progress, disable both submit buttons during a
 run, and use a live result status; the initial answer/detail components remain
-hidden rather than displaying duplicate placeholders. The input uses a wider
-desktop column while the workflow and result share one sticky companion panel;
-the columns stack without horizontal overflow on narrow viewports. The local
+hidden rather than displaying duplicate placeholders. Agentic TabCF uses a
+single-column workspace with Upload CSV selected by default
+and Try an example as a secondary tab. Advanced settings hold role overrides and
+the seed. Empty conversation and result components stay hidden until needed;
+results appear below the input with compact responsive progress, the answer,
+plot, diagnostics, and download. Transfer consent remains beside submission,
+while build identity and runtime attribution appear in the footer. The local
 service and native ZeroGPU entrypoint consume the same `build_demo_theme()` and
 `DEMO_CSS` launch configuration instead of maintaining separate visual defaults.
 

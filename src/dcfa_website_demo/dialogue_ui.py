@@ -48,6 +48,10 @@ def bind_csv_dialogue(
         interactive = not session.busy and session.status != "completed"
         updates = [gr.update(interactive=interactive) for _ in controls]
         updates[-1] = gr.update(interactive=not session.busy)
+        updates[7] = gr.update(
+            interactive=interactive,
+            variant="secondary" if session.status == "ready" else "primary",
+        )
         if session.cached_answer and not session.busy:
             updates[5] = gr.update(interactive=True)
             updates[7] = gr.update(interactive=True)
@@ -57,10 +61,13 @@ def bind_csv_dialogue(
             updates[0] = gr.update(value=None, interactive=interactive)
         return (
             session,
-            session.history,
+            gr.update(value=session.history, visible=bool(session.history)),
             session.plan_html,
             text,
-            gr.update(interactive=session.status == "ready" and not session.busy),
+            gr.update(
+                interactive=session.status == "ready" and not session.busy,
+                visible=session.status == "ready" or session.busy,
+            ),
             gr.update(
                 **({"value": ""} if clear_key else {}),
                 interactive=temporary_key_enabled and interactive,
@@ -267,6 +274,12 @@ def bind_csv_dialogue(
         api_name=False,
         trigger_mode="once",
         concurrency_id="csv-dialogue",
+        show_progress="hidden",
+    ).success(
+        fn=None,
+        js="() => { document.getElementById('analysis-results')?.scrollIntoView("
+        "{behavior: 'smooth', block: 'start'}); }",
+        api_name=False,
     )
     reset.click(
         fn=reset_session,

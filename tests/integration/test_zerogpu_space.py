@@ -212,7 +212,7 @@ def test_canonical_space_config_requires_login_and_enables_temporary_key(
         for dependency in config["dependencies"]
     )
     serialized = json.dumps(config, ensure_ascii=False, default=str)
-    assert "Frozen preset question · no live LLM call" in serialized
+    assert "Example question" in serialized
     key_components = [
         component
         for component in config["components"]
@@ -224,7 +224,7 @@ def test_canonical_space_config_requires_login_and_enables_temporary_key(
     assert "not intentionally persisted by DCFA" in serialized
     assert "Confirm and generate report" in serialized
     assert "Prepare your analysis" in serialized
-    assert "Optional column overrides" in serialized
+    assert "Advanced settings" in serialized
     assert "three column names" in serialized
     for label in ("Outcome override", "Treatment override", "Instrument override"):
         component = next(

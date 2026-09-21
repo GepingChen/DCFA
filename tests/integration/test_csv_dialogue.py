@@ -233,6 +233,9 @@ def test_button_only_executes_once_and_clears_key(fixture):
         "Y outcome, X treatment, Z instrument; median high minus low",
         profile,
     )
+    assert result[1]["visible"]
+    assert result[4]["visible"]
+    assert result[13]["variant"] == "secondary"
     assert result[4]["interactive"]
     assert "value" not in result[5]  # Preserve the browser password without returning it.
     old_revision = f.session.revision
@@ -253,6 +256,10 @@ def test_button_only_executes_once_and_clears_key(fixture):
     assert f.session.status == "completed"
     assert f.session.validated is None
     assert completed[5]["value"] == ""
+    assert not completed[4]["visible"]
+    reset = h["reset_session"](f.session)
+    assert not reset[1]["visible"]
+    assert not reset[4]["visible"]
     list(h["generate"](f.session, f.path, "", "", "", True, 123, f.session.revision, profile))
     assert len(executions) == 1
     assert len(f.client.interactions.calls) == 2

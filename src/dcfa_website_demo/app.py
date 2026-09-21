@@ -46,7 +46,6 @@ from dcfa_website_demo.csv_upload import (
     read_authorized_csv_columns,
 )
 from dcfa_website_demo.gemini import (
-    GEMINI_MODEL,
     GeminiWebsiteCompilation,
     compile_website_question,
     write_compilation_trace,
@@ -139,14 +138,14 @@ SCENARIOS: dict[str, DemoScenario] = {
 
 DEMO_CSS = """
 :root {
-  --demo-paper: #fffdf8;
+  --demo-paper: #ffffff;
   --demo-surface: #ffffff;
-  --demo-muted-surface: #f5f1e9;
-  --demo-ink: #242320;
-  --demo-muted: #68645e;
-  --demo-accent: #35685c;
-  --demo-accent-deep: #254f47;
-  --demo-line: #ddd7ce;
+  --demo-muted-surface: #f1f5f9;
+  --demo-ink: #172033;
+  --demo-muted: #526176;
+  --demo-accent: #2563eb;
+  --demo-accent-deep: #1d4ed8;
+  --demo-line: #dce3ed;
   --demo-warning: #9a5d17;
   --demo-danger: #9b3f35;
 }
@@ -159,40 +158,32 @@ body,
 
 .gradio-container {
   width: 100% !important;
-  max-width: 74rem !important;
+  max-width: 64rem !important;
   min-width: 0 !important;
   margin-inline: auto !important;
-  padding: clamp(1rem, 3vw, 2.5rem) !important;
+  padding: clamp(1rem, 2.5vw, 2rem) !important;
   box-sizing: border-box !important;
   font-family: Inter, ui-sans-serif, -apple-system, BlinkMacSystemFont,
     "Segoe UI", sans-serif !important;
 }
 
-.gradio-container > .main {
+.gradio-container .main {
+  padding: 0 !important;
   width: 100% !important;
   min-width: 0 !important;
   box-sizing: border-box !important;
 }
 
 .demo-hero {
-  padding: clamp(1rem, 3vw, 2rem) 0 1.25rem;
+  padding: .5rem 0 1rem;
   border-bottom: 1px solid var(--demo-line);
-}
-
-.demo-eyebrow {
-  margin: 0 0 .7rem;
-  color: var(--demo-accent-deep);
-  font-size: .76rem;
-  font-weight: 750;
-  letter-spacing: .12em;
-  text-transform: uppercase;
 }
 
 .demo-hero h1 {
   max-width: 21ch !important;
   margin: 0 0 .75rem !important;
   color: var(--demo-ink) !important;
-  font-size: clamp(2rem, 5vw, 3.6rem) !important;
+  font-size: clamp(2rem, 4vw, 3rem) !important;
   line-height: 1.02 !important;
   letter-spacing: -.045em !important;
 }
@@ -201,32 +192,11 @@ body,
   max-width: 47rem;
   margin: 0 0 1rem;
   color: var(--demo-muted);
-  font-family: Charter, Georgia, serif;
+  font-family: inherit;
   font-size: clamp(1.02rem, 2vw, 1.18rem);
   line-height: 1.65;
 }
 
-.demo-hero-actions {
-  display: flex;
-  align-items: center;
-  margin: 1rem 0;
-  gap: .75rem;
-}
-
-.demo-primary-link {
-  display: inline-flex;
-  min-height: 2.8rem;
-  align-items: center;
-  padding: 0 1rem;
-  border-radius: .3rem;
-  background: var(--demo-accent-deep);
-  color: white !important;
-  font-size: .9rem;
-  font-weight: 750;
-  text-decoration: none !important;
-}
-
-.demo-privacy-summary,
 .demo-transfer-note {
   max-width: 47rem;
   margin: .75rem 0 0;
@@ -238,32 +208,6 @@ body,
   line-height: 1.55;
 }
 
-.demo-privacy-summary summary {
-  cursor: pointer;
-  font-weight: 700;
-}
-
-.demo-privacy-summary p,
-.demo-transfer-note p {
-  margin: .45rem 0 0;
-}
-
-.demo-badges {
-  display: flex;
-  flex-wrap: wrap;
-  gap: .5rem;
-}
-
-.demo-badges span {
-  padding: .35rem .65rem;
-  border: 1px solid var(--demo-line);
-  border-radius: 999px;
-  background: var(--demo-surface);
-  color: var(--demo-muted);
-  font-size: .76rem;
-  font-weight: 650;
-}
-
 .demo-section-heading {
   margin: 0 0 .35rem !important;
   font-size: 1.15rem !important;
@@ -271,38 +215,33 @@ body,
 }
 
 .demo-section-copy {
-  margin-bottom: 1rem !important;
+  margin-bottom: .35rem !important;
   color: var(--demo-muted) !important;
   font-size: .92rem !important;
 }
 
-.demo-panel {
-  padding: clamp(1rem, 2.5vw, 1.4rem) !important;
-  border: 1px solid var(--demo-line) !important;
-  border-radius: .65rem !important;
-  background: var(--demo-surface) !important;
-  box-shadow: none !important;
+.demo-workspace { margin-top: 1.25rem; gap: 1.5rem !important; }
+.demo-input { min-width: 0 !important; }
+.demo-results { min-width: 0 !important; gap: .9rem !important; }
+.demo-results:has(> .hidden):not(:has(> :not(.hidden))) { display: none; }
+#input-tabs > .tab-nav { margin-bottom: 1rem; }
+#csv-upload { border: 1px dashed var(--demo-accent) !important; }
+#csv-question textarea { font-size: 1rem !important; }
+.demo-footer {
+  display: flex;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: .5rem;
+  border-top: 1px solid var(--demo-line);
+  margin-top: 1.5rem;
+  padding-top: .8rem;
+  color: var(--demo-muted);
+  font-size: .75rem;
 }
+.demo-footer p { margin: 0; font-size: inherit; }
 
-.demo-controls {
-  margin-top: 1.4rem;
-}
-
-.demo-input-column,
-.demo-output-column {
-  min-width: 0 !important;
-}
-
-@media (min-width: 48.01rem) {
-  .demo-output-column {
-    position: sticky !important;
-    top: 1rem;
-    align-self: flex-start;
-  }
-}
-
-#run-demo-button,
-#run-csv-button {
+#run-demo-button.primary,
+#run-csv-button.primary {
   min-height: 3rem;
   border: 1px solid var(--demo-accent-deep) !important;
   border-radius: .3rem !important;
@@ -311,8 +250,8 @@ body,
   font-weight: 750 !important;
 }
 
-#run-demo-button:hover,
-#run-csv-button:hover {
+#run-demo-button.primary:hover,
+#run-csv-button.primary:hover {
   background: var(--demo-accent) !important;
 }
 
@@ -320,7 +259,7 @@ body,
   padding: .9rem 1rem;
   border-left: .28rem solid var(--demo-accent);
   border-radius: .25rem;
-  background: #edf4f1;
+  background: #eff6ff;
   color: var(--demo-ink);
   line-height: 1.55;
 }
@@ -347,6 +286,7 @@ body,
 
 .state-graph {
   display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   margin: 0;
   padding: 0;
   gap: .55rem;
@@ -386,13 +326,13 @@ body,
 
 .state-graph li.current {
   border-color: var(--demo-accent);
-  background: #edf4f1;
+  background: #eff6ff;
   color: var(--demo-ink);
 }
 
 .state-graph li.current::before {
   background: var(--demo-accent);
-  box-shadow: 0 0 0 .22rem #d7e6e1;
+  box-shadow: 0 0 0 .22rem #dbeafe;
 }
 
 .state-graph li.pending {
@@ -426,7 +366,7 @@ body,
 .demo-answer p {
   max-width: 52rem;
   margin-bottom: 0 !important;
-  font-family: Charter, Georgia, serif;
+  font-family: inherit;
   font-size: clamp(1.35rem, 3vw, 2rem);
   line-height: 1.35;
 }
@@ -436,7 +376,10 @@ body,
   white-space: normal;
 }
 
+.demo-confirmation-plan { overflow-x: auto; }
+
 .demo-confirmation-plan table {
+  min-width: 32rem;
   width: 100%;
   table-layout: fixed;
   font-size: .82rem;
@@ -502,76 +445,17 @@ body,
 
 .demo-evidence-placeholder {
   color: var(--demo-muted);
-  font-family: Charter, Georgia, serif;
-}
-
-.demo-boundary {
-  margin-top: 1.5rem;
-  padding-top: 1.4rem;
-  border-top: 1px solid var(--demo-line);
-}
-
-.demo-boundary-grid {
-  display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: .75rem;
-}
-
-.demo-boundary-item {
-  padding: .85rem;
-  border: 1px solid var(--demo-line);
-  border-radius: .35rem;
-  background: var(--demo-surface);
-}
-
-.demo-boundary-item strong {
-  display: block;
-  margin-bottom: .25rem;
-  font-size: .8rem;
-}
-
-.demo-boundary-item span {
-  color: var(--demo-muted);
-  font-family: Charter, Georgia, serif;
-  font-size: .82rem;
-  line-height: 1.45;
+  font-family: inherit;
 }
 
 @media (max-width: 48rem) {
-  .gradio-container {
-    padding: .8rem !important;
-  }
-
-  .demo-controls {
-    flex-direction: column !important;
-  }
-
-  .demo-input-column,
-  .demo-output-column {
-    width: 100% !important;
-  }
-
-  .demo-boundary-grid {
-    grid-template-columns: 1fr 1fr;
-  }
-
-  .demo-result-details {
-    grid-template-columns: 1fr;
-  }
+  .gradio-container { padding: .8rem !important; }
+  .state-graph { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .demo-result-details { grid-template-columns: 1fr; }
 }
-
 @media (max-width: 30rem) {
-  .demo-hero {
-    padding-top: .45rem;
-  }
-
-  .demo-hero-copy {
-    line-height: 1.45;
-  }
-
-  .demo-boundary-grid {
-    grid-template-columns: 1fr;
-  }
+  .demo-hero { padding-top: .45rem; }
+  .demo-hero-copy { line-height: 1.45; }
 }
 """
 
@@ -585,9 +469,9 @@ def build_demo_theme() -> Any:
             "Install the website demo with: python -m pip install -r requirements-website-demo.lock"
         ) from exc
     return gr.themes.Base(
-        primary_hue="green",
-        secondary_hue="green",
-        neutral_hue="stone",
+        primary_hue="blue",
+        secondary_hue="blue",
+        neutral_hue="slate",
         radius_size="sm",
         font=("Inter", "ui-sans-serif", "system-ui", "sans-serif"),
         font_mono=("IBM Plex Mono", "ui-monospace", "monospace"),
@@ -1503,7 +1387,7 @@ def portfolio_ui_updates(
     return (
         gr.update(value=answer_value, visible=bool(answer_value)),
         gr.update(value=status_value, visible=bool(status_value)),
-        gr.update(value=state_value),
+        gr.update(value=state_value, visible=bool(state_value)),
         gr.update(value=evidence_value, visible=bool(evidence_value)),
         gr.update(value=plot_value, visible=plot_value is not None),
         gr.update(value=archive_path, visible=archive_path is not None),
@@ -1548,7 +1432,7 @@ def build_app(
     scenario_choices = [(item.label, key) for key, item in SCENARIOS.items()]
     visible_revision = html.escape(build_revision or resolve_build_revision())
     with gr.Blocks(
-        title="DCFA — auditable causal agent demo",
+        title="Agentic TabCF",
         analytics_enabled=False,
         fill_width=True,
         delete_cache=(300, 900) if is_space else None,
@@ -1556,23 +1440,6 @@ def build_app(
         if is_space:
             gr.LoginButton(value="Sign in with Hugging Face", size="sm")
         environment_label = "ZeroGPU demo" if is_space else "Local demo"
-        privacy_summary = (
-            "Preset data stays inside this Hugging Face Space and uses local TabPFN v2."
-            if is_space
-            else (
-                "Question text and CSV header names go to Google Gemini; approved CSV rows "
-                "go separately to Prior Labs."
-            )
-        )
-        privacy_detail = (
-            "Built-in examples are synthetic and use a frozen typed specification without a live "
-            "LLM call. For an uploaded CSV, only conversation text, three header names, and any "
-            "optional role overrides go to Google; uploaded rows stay in the Hugging Face "
-            "runtime. Do not upload sensitive or confidential data."
-            if is_space
-            else "Built-in examples are synthetic. Gemini receives no data rows or actual "
-            "intervention values. A CSV leaves this machine only after explicit confirmation."
-        )
         attribution = (
             '<p class="demo-attribution"><strong>Built with PriorLabs-TabPFN</strong> · '
             "TabPFN v2</p>"
@@ -1580,116 +1447,46 @@ def build_app(
             else ""
         )
         gr.HTML(
-            f"""
+            """
             <header class="demo-hero">
-              <p class="demo-eyebrow">DCFA · {environment_label} · Build {visible_revision}</p>
-              <h1>Ask how outcomes change under treatment.</h1>
+              <h1>Agentic TabCF</h1>
               <p class="demo-hero-copy">
-                Turn one bounded continuous-treatment question into an evidence-checked answer,
-                with unsupported claims stopped before a number is shown.
+                Upload your data. Describe your question. Explore treatment effects.
               </p>
-              <div class="demo-badges" aria-label="Supported scope">
-                <span>Continuous Y / X / Z only</span><span>Development-only</span>
-              </div>
-              <div class="demo-hero-actions">
-                <a class="demo-primary-link" href="#guided-input">Try a guided example</a>
-              </div>
-              <details class="demo-privacy-summary" role="note">
-                <summary>{privacy_summary}</summary>
-                <p>{privacy_detail} This result is development-only and cannot create an
-                automatic real-world causal claim.</p>
-              </details>
-              {attribution}
             </header>
             """
         )
-        with gr.Row(elem_classes="demo-controls", elem_id="guided-input"):
+        with gr.Column(elem_classes="demo-workspace", elem_id="analysis-input"):
             with gr.Column(
-                scale=6,
-                elem_classes=["demo-panel", "demo-input-column"],
+                elem_classes="demo-input",
             ):
-                gr.Markdown("## 1 · Choose an input", elem_classes="demo-section-heading")
-                with gr.Tabs():
-                    with gr.Tab("Guided scenarios"):
+                with gr.Tabs(selected="csv", elem_id="input-tabs"):
+                    with gr.Tab("Upload CSV", id="csv"):
                         gr.Markdown(
-                            "Frozen synthetic engineering paths for a quick walkthrough.",
-                            elem_classes="demo-section-copy",
-                        )
-                        scenario = gr.Radio(
-                            choices=scenario_choices,
-                            value="strong_iv",
-                            label="Guided path",
-                        )
-                        question = gr.Textbox(
-                            value=scenario_question("strong_iv"),
-                            label=(
-                                f"Natural-language question · compiled by {GEMINI_MODEL}"
-                                if gemini_enabled
-                                else "Frozen preset question · no live LLM call"
-                            ),
-                            info=(
-                                "Ask for a mean or median summary/contrast at low, center, or "
-                                "high treatment. Gemini receives the question, not data rows."
-                            ),
-                            lines=3,
-                            interactive=gemini_enabled,
-                        )
-                        gr.HTML(
-                            '<div class="demo-transfer-note" role="note">'
-                            + (
-                                "<strong>Before you run:</strong> Your question text will be sent "
-                                "to Google Gemini. Do not enter private or sensitive information. "
-                                "Gemini receives no data rows or actual treatment values.</div>"
-                                if gemini_enabled
-                                else "<strong>Canonical Space:</strong> this preset uses a frozen "
-                                "typed median contrast and makes no Gemini request.</div>"
-                            )
-                        )
-                        with gr.Accordion("Reproducibility controls", open=False):
-                            rows = gr.Slider(
-                                MIN_DEMO_ROWS,
-                                MAX_DEMO_ROWS,
-                                value=128,
-                                step=8,
-                                label="Synthetic rows",
-                            )
-                            seed = gr.Number(
-                                value=20260810,
-                                precision=0,
-                                minimum=MIN_DEMO_SEED,
-                                maximum=MAX_DEMO_SEED,
-                                label="Seed",
-                            )
-                        run_button = gr.Button(
-                            "Run the guided workflow",
-                            variant="primary",
-                            elem_id="run-demo-button",
-                        )
-                    with gr.Tab("Upload CSV"):
-                        gr.Markdown(
-                            (
-                                f"Upload exactly three numeric columns and {MIN_UPLOAD_ROWS}–"
-                                f"{MAX_UPLOAD_ROWS} rows. The file is processed ephemerally by "
-                                "Hugging Face and local TabPFN v2. Describe the outcome, "
-                                "treatment, and instrument columns in your question; extra "
-                                "columns are rejected."
-                                if is_space
-                                else (
-                                    f"Upload exactly three numeric columns and "
-                                    f"{MIN_UPLOAD_ROWS}–{MAX_UPLOAD_ROWS} rows. Extra columns are "
-                                    "rejected rather than silently treated as W. Describe the "
-                                    "outcome, treatment, and instrument columns in your question."
-                                )
-                            ),
+                            "Three numeric columns: outcome, continuous treatment, "
+                            "and instrument. "
+                            f"{MIN_UPLOAD_ROWS}–{MAX_UPLOAD_ROWS} rows; no extra columns.",
                             elem_classes="demo-section-copy",
                         )
                         csv_file = gr.File(
-                            label="Y/X/Z CSV",
+                            label="Upload your CSV",
+                            elem_id="csv-upload",
+                            height=150,
                             file_types=[".csv"],
                             type="filepath",
                             interactive=csv_enabled,
                         )
-                        with gr.Accordion("Optional column overrides", open=False):
+                        csv_question = gr.Textbox(
+                            value="" if is_space else DEFAULT_CSV_QUESTION,
+                            placeholder="Describe your variables and the analysis you want.",
+                            label="Describe your question",
+                            elem_id="csv-question",
+                            info="Name the outcome, treatment, and instrument columns, "
+                            "then describe the comparison you want to explore.",
+                            lines=3,
+                            interactive=csv_enabled,
+                        )
+                        with gr.Accordion("Advanced settings", open=False):
                             gr.Markdown(
                                 "Leave these blank to let Gemini map the three CSV headers from "
                                 "your question. An override must exactly match a header name.",
@@ -1714,6 +1511,14 @@ def build_app(
                                     placeholder="Optional exact column name",
                                     interactive=csv_enabled,
                                 )
+                            csv_seed = gr.Number(
+                                value=20260813,
+                                precision=0,
+                                minimum=MIN_DEMO_SEED,
+                                maximum=MAX_DEMO_SEED,
+                                label="Analysis seed",
+                                interactive=csv_enabled,
+                            )
                         csv_api_key = gr.Textbox(
                             value="",
                             type="password",
@@ -1734,27 +1539,6 @@ def build_app(
                                 "Space Secret; no browser key is required.",
                                 elem_classes="demo-section-copy",
                             )
-                        csv_seed = gr.Number(
-                            value=20260813,
-                            precision=0,
-                            minimum=MIN_DEMO_SEED,
-                            maximum=MAX_DEMO_SEED,
-                            label="Analysis seed",
-                            interactive=csv_enabled,
-                        )
-                        csv_question = gr.Textbox(
-                            value="" if is_space else DEFAULT_CSV_QUESTION,
-                            placeholder="Describe your variables and the analysis you want.",
-                            label=f"Natural-language question · compiled by {GEMINI_MODEL}",
-                            info=(
-                                "State which header is the outcome, continuous treatment, and "
-                                "instrument. Gemini receives this text and the three header names, "
-                                "including requested prices, but not CSV rows "
-                                "or observed treatment values."
-                            ),
-                            lines=3,
-                            interactive=csv_enabled,
-                        )
                         csv_confirmed = gr.Checkbox(
                             value=False,
                             label=(
@@ -1791,59 +1575,90 @@ def build_app(
                                 label="Prepare your analysis",
                                 render_markdown=False,
                                 buttons=[],
-                                height=300,
+                                height=260,
+                                visible=False,
                             )
                             csv_plan = gr.HTML("")
                             csv_notice = gr.Markdown("")
                             csv_generate = gr.Button(
                                 "Confirm and generate report",
                                 interactive=False,
+                                visible=False,
                                 variant="primary",
                             )
-                            csv_reset = gr.Button("Reset conversation")
+                            csv_reset = gr.Button(
+                                "Reset conversation", variant="secondary", size="sm"
+                            )
+                    with gr.Tab("Try an example", id="example"):
+                        gr.Markdown(
+                            "Explore a synthetic example with strong instruments, "
+                            "weak instruments, "
+                            "or limited support.",
+                            elem_classes="demo-section-copy",
+                        )
+                        scenario = gr.Radio(
+                            choices=scenario_choices,
+                            value="strong_iv",
+                            label="Guided path",
+                        )
+                        question = gr.Textbox(
+                            value=scenario_question("strong_iv"),
+                            label="Example question",
+                            info=(
+                                "Ask for a mean or median summary/contrast at low, center, or "
+                                "high treatment. Gemini receives the question, not data rows."
+                            ),
+                            lines=3,
+                            interactive=gemini_enabled,
+                        )
+                        gr.HTML(
+                            '<div class="demo-transfer-note" role="note">'
+                            + (
+                                "<strong>Before you run:</strong> Your question text will be sent "
+                                "to Google Gemini. Do not enter private or sensitive information. "
+                                "Gemini receives no data rows or actual treatment values.</div>"
+                                if gemini_enabled
+                                else "<strong>Canonical Space:</strong> this preset uses a frozen "
+                                "typed median contrast and makes no Gemini request.</div>"
+                            )
+                        )
+                        with gr.Accordion("Reproducibility controls", open=False):
+                            rows = gr.Slider(
+                                MIN_DEMO_ROWS,
+                                MAX_DEMO_ROWS,
+                                value=128,
+                                step=8,
+                                label="Synthetic rows",
+                            )
+                            seed = gr.Number(
+                                value=20260810,
+                                precision=0,
+                                minimum=MIN_DEMO_SEED,
+                                maximum=MAX_DEMO_SEED,
+                                label="Seed",
+                            )
+                        run_button = gr.Button(
+                            "Run example",
+                            variant="primary",
+                            elem_id="run-demo-button",
+                        )
 
-            with gr.Column(
-                scale=4,
-                elem_classes=["demo-panel", "demo-output-column"],
-            ):
-                gr.Markdown(
-                    "## 2 · Follow the workflow and review",
-                    elem_classes="demo-section-heading",
-                )
-                gr.Markdown(
-                    "A result is shown only after typed scope, support, and evidence gates.",
-                    elem_classes="demo-section-copy",
-                )
-                state_graph = gr.HTML(
-                    '<div class="demo-status demo-status--idle">'
-                    "<strong>Ready</strong>Choose a path and run the frozen workflow.</div>"
-                    + _progress_html(("current", "pending", "pending", "pending"))
-                )
+            with gr.Column(elem_classes="demo-results", elem_id="analysis-results"):
+                state_graph = gr.HTML("", visible=False)
                 answer = gr.Markdown("", visible=False, elem_classes="demo-answer")
                 status = gr.HTML("", visible=False)
-                evidence = gr.HTML("", visible=False)
                 plot = gr.Image(
                     type="filepath",
                     label="Estimated outcome distributions and summaries",
+                    show_label=False,
                     visible=False,
                 )
-                artifact_download = gr.File(label="Verified run artifact", visible=False)
+                evidence = gr.HTML("", visible=False)
+                artifact_download = gr.File(label="Download analysis artifacts", visible=False)
         gr.HTML(
-            """
-            <section class="demo-boundary" aria-labelledby="boundary-title">
-              <h2 class="demo-eyebrow" id="boundary-title">Scope and limitations</h2>
-              <div class="demo-boundary-grid">
-                <div class="demo-boundary-item"><strong>Not a general router</strong>
-                  <span>Only the continuous-treatment IV contract is public.</span></div>
-                <div class="demo-boundary-item"><strong>No silent W drop</strong>
-                  <span>Non-empty baseline covariates are rejected before fitting.</span></div>
-                <div class="demo-boundary-item"><strong>Hillstrom stays separate</strong>
-                  <span>The randomized-policy track is not TabCF validation.</span></div>
-                <div class="demo-boundary-item"><strong>TabPFN development runtime</strong>
-                  <span>Mechanics only; this is not locked Track T release evidence.</span></div>
-              </div>
-            </section>
-            """
+            f'<footer class="demo-footer">'
+            f"<span>{environment_label} · Build {visible_revision}</span>"
+            f"{attribution}</footer>"
         )
 
         scenario.change(

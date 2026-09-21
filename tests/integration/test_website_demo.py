@@ -783,14 +783,19 @@ def test_default_app_config_omits_machine_audit_payload_and_shows_build() -> Non
     }
 
     assert "Build deadbee" in config
-    assert "Try a guided example" in config
+    assert app.config["title"] == "Agentic TabCF"
+    assert "Try an example" in config
+    tabs = [c for c in app.config["components"] if c["type"] == "tabitem"]
+    assert [c["props"]["label"] for c in tabs] == ["Upload CSV", "Try an example"]
+    tab_group = next(c for c in app.config["components"] if c["type"] == "tabs")
+    assert tab_group["props"]["selected"] == "csv"
     assert "Do not enter private or sensitive information" in config
     assert "I am authorized to use this data and approve both transfers" in config
-    assert "Scope and limitations" in config
-    assert "2 · Follow the workflow and review" in config
-    assert "demo-input-column" in config
-    assert "demo-output-column" in config
-    assert "font-size: clamp(2rem, 5vw, 3.6rem) !important" in DEMO_CSS
+    assert "Scope and limitations" not in config
+    assert "Follow the workflow and review" not in config
+    assert "demo-input-column" not in config
+    assert "demo-output-column" not in config
+    assert "position: sticky" not in DEMO_CSS
     assert "Run a scenario to populate this panel" not in config
     assert "No run yet" not in config
     for forbidden in (

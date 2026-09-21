@@ -889,3 +889,17 @@ Do not rewrite an accepted entry when it changes; append a superseding entry.
 - Scope: Space dialogue only; no estimator, frozen research profile, or core
   statistical behavior changes. Use the existing repository-external credential
   for the user-authorized synthetic live smoke; never publish the credential.
+
+## D-040 — End CSV progress on GPU allocation failure
+
+- Date: 2026-09-20
+- Evidence: The live two-turn canonical CSV plan reached confirmation, but HF
+  rejected GPU allocation (`180s requested vs. 178s left`). The error appeared
+  beside the plan while the result panel still said analysis was in progress.
+- Decision: A claimed execution that raises now renders the existing service
+  failure projection, hides result/download outputs, clears the temporary key,
+  and returns the same plan to ready state. Pre-claim rejections leave result
+  outputs alone so duplicate/stale clicks cannot interrupt an active run.
+- Scope: Presentation and regression coverage only. Do not change GPU duration,
+  quota behavior, estimator, model, or automatic retry policy. Successful live
+  CSV fitting and artifact verification remain pending quota restoration.

@@ -7,7 +7,7 @@ from typing import Any
 
 import gradio as gr
 
-from dcfa.errors import DCFAError
+from dcfa.errors import DCFAError, ErrorCode
 from dcfa_website_demo.dialogue import SESSION_SECONDS, CSVConversation, prepare_turn
 
 
@@ -147,12 +147,25 @@ def bind_csv_dialogue(
                 *result[:6],
             )
         except (DCFAError, ValueError, OSError, RuntimeError, TypeError) as exc:
+            result_updates = tuple(gr.skip() for _ in result_outputs[:6])
             if claimed:
                 session.status = "ready"
                 session.release()
+                from dcfa_website_demo.app import _execution_error_outputs
+
+                error = (
+                    exc
+                    if isinstance(exc, DCFAError)
+                    else DCFAError(
+                        ErrorCode.BACKEND_LOAD_FAILED, str(exc), stage="website_demo.csv_execution"
+                    )
+                )
+                result_updates = portfolio_ui_updates(
+                    _execution_error_outputs(error), buttons_enabled=True
+                )[:6]
             yield (
                 *projection(session, str(exc), clear_key=claimed),
-                *(gr.skip() for _ in result_outputs[:6]),
+                *result_updates,
             )
 
     def reset_session(session):

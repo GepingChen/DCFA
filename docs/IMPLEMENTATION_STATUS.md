@@ -13,7 +13,7 @@ entrypoint and resolved through `DCFA_SPACE_CSV_DIALOGUE_CONFIG_FILE`.
 
 Verification for this update:
 
-- Full local regression: `153 passed`; Ruff, formatting, `pip check`, and
+- Full local regression: `154 passed`; Ruff, formatting, `pip check`, and
   `git diff --check` passed.
 - Real Gemini, using an existing repository-external credential: two synthetic
   conversation turns produced clarification followed by a ready plan with correct
@@ -22,12 +22,20 @@ Verification for this update:
 - Deployed ZeroGPU supported preset: report, plot, and ZIP completed. Independent
   `verify_run_directory` returned `valid` for `run_e6c1a6d121b1c488a3639ef9`;
   backend metadata records TabPFN 8.5.0, Torch 2.11.0, CUDA, and one estimator.
-- The synthetic CSV uploaded successfully through the native file chooser.
-  Full live CSV conversation-to-report verification is pending manual password
-  entry: browser automation redacts password fields, so the attempted local key
-  transfer yielded an empty value and stopped before a Gemini request. No key was
-  published or added as a shared Space Secret. Duplicate-Secret execution remains
-  unverified against the live provider.
+- Live canonical CSV: manual password entry enabled two real Gemini turns. The
+  confirmation card correctly mapped `irrigation` to X (column 2), `crop_yield`
+  to Y (column 1), and `assignment` to Z (column 3), preserving the supplied
+  definitions and median high-minus-low objective. No report existed before
+  clicking confirmation; the password field was visibly empty afterward.
+- Confirmation reached HF GPU allocation, which rejected the request with
+  `180s requested vs. 178s left` and a reset approximately 24 hours later.
+  No CSV fit or report completed. The existing 120-second decorator, platform
+  quota accounting, and no-retry behavior were left unchanged. The error was
+  visible, but the progress panel incorrectly remained running; a focused UI
+  fix now terminates progress while retaining the ready plan and clearing the key.
+- The combined live CSV report/download path remains quota-blocked;
+  Duplicate-Secret execution remains unverified against the live provider.
+  No key was published or added as a shared Space Secret.
 
 These are development mechanics checks, not estimator validation or a paired
 Track A evaluation. Historical verification below retains its original scope.
@@ -51,8 +59,8 @@ boundary. A public canonical Hugging Face Space now runs three login-gated
 synthetic presets with hash-pinned local TabPFN v2 on ZeroGPU and no live LLM;
 the Space CSV path now uses multi-turn clarification and explicit button
 confirmation. Real Gemini dialogue and deployed ZeroGPU preset checks passed
-separately; the combined live CSV report path and Duplicate-Secret route remain
-pending.
+separately; live CSV clarification and button confirmation passed, but GPU
+allocation was quota-blocked. Duplicate-Secret execution remains unverified.
 Publishable Track T,
 real-data Track T/H, and the paired live-model Track A comparison remain
 explicitly blocked on the external inputs listed below.
@@ -89,7 +97,7 @@ Current protocols:
 | TabCF scope | Exactly one continuous treatment, one continuous outcome, one scalar IV, and no `W`; unsupported treatments, role conflicts, unconfirmed specs, malformed grids, data/manifest hash mismatches, and nonempty `W` fail before backend construction or fit | Conditional `W` extension and general method routing are intentionally absent |
 | TabCF deterministic slice | Explicit fallback or TabPFN backend selection; Stage 1 control rank; empirical diagnostics; whole-grid strict support gate before Stage 2; Stage 2 distribution/mean paths; CDF, means, quantiles, risks, and directed contrasts from one core | Local sklearn output is `development_only`, is not TabCF, and cannot enter locked Track T |
 | Managed TabPFN demo | Exact `tabpfn-client==0.3.3` profile; fixed synthetic and confirmed exactly-three-column CSV website routes; prompt-first role mapping with optional exact-name overrides; default one-call Gemini compiler; strict 120–256-row/no-W gates; batched predictions; service/LLM trace metadata; transport-safe CDF; evidence-linked immutable artifacts | `development_only`; question text, header names, and optional overrides go to Google while selected CSV rows go separately to Prior Labs; no LLM or sklearn fallback; service checkpoint/image hashes are unavailable, so this cannot enter locked Track T |
-| ZeroGPU local TabPFN v2 | Public login-gated canonical Space; exact v2 model repo/revision/SHA-256; Python 3.12.12, Torch 2.11.0, TabPFN 8.5.0, CUDA, one estimator; frozen no-LLM presets; temporary-key or duplicate-Secret CSV; optional role overrides without upload-triggered dropdown mutation; verified ZIP export and ephemeral cleanup | `development_only`; ZeroGPU has no immutable image digest. The multi-turn dialogue passed a real Gemini two-turn check; the full live CSV report path and Duplicate-Secret execution remain pending |
+| ZeroGPU local TabPFN v2 | Public login-gated canonical Space; exact v2 model repo/revision/SHA-256; Python 3.12.12, Torch 2.11.0, TabPFN 8.5.0, CUDA, one estimator; frozen no-LLM presets; temporary-key or duplicate-Secret CSV; optional role overrides without upload-triggered dropdown mutation; verified ZIP export and ephemeral cleanup | `development_only`; ZeroGPU has no immutable image digest. The multi-turn dialogue passed a real Gemini two-turn check; live CSV confirmation reached a quota block before fit; CSV report/download and Duplicate-Secret execution remain unverified |
 | Locked TabPFN boundary | Lazy imports, no automatic fallback, pinned upstream commit, exact model/image SHA-256 validation, current-host image-digest check, package/runtime manifest validator, and release rejection of fallback evidence | No working local Torch/TabPFN/checkpoint/image is available; the bounded probe was not repeated |
 | Track T development evaluation | Strong/weak engineering scenarios, exact DCFA-fixture oracle metrics, three frozen seeds in the current artifact, seed-level aggregation, warnings, assumptions, evidence, and independent recomputation | Not mapped to manuscript DGP codes; not a locked 12-cell study, estimator ranking, diagnostic calibration, or publishable TabCF result |
 | Fulton | Provenance-required 97-row schema loader and development-only workflow command | No approved local CSV or usage decision was supplied; no Fulton result was run |
@@ -97,7 +105,7 @@ Current protocols:
 | Track H policy | Training-only fit, validation-only best-uniform/threshold selection, train+validation refit, immutable policy freeze before test access, DR primary plus IPW/direct sensitivity, paired contrasts, randomized-arm effects, costs/capacity/allocation, 95% influence-score intervals, warnings, assumptions, and release gate | No approved real file, final one-time test run, real held-out policy value, or individual oracle claim |
 | H semi-synthetic | Four prespecified DGPs, training-covariate resampling, same-constraint oracle, 50 replications per scenario, value/regret/accuracy/confusion/abstention/selective-regret/fallback/calibration/constraint metrics, and 84 evidence records | Covariates come from a development fixture, so the result is explicitly not Hillstrom-calibrated |
 | Track A | Explicit state machine/compiler/runtime; 24-case recorded benchmark; bounded Gemini 3.6 Flash clean-case implementation; frozen prompt/model/schema; no-row symbolic input; token/latency/list-price trace contract; evidence agreement verifier | The first live request failed before analysis on a removed API field; corrected serialization is offline-only, and no paired live fixed/full comparison exists |
-| Public UI | Local Gradio operator shell, released hash-bound static replay, pinned user-owned Colab notebook, and live canonical ZeroGPU Space; canonical presets use local TabPFN v2 without Gemini/Prior Labs | Static replay, Colab CTA, and canonical ZeroGPU presets are live. Real Gemini dialogue and ZeroGPU presets were verified separately; combined CSV-to-report, Duplicate-Secret, and fresh credentialed clean-Colab execution remain unverified |
+| Public UI | Local Gradio operator shell, released hash-bound static replay, pinned user-owned Colab notebook, and live canonical ZeroGPU Space; canonical presets use local TabPFN v2 without Gemini/Prior Labs | Static replay, Colab CTA, and canonical ZeroGPU presets are live. Real Gemini dialogue and ZeroGPU presets were verified separately; CSV dialogue and confirmation passed, but CSV fitting was quota-blocked; Duplicate-Secret and fresh credentialed clean-Colab execution remain unverified |
 
 The independent artifact verifier now checks saved file hashes and also
 recomputes protocol versions, marker contracts, source identity,
@@ -271,10 +279,9 @@ optimal treatment. Negative, null, deferred, and blocked results remain visible.
 
 For the public website tool, the canonical ZeroGPU Space is live with three
 authenticated local-TabPFN v2 presets, while the repository, notebook, and Colab
-URL remain anonymously readable. For the pending combined live CSV check, enter
-the existing local Gemini key in the disclosed temporary password field and
-complete the prepared two-turn
-synthetic conversation followed by button confirmation. Duplicate mode continues
+URL remain anonymously readable. After HF restores the account GPU quota,
+complete the synthetic CSV conversation-to-report check, then independently
+verify its downloaded artifact. Duplicate mode continues
 to use the owner-provided Space Secret. The static
 GitHub Pages replay remains deployed and historically
 hash-bound. For a comparative live Track A result, the

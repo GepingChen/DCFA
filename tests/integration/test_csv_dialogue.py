@@ -258,6 +258,44 @@ def test_button_only_executes_once_and_clears_key(fixture):
     assert len(f.client.interactions.calls) == 2
 
 
+def test_gpu_allocation_failure_ends_progress_and_retains_plan(fixture):
+    f = fixture
+    f.client.interactions.output_text = json.dumps(f.ready)
+    turn(f)
+    compilation = f.session.compilation
+    attempts = []
+
+    def unavailable(*args):
+        attempts.append(args)
+        raise RuntimeError("You have exceeded your ZeroGPU quota.")
+
+    h = handlers(None, unavailable)
+    f.session.overrides = {"outcome": "", "treatment": "", "instrument": ""}
+    updates = list(
+        h["generate"](
+            f.session,
+            f.path,
+            "",
+            "",
+            "",
+            True,
+            123,
+            f.session.revision,
+            SimpleNamespace(username="alice"),
+        )
+    )
+    assert len(attempts) == 1 and len(updates) == 2
+    failed = updates[-1]
+    assert "ZeroGPU quota" in failed[3]
+    assert failed[4]["interactive"] and failed[5]["value"] == ""
+    assert f.session.status == "ready" and not f.session.busy
+    assert f.session.compilation is compilation and f.session.validated is not None
+    assert len(f.client.interactions.calls) == 1
+    assert "No numerical result was returned" in failed[-5]["value"]
+    assert "Analysis in progress" not in str(failed[-6:])
+    assert failed[-2]["visible"] is False and failed[-1]["visible"] is False
+
+
 def test_ui_invalidation_reset_expiry_login(fixture):
     f = fixture
     f.client.interactions.output_text = json.dumps(f.ready)

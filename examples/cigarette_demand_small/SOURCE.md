@@ -1,6 +1,8 @@
 # Data provenance and preparation
 
-Prepared on 2026-09-20 for the DCFA Space's bounded CSV workflow.
+Data prepared on 2026-09-20 for the DCFA Space's bounded CSV workflow.
+Example question revised on 2026-09-21; CSV selection, transformations and bytes
+are unchanged. See [DESIGN.md](DESIGN.md) for the exact-price distributional design.
 
 ## Source and attribution
 

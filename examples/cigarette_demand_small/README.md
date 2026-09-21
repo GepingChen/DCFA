@@ -1,99 +1,102 @@
-# Small real-data example: cigarette demand
+# Cigarette demand: a distributional price intervention
 
-Start with this guide, copy the first prompt from [PROMPTS.md](PROMPTS.md), and upload
-only [cigarette_144.csv](cigarette_144.csv) to the
-[DCFA ZeroGPU Space](https://huggingface.co/spaces/GPChen01/dcfa-zerogpu).
+Updated design: 2026-09-21.
 
-## The question and data
+> If the real price of a pack of cigarettes increases from 100 to 120 cents,
+> how does the distribution of state-level annual sales per capita change?
+> Is the change larger around the middle or in the upper part of the distribution?
 
-How does the median of log cigarette sales per capita change between a high and a
-low real cigarette price, using the sales-tax component as an instrument for price?
+**Status: example design, not yet executable through the current Space dialogue.**
+The current interface accepts only low/center/high and mean/median summaries.
+It cannot faithfully compile this numeric-price, multi-result request. Do not
+confirm a card that silently replaces 100/120 with sample percentiles. This update
+changes the example documents only; it does not extend or deploy the application.
 
-This is a small version of the classic Stock–Watson cigarette-demand example.
-It uses **144 genuine state-year observations: all 48 continental US states in
-1985, 1990 and 1995**. The original TabCF cigarette example uses the 96 observations
-in 1985 and 1995. We add the midpoint year from the public Ecdat panel because the
-Space requires at least 120 rows. No rows are duplicated, simulated or jittered.
-See [SOURCE.md](SOURCE.md) for provenance, transformations and limitations.
+## Files
 
-| CSV position | Column | Role | Meaning |
+- [DESIGN.md](DESIGN.md): precise estimands, result layout, calculation rules and
+  the implementation work needed before a live run.
+- [PROMPTS.md](PROMPTS.md): revised user prompt and clarification replies.
+- [cigarette_144.csv](cigarette_144.csv): the same prepared three-column dataset.
+- [SOURCE.md](SOURCE.md): source, selection, transformations and interpretation limits.
+- [GPL-2.0.txt](GPL-2.0.txt): accompanying source-package license text.
+
+## Data and units
+
+Use all 144 observations: 48 US states in 1985, 1990 and 1995. Every state-year
+has equal weight; this is not population weighting or a distribution of individual
+smokers. The CSV remains unchanged, about 7.4 KB, with no extra columns.
+
+| Position | CSV column | Role | Stored scale |
 | --- | --- | --- | --- |
-| 1 | `log_packs_per_capita` | Outcome Y | Natural log of annual cigarette sales in packs per capita |
-| 2 | `log_real_price` | Continuous treatment X | Natural log of average price per pack divided by CPI |
-| 3 | `real_sales_tax` | Instrument Z | Tax including sales tax minus excise tax, divided by CPI |
+| 1 | `log_packs_per_capita` | Y | Natural log of annual packs per capita |
+| 2 | `log_real_price` | X | Natural log of CPI-deflated cents per pack |
+| 3 | `real_sales_tax` | Z | CPI-deflated sales-tax component per pack |
 
-The CSV is about **7.4 KB**. It has one header row and 144 data rows, no index
-column, no missing values, and no additional covariates. Use it as supplied.
+The input intervention is **100 to 120 CPI-deflated cents per pack**, not today's
+nominal cents, not a tax increase, and not `X=100` to `X=120` on the log scale.
+The corresponding model inputs are `log(100)` and `log(120)`.
 
-## One-run walkthrough
+The observed price's 25th/75th percentiles are approximately 99.43/121.82 real
+cents. These descriptive values motivate interior price choices; they do not
+replace the exact requested prices or establish joint support. Both interventions
+must pass the existing support checks.
 
-1. Open the Space and sign in with Hugging Face. The optimization was deployed as
-   build `A88468F`; a later build may have a different label.
-2. Choose **Upload CSV**. On a narrow screen, open **More tabs** first.
-3. Upload **cigarette_144.csv** from this folder. Do not upload the Markdown or
-   license files, and do not add state/year columns to the upload.
-4. Enter your Gemini key in **Temporary Gemini API key**. Keep the key out of chat
-   and these files. Gemini API usage is separate from free ZeroGPU usage.
-5. Read and check the data-transfer authorization. The numeric rows go to Hugging
-   Face for local TabPFN execution; Gemini receives your conversation, column names
-   and any role overrides. The temporary key passes through Hugging Face to Gemini.
-6. Leave **Optional column overrides** blank initially. Set **Analysis seed** to
-   `20260920` once, then leave it unchanged.
-7. Copy the **initial prompt** from [PROMPTS.md](PROMPTS.md), paste it in the message
-   field and click **Send message** once. This uses Gemini but does not fit TabPFN.
-8. If clarification is needed, use only the relevant short reply in PROMPTS.md.
-   Review the plan: the table above must match all three roles and column positions,
-   the objective must be a **median/quantile contrast**, and the direction must be
-   **high minus low**. No baseline covariates should be requested.
-9. Click **Confirm and generate report** once. Typing “confirm” in chat does not
-   start analysis. The key field should clear when generation begins.
-10. Wait for completion. Save the displayed report/plot and the verified ZIP if
-    available. Stop after this single run to conserve quota.
+## Expected result package after implementation
 
-## What to expect and how to save quota
+1. Two interventional CDF curves, labeled **price = 100** and **price = 120**, on
+   an outcome axis in packs per person per year.
+2. A table and a quantile-change plot at the 25th, 50th, 75th and 90th percentiles,
+   reporting both intervention-specific values and **120 minus 100** differences.
+3. The probability of annual sales exceeding **120 packs per capita** under each
+   price, and its difference in percentage points. This is an illustrative
+   threshold near the observed outcome's 75th percentile, not a health standard.
+4. A short comparison of the median change and upper-quantile changes, with all
+   support, identification, weak-IV and numerical-grid warnings retained.
 
-- A supported local TabPFN analysis uses one Stage 1 fit and one shared Stage 2 fit.
-  The two stages request GPU allocations separately; CPU reporting and ZIP creation
-  occur outside those allocations. Small data do not eliminate queue/allocation
-  overhead or guarantee a particular runtime.
-- Before confirmation there should be no fitted result. The execution button
-  should not make another Gemini request.
-- Low/high refer to the observed treatment's 10th/90th percentiles. The intervention
-  grid also contains intermediate percentiles. The whole grid must pass support
-  checks, so even an in-range price can be rejected for insufficient joint support.
-- If quota is insufficient, wait for the displayed reset time. Do not repeatedly
-  click or change the seed. If Stage 1 ran before Stage 2 allocation failed, a later
-  retry can repeat Stage 1; it is not a free continuation.
-- If support is rejected, keep the warning as the outcome of this example. Do not
-  duplicate observations, trim data or search seeds merely to obtain a report.
-- If CPU finalization fails, the app cleans temporary results and ends that CSV
-  attempt. Resetting starts a new analysis and may spend GPU quota again.
-- To ask someone to interpret a completed result, share the downloaded report/ZIP.
-  Do not rerun fitting just to rephrase the explanation. Never share an API key.
+The two occurrences of 120 have different units: **120 cents** is the intervention;
+**120 packs per person per year** is the outcome threshold.
 
-## Reading the result correctly
+## Intended one-run workflow, after the interface supports it
 
-The requested contrast is in **log packs per capita**, not packs, smoking
-prevalence, a percentage, or a price elasticity. Do not label it as an elasticity.
-A negative contrast would mean a lower fitted median log-sales outcome at the
-higher price; a positive or unsupported result must also be retained.
+1. Open the [Space](https://huggingface.co/spaces/GPChen01/dcfa-zerogpu), sign in,
+   and select **Upload CSV** (under **More tabs** on narrow screens).
+2. Upload only `cigarette_144.csv`. Enter a Gemini key in its password field and
+   review the transfer authorization. Keep keys out of chat and files.
+3. Set the analysis seed to `20260920`, then paste the initial prompt from
+   PROMPTS.md. Preparing or correcting the plan must not fit TabPFN.
+4. Before confirmation, the card must explicitly show the three roles above,
+   prices 100/120 in real cents, their log-scale mapping, the four outcome
+   quantiles, the 120-packs threshold, and the contrast direction 120 minus 100.
+   If it shows only low/high, a single median contrast, or missing units, stop.
+5. Confirm once. All requested results should reuse the same two fitted stages
+   and one validated result bundle; no separate fit per chart or statistic.
+6. Download the report, tables/curve data and verified ZIP. Inspect cached results
+   rather than rerunning to change wording or colors.
 
-This is a pooled, three-variable, real-data demonstration with no known causal
-ground truth. The Space does not adjust for income, state/year effects or repeated
-observations within states. Instrument validity and common support are substantive
-assumptions; a tax-price association alone does not establish them. This is not a
-replication of Stock–Watson or a publication-ready policy estimate.
+## Quota and interpretation
 
-## Verification already performed
+Keep the first run to two prices and four outcome quantiles. Do not add a price
+sweep, seed search or bootstrap run. The first report contains point estimates,
+not confidence bands or claims of statistical significance. Two fits do not
+promise a particular wall-clock time; allocations and queueing add overhead.
 
-- 144 distinct state-year records, 48 in each selected year.
-- 144 distinct Y values, 144 distinct X values, 117 distinct Z values.
-- Independent recomputation of every transformed value from the public source.
-- The 96 overlapping records match TabCF's shipped cigarette analysis data to
-  floating-point precision (largest absolute difference below `2e-13`).
-- Current Space CSV ingress and role-assignment functions accepted the file.
-- **Zero model fits, zero Gemini calls and zero GPU calls during preparation.**
+If support is insufficient, retain the rejection. If quota is exhausted, wait
+rather than repeatedly retrying; a failed later allocation can require repeating
+Stage 1 on a new attempt. A report-finalization failure must not silently refit.
 
-Real TabPFN support checks, a live report, and post-optimization timing for this
-specific CSV remain untested. A successful file check does not promise a successful
-causal analysis.
+The result concerns the distribution of a state-level aggregate under hypothetical
+price interventions, conditional on the maintained IV assumptions. It does not
+identify which states or smokers benefit, or the distribution of individual
+causal effects. The current three-column model omits income and state/year effects
+and does not address within-state dependence. Treat this as an exploratory Track T
+real-data demonstration (`development_only`), not a policy recommendation.
+
+## What has been verified
+
+The existing data preparation checks remain applicable: 144 genuine state-year
+records, correct source transforms, no missing values, and acceptance by the
+current CSV ingress and role-mapping functions. For this revision, the exact-price
+log transforms, probability-difference sign, document links and unchanged CSV
+were checked. No TabPFN fit, Gemini call or GPU call was made. No actual causal
+results have been computed for this revised question.

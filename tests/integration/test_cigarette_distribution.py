@@ -337,7 +337,8 @@ def test_csv_handler_cached_followup_and_repeated_click(tmp_path, monkeypatch):
     assert not path.exists()
     list(h["generate"](*args))
     reply = h["talk"](session, None, "", "", "", "", True, "Explain the tail", profile)
-    assert "Cached report" in reply[1][-1]["content"]
+    assert reply[1]["visible"] is True
+    assert "Cached report" in reply[1]["value"][-1]["content"]
     assert calls == executions == [True]
     assert h["reset_session"](session)[0].cached_answer is None
 

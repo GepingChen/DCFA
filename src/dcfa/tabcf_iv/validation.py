@@ -145,7 +145,33 @@ def validate_tabcf_specification(specification: AnalysisSpecification) -> None:
             "risk_thresholds must be strictly increasing and contain no duplicates.",
             stage="specification.validation",
         )
+    if specification.distribution is not None:
+        import math
+
+        from dcfa.tabcf_iv.distribution import validate_distribution_request
+
+        d = specification.distribution
+        validate_distribution_request(d)
+        if (
+            specification.intervention_grid != tuple(math.log(p) for p in d.prices)
+            or specification.quantile_levels != d.quantile_levels
+            or specification.risk_thresholds != (math.log(d.threshold),)
+            or len(specification.queries) != 1
+            or specification.queries[0].kind != "distribution"
+        ):
+            raise DCFAError(
+                ErrorCode.INVALID_SPECIFICATION,
+                "Distribution specification does not match its exact-unit request.",
+                stage="specification.units",
+            )
+    elif any(q.kind == "distribution" for q in specification.queries):
+        raise DCFAError(
+            ErrorCode.INVALID_SPECIFICATION,
+            "Missing distribution request.",
+            stage="specification.units",
+        )
     supported_query_kinds = {
+        "distribution",
         "mean",
         "quantile",
         "risk",

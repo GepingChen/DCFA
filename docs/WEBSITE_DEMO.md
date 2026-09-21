@@ -37,7 +37,8 @@ inside the Hugging Face runtime and are never sent to Prior Labs.
 A visitor who prefers server-side secret storage can instead duplicate the Space
 and add `DCFA_GEMINI_API_KEY` as their own Space Secret; that mode hides the browser
 key field. Gemini receives conversation text, three header names and optional role
-overrides, but no rows or actual intervention values. Completed runs retain the
+overrides, including user-requested numeric interventions, but no CSV rows or
+observed treatment values. Completed runs retain the
 verified statistical report plus a `confirmed_plan.html` appendix; full chat
 history is not exported. Uploads must be authorized, non-sensitive three-column
 data. Results are available as a path-safe ZIP and uncompressed run directories

@@ -1,48 +1,30 @@
-# Prompt: price 100 to 120 and the outcome distribution
+# Exact-price distribution prompt
 
-Updated: 2026-09-21. This replaces the previous low/high median-only example.
-**Target behavior:** the current Space compiler does not support this complete
-request. Save this prompt for the extended interface; do not approve an automatic
-substitution of low/high percentiles for the exact prices.
-
-## Initial prompt
+Use this prompt in the Space **Upload CSV** conversation after uploading
+`cigarette_144.csv`, signing in, authorizing the upload and setting seed `20260920`.
+It fits within the UI's 1000-character message limit.
 
 ```text
-I want an exploratory distributional IV analysis of cigarette demand. If the real price per pack rises from 100 to 120 CPI-deflated cents, how does the distribution of state-level annual sales per capita change? Is the change larger near the median or in the upper part of the distribution?
-
-Use log_packs_per_capita as outcome Y, log_real_price as continuous treatment X, and real_sales_tax as instrument Z. The CSV already contains natural-log sales and natural-log real prices. The treatment inputs must therefore be log(100) and log(120), not 100 and 120 on the stored scale. Use no baseline covariates.
-
-Compare the two interventional CDFs. Report the 25th, 50th, 75th and 90th outcome quantiles under each price and their differences, always price 120 minus price 100. Show outcome quantiles and their differences in packs per person per year. Also report the probability of annual sales exceeding 120 packs per capita under each price, and the difference in percentage points.
-
-Use the same fitted analysis for every output. Retain all support and identification warnings. These are illustrative state-year aggregate results, not individual effects or a claim that the instrument is proven valid. Do not substitute low/high labels or sample percentiles for my prices. If this request is not supported, explain that limitation before any fitting. Show me the complete plan with units before execution.
+Use log_packs_per_capita as outcome Y, log_real_price as continuous treatment X, and real_sales_tax as instrument Z; no W. Compare real price from 100 to 120 CPI-deflated cents per pack. The CSV already contains natural-log sales and natural-log real prices. Do not log the CSV again or substitute percentiles. Return both CDFs, outcome quantiles 0.25, 0.50, 0.75, 0.90 and their differences in packs per person per year; probability exceeding 120 packs per person per year and its difference in percentage points; and 90th quantile change minus median change. All differences are price 120 minus price 100. Use one analysis, point estimates only, preserve support and identification warnings, and flag grid-limited quantiles. Show the exact units and model inputs before execution.
 ```
 
-## Clarification replies, only if needed
-
-**Price units and transformations:**
+If asked for scale clarification:
 
 ```text
-The prices are 100 and 120 CPI-deflated cents per pack. The stored treatment is already log real price. Compute the natural logs once to form the intervention values; do not log the CSV again and do not replace my values with price percentiles.
+The CSV X and Y are already natural logs. Prices are from 100 to 120 CPI-deflated cents per pack. The original outcome unit is packs per person per year; report probability exceeding 120 packs per person per year. Transform only the requested prices and threshold, never the CSV columns.
 ```
 
-**Roles:**
+The confirmation card must show the Y/X/Z roles, no W, both original prices,
+natural-log transform, model inputs approximately 4.605170185988092 and
+4.787491742782046, all four outcome quantiles, the 120-packs threshold and the
+second-minus-first direction. A low/high card does not answer this question.
 
-```text
-Column 1, log_packs_per_capita, is Y. Column 2, log_real_price, is continuous treatment X. Column 3, real_sales_tax, is Z. There are no requested covariates.
-```
+Click **Confirm and generate report** once. Typing “confirm” or “确认” does not
+execute. The button makes no additional Gemini request. Keep the key in its
+password field, never in chat. After success, download the ZIP; ordinary
+follow-ups display the cached evidence-linked report without another fit or
+provider call. Reset to request different interventions or a new analysis.
 
-**Threshold and comparison direction:**
-
-```text
-The outcome threshold is 120 packs per person per year, distinct from the price of 120 cents per pack. For both quantiles and exceedance probabilities, subtract the price-100 result from the price-120 result. Use percentage points for the probability difference.
-```
-
-**If the card offers only low/center/high:**
-
-```text
-That changes my question. Do not execute the low/high comparison. I need the exact real prices 100 and 120 and the requested distributional outputs. If the interface cannot represent them, stop before fitting and state the missing capability.
-```
-
-Review the full card before pressing **Confirm and generate report**. Typing
-confirmation in chat must not execute the model. Keep API keys in the password
-field; never paste them into a prompt.
+A support refusal or grid-limited tail is an admissible outcome. Do not edit the
+CSV, substitute price percentiles, retry an exhausted GPU quota, or infer an
+individual treatment effect from these aggregate quantile differences.

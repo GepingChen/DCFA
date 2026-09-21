@@ -48,8 +48,11 @@ def bind_csv_dialogue(
         interactive = not session.busy and session.status != "completed"
         updates = [gr.update(interactive=interactive) for _ in controls]
         updates[-1] = gr.update(interactive=not session.busy)
+        if session.cached_answer and not session.busy:
+            updates[5] = gr.update(interactive=True)
+            updates[7] = gr.update(interactive=True)
         if clear_message:
-            updates[5] = gr.update(value="", interactive=interactive)
+            updates[5] = gr.update(value="", interactive=interactive or bool(session.cached_answer))
         if clear_file:
             updates[0] = gr.update(value=None, interactive=interactive)
         return (
@@ -79,6 +82,20 @@ def bind_csv_dialogue(
             check_owner(session, profile)
             if credential and credential in text:
                 raise ValueError("Keep the API key in the password field, not the conversation.")
+            if session.status == "completed" and session.cached_answer:
+                if session.expired():
+                    session.cached_answer = None
+                    raise ValueError("This conversation expired. Reset to start again.")
+                session.history = [
+                    {"role": "user", "content": text},
+                    {
+                        "role": "assistant",
+                        "content": "Cached report; no refit or provider request. Reset for a "
+                        "different analysis.\n\n" + session.cached_answer,
+                    },
+                ]
+                session.touched = time.monotonic()
+                return projection(session, clear_message=True, clear_key=True)
             if chat_handler is None:
                 raise ValueError("The Space dialogue provider is unavailable.")
             prepare_turn(
@@ -134,6 +151,8 @@ def bind_csv_dialogue(
                 *portfolio_ui_updates(_running_outputs(), buttons_enabled=False)[:6],
             )
             result = execute_handler(session.validated, session.compilation, selected_seed, profile)
+            if session.compilation.distribution is not None and result[0].get("value"):
+                session.cached_answer = result[0]["value"]
             session.status = "completed"
             session.release()
             cleanup_session(session)

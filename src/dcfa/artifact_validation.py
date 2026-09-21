@@ -187,6 +187,52 @@ def _validate_tabcf_projection(
             expected=numerical_core.get(field),
             observed=bundle.get(field),
         )
+    if specification.get("distribution") is not None:
+        from dcfa.schemas import DistributionRequest
+        from dcfa.tabcf_iv.distribution import derive_distribution
+
+        request = dict(specification["distribution"])
+        request["prices"] = tuple(request["prices"])
+        request["quantile_levels"] = tuple(request["quantile_levels"])
+        projection = derive_distribution(
+            DistributionRequest(**request),
+            numerical_core["y_grid"],
+            numerical_core["interventional_cdf"],
+            numerical_core["interventional_quantiles"],
+            numerical_core["interventional_risks"],
+        )
+        projection = to_primitive(projection)
+        for location in (numerical_core, bundle):
+            _assert_projection(
+                name="original-unit distribution",
+                expected=projection,
+                observed=location.get("distribution"),
+            )
+        queries = bundle.get("queries", [])
+        _assert_projection(
+            name="distribution query count",
+            expected=len(projection["metrics"]),
+            observed=len(queries),
+        )
+        status = (
+            "weak_support"
+            if any(s["status"] == "weak_support" for s in numerical_core["support"])
+            else "supported"
+        )
+        for metric, query in zip(projection["metrics"], queries, strict=True):
+            expected = {
+                "query_id": metric["key"],
+                "claim_type": "distribution:" + metric["key"],
+                "value_raw": metric["value"],
+                "value_display": format(metric["value"], ".6g"),
+                "units": metric["units"],
+                "support_status": status,
+                "warnings": numerical_core["warnings"],
+            }
+            _assert_projection(
+                name=metric["key"], expected=expected, observed={k: query.get(k) for k in expected}
+            )
+        return
     queries = bundle.get("queries")
     query_specs = specification.get("queries")
     if (
@@ -779,6 +825,19 @@ def verify_run_directory(directory: Path) -> dict[str, Any]:
 
     audit_records = _load_jsonl(root / "audit.jsonl")
     evidence_records = _load_jsonl(root / "evidence_records.jsonl")
+    if variant == "tabcf" and bundle.get("distribution") is not None:
+        exported = _load_json(root / "distribution_results.json")
+        by_id = {e["evidence_id"]: e for e in evidence_records}
+        expected_export = {
+            "result_bundle_id": bundle["result_bundle_id"],
+            "track": bundle["track"],
+            "evidence_status": bundle["evidence_status"],
+            "distribution": bundle["distribution"],
+            "evidence": {q["query_id"]: by_id.get(q["evidence_id"]) for q in bundle["queries"]},
+            "warnings": bundle["warnings"],
+            "assumptions": bundle["assumptions"],
+        }
+        _assert_projection(name="distribution export", expected=expected_export, observed=exported)
     if not audit_records or not evidence_records:
         raise DCFAError(
             ErrorCode.EVIDENCE_MISMATCH,

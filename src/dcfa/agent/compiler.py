@@ -2,15 +2,24 @@
 
 from __future__ import annotations
 
+import math
 from dataclasses import dataclass
 
 from dcfa.canonical import content_id
 from dcfa.constants import EstimatorBackend, EvidenceStatus, ExecutionProfile, Track
 from dcfa.errors import DCFAError, ErrorCode
-from dcfa.schemas import AnalysisSpecification, CausalRoles, QuerySpecification
+from dcfa.schemas import AnalysisSpecification, CausalRoles, DistributionRequest, QuerySpecification
 
 SUPPORTED_OBJECTIVES = frozenset(
-    {"mean", "quantile", "risk", "mean_contrast", "quantile_contrast", "risk_contrast"}
+    {
+        "mean",
+        "quantile",
+        "risk",
+        "mean_contrast",
+        "quantile_contrast",
+        "risk_contrast",
+        "distribution",
+    }
 )
 
 
@@ -35,6 +44,7 @@ class CompilationRequest:
     evidence_status: EvidenceStatus = EvidenceStatus.DEVELOPMENT_ONLY
     backend_parameters: tuple[tuple[str, str], ...] = ()
     seed: int = 1729
+    distribution: DistributionRequest | None = None
 
 
 @dataclass(frozen=True)
@@ -64,6 +74,30 @@ class SpecificationCompiler:
                 context={"treatment_type": request.treatment_type},
             )
 
+        if request.objective == "distribution":
+            from dcfa.tabcf_iv.distribution import validate_distribution_request
+
+            validate_distribution_request(request.distribution)
+            d = request.distribution
+            assert d is not None
+            expected_grid = tuple(math.log(p) for p in d.prices)
+            if (
+                request.intervention_grid != expected_grid
+                or request.x != expected_grid[1]
+                or request.comparison_x != expected_grid[0]
+            ):
+                raise DCFAError(
+                    ErrorCode.INVALID_SPECIFICATION,
+                    "Exact original-unit interventions must be logged once; "
+                    "no symbolic substitution.",
+                    stage="compiler.units",
+                )
+        elif request.distribution is not None:
+            raise DCFAError(
+                ErrorCode.INVALID_SPECIFICATION,
+                "Distribution metadata requires the distribution objective.",
+                stage="compiler.units",
+            )
         questions: list[str] = []
         if not request.outcome:
             questions.append("Which single continuous outcome column is Y?")
@@ -85,7 +119,12 @@ class SpecificationCompiler:
             questions.append("Which quantile level tau in (0, 1) should be evaluated?")
         if request.objective in {"risk", "risk_contrast"} and request.threshold is None:
             questions.append("Which outcome threshold defines the requested risk?")
-        if request.objective in {"mean_contrast", "quantile_contrast", "risk_contrast"}:
+        if request.objective in {
+            "mean_contrast",
+            "quantile_contrast",
+            "risk_contrast",
+            "distribution",
+        }:
             if request.comparison_x is None:
                 questions.append("Which comparison intervention defines x minus comparison_x?")
         if questions:
@@ -115,6 +154,9 @@ class SpecificationCompiler:
         )
         quantile_levels = (float(request.level),) if request.level is not None else (0.1, 0.5, 0.9)
         risk_thresholds = (float(request.threshold),) if request.threshold is not None else ()
+        if request.distribution is not None:
+            quantile_levels = request.distribution.quantile_levels
+            risk_thresholds = (math.log(request.distribution.threshold),)
         specification = AnalysisSpecification(
             dataset_hash=request.dataset_hash,
             roles=CausalRoles(
@@ -135,5 +177,6 @@ class SpecificationCompiler:
             confirmed_by_user=request.confirmed_by_user,
             backend_parameters=request.backend_parameters,
             seed=request.seed,
+            distribution=request.distribution,
         )
         return CompilationOutcome(specification, ())

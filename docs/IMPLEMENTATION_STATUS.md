@@ -324,3 +324,25 @@ fixed-workflow/full-agent protocol and grader over the 24 cases.
 For publishable estimator evidence, the highest-priority path remains the frozen
 TabPFN runtime plus manuscript DGP mapping. Repeating either current one-case
 smoke under new names would add no research evidence.
+
+## 2026-09-21 — cigarette exact-price distribution UI
+
+Implemented the two-price already-log CSV request with explicit original units,
+four outcome quantiles, original-unit differences, strict exceedance probabilities,
+percentage-point contrast and upper-minus-median gap change. CPU report/plot/export
+reuse one bundle with resolvable point evidence and endpoint warnings. The CSV,
+TabCF estimator, integration nodes, outcome-grid construction and support rules
+are unchanged. Existing local TabPFN shared Stage 2 mean/full uses two total fits;
+legacy backends retain their original behavior. Ordinary follow-ups use the cached
+completed report. No real GPU numerical result, timing or causal sign is claimed.
+
+Validation includes fake Gemini/TabPFN success and support refusal, hand arithmetic,
+artifact verification, finalization failure and session/handler regressions. Space
+build/UI deployment checks are distinct from a real provider/estimator analysis.
+
+Verification recorded for this change: full repository suite **183 passed**;
+post-review focused CSV/website/ZeroGPU regression **84 passed**; Ruff and format
+checks passed. The only warnings were Gradio's expected local OAuth mocks.
+Successful fake archives pass `verify_run_directory`, including the 340 derived
+metric/CDF evidence records and the exported distribution projection. No real
+Gemini request or GPU allocation was made.

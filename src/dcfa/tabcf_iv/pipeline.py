@@ -32,6 +32,7 @@ from dcfa.schemas import (
     DatasetManifest,
     EvidenceRecord,
     QueryResult,
+    QuerySpecification,
     ResultBundle,
     RunManifest,
     SupportAssessment,
@@ -496,6 +497,47 @@ class TabCFAnalysisEngine:
                     source="support.assessment",
                 )
             )
+        distribution = None
+        if specification.distribution is not None:
+            from dcfa.tabcf_iv.distribution import derive_distribution
+
+            distribution = derive_distribution(
+                specification.distribution, y_grid, cdf, quantiles, risks
+            )
+            global_warnings.append(
+                WarningRecord(
+                    code="DISTRIBUTIONAL_POINT_ESTIMATES",
+                    message="Point estimates only, without confidence intervals or significance. "
+                    "Quantile changes are distributional, not individual effects. "
+                    "CDFs cover only the evaluated outcome grid; no extrapolation.",
+                    severity=WarningSeverity.WARNING,
+                    source="distribution.presentation",
+                )
+            )
+            if specification.roles.outcome == "log_packs_per_capita":
+                global_warnings.append(
+                    WarningRecord(
+                        code="POOLED_STATE_YEAR_LIMITATIONS",
+                        message="Real-data exploratory state-year aggregates with equal "
+                        "observation "
+                        "weights, repeated states, and omitted income and state/year effects. "
+                        "Within-state dependence and omitted confounding are not addressed. "
+                        "Instrument exclusion and exogeneity remain assumptions.",
+                        severity=WarningSeverity.WARNING,
+                        source="distribution.presentation",
+                    )
+                )
+            if distribution["boundary_limited"]:
+                global_warnings.append(
+                    WarningRecord(
+                        code="QUANTILE_GRID_ENDPOINT",
+                        message="At least one quantile touches an evaluated-grid endpoint. "
+                        "Boundary-limited quantiles are clipped descriptions; restrict "
+                        "tail conclusions and do not extrapolate.",
+                        severity=WarningSeverity.WARNING,
+                        source="distribution.presentation",
+                    )
+                )
         warnings = tuple(global_warnings)
         assumptions = (
             (
@@ -539,6 +581,8 @@ class TabCFAnalysisEngine:
             "warnings": warnings,
             "assumptions": assumptions,
         }
+        if distribution is not None:
+            numerical_core["distribution"] = distribution
         source_artifact = "numerical_core.json"
         if output_dir is None:
             source_artifact_hash = sha256_digest(numerical_core)
@@ -552,13 +596,29 @@ class TabCFAnalysisEngine:
         provisional_queries: list[
             tuple[int, str, float, SupportStatus, tuple[WarningRecord, ...]]
         ] = []
-        for query_index, query in enumerate(specification.queries):
-            claim_type, value = _query_value(
-                specification=specification,
-                query_index=query_index,
-                means=means,
-                quantiles=quantiles,
-                risks=risks,
+        query_specs = specification.queries
+        if distribution is not None:
+            query_specs = tuple(
+                QuerySpecification(
+                    query_id=m["key"],
+                    kind="distribution",
+                    x=specification.intervention_grid[1],
+                    comparison_x=specification.intervention_grid[0],
+                    units=m["units"],
+                )
+                for m in distribution["metrics"]
+            )
+        for query_index, query in enumerate(query_specs):
+            claim_type, value = (
+                ("distribution:" + query.query_id, distribution["metrics"][query_index]["value"])
+                if distribution is not None
+                else _query_value(
+                    specification=specification,
+                    query_index=query_index,
+                    means=means,
+                    quantiles=quantiles,
+                    risks=risks,
+                )
             )
             assessments = [_support_for_x(support, query.x)]
             if query.comparison_x is not None:
@@ -590,11 +650,11 @@ class TabCFAnalysisEngine:
         ledger = EvidenceLedger(records)
         query_results = tuple(
             QueryResult(
-                query_id=specification.queries[index].query_id,
+                query_id=query_specs[index].query_id,
                 claim_type=claim_type,
                 value_raw=value,
                 value_display=format(value, ".6g"),
-                units=specification.queries[index].units,
+                units=query_specs[index].units,
                 support_status=status,
                 warnings=query_warnings,
                 evidence_id=records[position].evidence_id,
@@ -614,6 +674,7 @@ class TabCFAnalysisEngine:
             evidence_status=specification.evidence_status,
             x_grid=tuple(float(value) for value in x_grid),
             y_grid=tuple(float(value) for value in y_grid),
+            distribution=distribution,
             interventional_cdf=tuple(tuple(float(value) for value in row) for row in cdf),
             interventional_mean=tuple(float(value) for value in means),
             quantile_levels=specification.quantile_levels,
@@ -680,6 +741,15 @@ class TabCFAnalysisEngine:
                     "source_artifact_hash": bundle.source_artifact_hash,
                 },
             )
+            if bundle.distribution is not None:
+                from dcfa.distribution_reporting import export_distribution
+
+                artifact_paths["distribution_results.json"] = (
+                    output_dir / "distribution_results.json"
+                )
+                _write_json(
+                    artifact_paths["distribution_results.json"], export_distribution(bundle, ledger)
+                )
             artifact_hashes = tuple(
                 sorted((name, file_sha256(path)) for name, path in artifact_paths.items())
             )

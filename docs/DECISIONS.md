@@ -929,3 +929,23 @@ Do not rewrite an accepted entry when it changes; append a superseding entry.
   queue overhead; do not claim a measured speedup or shorten duration without
   real post-change timing. Free quota was recently exhausted, so build/UI checks
   and deterministic fake tests are separate from pending GPU timing evidence.
+
+## 2026-09-21 — composite exact-unit distribution request
+
+Expose two explicitly supplied increasing positive original-unit interventions
+for CSV X and Y declared to be stored natural logs. Keep the first extension
+bounded to the requested quantile set and one positive exceedance threshold.
+The compiler logs requested values once, never the CSV, and uses the existing
+continuous-treatment adapter. It does not infer transformations from names or
+replace exact prices with empirical quantiles. A composite query expands into
+CPU-derived evidence-linked results after the existing predictions, preserving
+all diagnostics, support and identification warnings. CDF point evidence and
+export consistency use the existing ledger/run verifier, without new hash layers,
+freeze protocols or release gates. Endpoint quantiles retain clipped values with
+explicit flags and restricted tail conclusions. No bootstrap or estimator change.
+
+The Space keeps its existing GPU fit/predict wrapper and CPU finalization, cleanup,
+confirmation and download boundaries. Successful distribution reports can be read
+again from session-local cached display data without Gemini or refitting. This
+feature remains Track T / real-data / development_only; fake success-path checks
+are engineering evidence, not a supported real-data numerical result.

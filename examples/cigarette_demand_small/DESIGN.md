@@ -1,6 +1,6 @@
 # Exact-price distributional example
 
-Status: editable example design, 2026-09-21. No results or frozen protocol.
+Status: implemented editable example design, 2026-09-21. No real GPU results or frozen protocol.
 
 ## Question and estimands
 
@@ -98,21 +98,14 @@ Additional quantiles, complements, unit conversions and tables are deterministic
 CPU operations on that result, not separate GPU fits. Retain the existing GPU
 duration declaration. No bootstrap or parameter sweep is part of this first run.
 
-The inspected code already has numeric intervention grids, CDF output, configurable
-quantile levels and threshold queries. The current **Space compiler and report
-workflow do not expose this whole request**. Required follow-on work is:
-
-1. Represent exact numeric prices with explicit original/model-scale units and
-   transformations in compilation and in the user-confirmed plan. Do not infer a
-   log transformation solely from a column name. Reject unsupported requests
-   before fitting instead of substituting symbolic labels.
-2. Compile the two exact grid points and all requested summaries into one analysis,
-   rather than one new execution per question.
-3. Derive and evidence-link the original-scale quantiles, their differences,
-   upper-tail gap change and exceedance probabilities with deterministic tools.
-   Keep LLM narration out of numerical arithmetic.
-4. Render the new CDF/quantile views and exports on CPU from the same validated
-   result, preserving existing confirmation, cleanup and session behavior.
+The Space dialogue now exposes this composite request through a typed
+`DistributionRequest`. It validates exact user-supplied prices and units plus an
+explicit already-log declaration; the confirmation card computes the logs in
+Python. The compiler produces exactly two intervention points. CPU projection
+creates evidence-linked original-unit quantiles, differences, exceedance and gap
+change, and one evidence record for every evaluated CDF point. All results are
+cached together. Saved-artifact verification recomputes the deterministic
+projection from the numerical core without fitting.
 
 Two important arithmetic details from the inspected core:
 
@@ -145,11 +138,11 @@ confounders. Instrument exclusion/exogeneity remain assumptions. Label outputs
 Track T / real-data / development_only and exploratory; do not claim textbook
 replication, individual effects or a reliable tax-policy recommendation.
 
-## Design verification and execution status
+## Verification and execution status
 
-The example CSV and license remain unchanged. Exact-value transformations,
-probability signs and file links were checked during this documentation revision.
-No new application feature, deployment, model fit, Gemini call or GPU run is
-included. Every result cell above remains pending until implementation and a
-successful supported execution. This document supersedes the former low/high
-median-only example; its Git history remains available.
+The CSV and license are unchanged. Fake Gemini/TabPFN tests exercise compilation,
+unit arithmetic, successful verified exports, support failure, grid endpoints,
+shared fitting, caching and CPU finalization. The result layout above remains
+uncomputed for the real estimator. No real Gemini or ZeroGPU run or timing
+measurement is part of this implementation. Follow README.md and PROMPTS.md for
+the current UI workflow.

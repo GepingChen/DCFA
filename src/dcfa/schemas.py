@@ -37,6 +37,19 @@ class QuerySpecification:
 
 
 @dataclass(frozen=True)
+class DistributionRequest:
+    """Two original-unit interventions on explicitly already-log stored columns."""
+
+    prices: tuple[float, float]
+    treatment_units: str
+    outcome_units: str
+    threshold: float
+    treatment_scale: str = "stored_natural_log"
+    outcome_scale: str = "stored_natural_log"
+    quantile_levels: tuple[float, ...] = (0.25, 0.50, 0.75, 0.90)
+
+
+@dataclass(frozen=True)
 class AnalysisSpecification:
     dataset_hash: str
     roles: CausalRoles
@@ -53,6 +66,7 @@ class AnalysisSpecification:
     seed: int = 1729
     backend_parameters: tuple[tuple[str, str], ...] = ()
     specification_version: str = "tabcf_iv_v1"
+    distribution: DistributionRequest | None = None
 
     @property
     def specification_id(self) -> str:
@@ -169,6 +183,7 @@ class ResultBundle:
     source_artifact: str
     source_artifact_hash: str
     cached: bool = False
+    distribution: dict[str, Any] | None = None
 
 
 @dataclass(frozen=True)

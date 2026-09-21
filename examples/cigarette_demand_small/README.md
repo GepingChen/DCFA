@@ -6,11 +6,10 @@ Updated design: 2026-09-21.
 > how does the distribution of state-level annual sales per capita change?
 > Is the change larger around the middle or in the upper part of the distribution?
 
-**Status: example design, not yet executable through the current Space dialogue.**
-The current interface accepts only low/center/high and mean/median summaries.
-It cannot faithfully compile this numeric-price, multi-result request. Do not
-confirm a card that silently replaces 100/120 with sample percentiles. This update
-changes the example documents only; it does not extend or deploy the application.
+**Status: implemented for the Space CSV dialogue, with fake-provider verification.**
+The exact-price path accepts explicitly already-natural-log X and Y, keeps the
+CSV unchanged, and computes all outputs from one validated result bundle.
+No real GPU numerical analysis or timing result is supplied with this example.
 
 ## Files
 
@@ -57,7 +56,7 @@ must pass the existing support checks.
 The two occurrences of 120 have different units: **120 cents** is the intervention;
 **120 packs per person per year** is the outcome threshold.
 
-## Intended one-run workflow, after the interface supports it
+## One-run workflow
 
 1. Open the [Space](https://huggingface.co/spaces/GPChen01/dcfa-zerogpu), sign in,
    and select **Upload CSV** (under **More tabs** on narrow screens).
@@ -71,8 +70,13 @@ The two occurrences of 120 have different units: **120 cents** is the interventi
    If it shows only low/high, a single median contrast, or missing units, stop.
 5. Confirm once. All requested results should reuse the same two fitted stages
    and one validated result bundle; no separate fit per chart or statistic.
-6. Download the report, tables/curve data and verified ZIP. Inspect cached results
-   rather than rerunning to change wording or colors.
+6. Download the verified ZIP: `report.md`, `interventional_summary.png` (two
+   panels), `distribution_results.json` (curve/table values and evidence mapping),
+   `result_bundle.json`, `evidence_records.jsonl`, warnings, specification and
+   `confirmed_plan.html`. The figure and tables use the same bundle.
+7. Ordinary chat follow-ups return the cached report without Gemini or fitting.
+   Reset is required for a new analysis; the upload is deleted after completion.
+   A CPU finalization failure is terminal and does not trigger another fit.
 
 ## Quota and interpretation
 
@@ -92,11 +96,14 @@ causal effects. The current three-column model omits income and state/year effec
 and does not address within-state dependence. Treat this as an exploratory Track T
 real-data demonstration (`development_only`), not a policy recommendation.
 
-## What has been verified
+## Verification boundary
 
-The existing data preparation checks remain applicable: 144 genuine state-year
-records, correct source transforms, no missing values, and acceptance by the
-current CSV ingress and role-mapping functions. For this revision, the exact-price
-log transforms, probability-difference sign, document links and unchanged CSV
-were checked. No TabPFN fit, Gemini call or GPU call was made. No actual causal
-results have been computed for this revised question.
+Tests use a fake Gemini response and fake TabPFN predictions. They cover exact
+units, complements and contrast signs, a nontrivial hand-calculated example,
+shared Stage 2 mean/full predictions with two total fits, support refusal before
+Stage 2, endpoint flags, cached follow-ups, repeated clicks, finalization errors,
+and independently verified artifacts. Fake broad control ranks exercise the
+success path without changing CSV bytes or production support rules. They are
+not evidence that the real cigarette analysis passes support or has any given
+causal effect. Live deployment verification checks the build/UI only; a real
+GPU analysis and its wall-clock timing remain unexecuted.

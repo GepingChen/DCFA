@@ -25,7 +25,6 @@ from dcfa_website_demo.gemini import (
     _load_config,
     _role_context,
     _usage_payload,
-    _validate_proposal,
 )
 
 DIALOGUE_VERSION = "space_csv_dialogue_v1"
@@ -53,6 +52,7 @@ class CSVConversation:
     upload_path: str | None = None
     overrides: dict[str, str | None] = field(default_factory=dict)
     owner: str | None = None
+    cached_answer: str | None = None
 
     def expired(self) -> bool:
         return not self.busy and time.monotonic() - self.touched >= SESSION_SECONDS
@@ -166,16 +166,9 @@ def compile_csv_turn(
         if output["decision"] != "ready":
             raise ValueError("Invalid decision")
         proposal = output["proposal"]
-        # Reuse the complete single-turn validator only at the ready boundary.
-        from dcfa_website_demo.gemini import _parse_proposal
+        from dcfa_website_demo.numeric_request import numeric_proposal
 
-        proposal = _parse_proposal(json.dumps(proposal))
-        values = _validate_proposal(
-            proposal,
-            columns=columns,
-            role_overrides=normalized,
-            csv_mode=True,
-        )
+        proposal, values, distribution = numeric_proposal(proposal, history, columns, normalized)
         trace = {
             "protocol_version": DIALOGUE_VERSION,
             "provider": config["provider"],
@@ -185,6 +178,7 @@ def compile_csv_turn(
             "last_turn_usage": _usage_payload(interaction),
             "data_rows_sent_to_gemini": 0,
             "actual_intervention_values_sent_to_gemini": 0,
+            "user_supplied_numeric_interventions": 2 if distribution else 0,
             "data_sent_to_gemini": ["conversation", "csv_column_names", "optional_role_overrides"],
             "proposal": proposal,
             "confirmed_roles": {
@@ -196,7 +190,7 @@ def compile_csv_turn(
                 for role in ROLES
             },
         }
-        return message, GeminiWebsiteCompilation(*values, trace=trace)
+        return message, GeminiWebsiteCompilation(*values, trace=trace, distribution=distribution)
     except (ValueError, TypeError, KeyError, AttributeError, DCFAError) as exc:
         raise DCFAError(
             ErrorCode.LLM_OUTPUT_INVALID,
@@ -216,6 +210,26 @@ def plan_html(compilation: GeminiWebsiteCompilation) -> str:
     direction = compilation.x_label
     if compilation.comparison_x_label:
         direction += f" minus {compilation.comparison_x_label}"
+    if compilation.distribution is not None:
+        import math
+
+        d = compilation.distribution
+        direction = f"{d.prices[1]:g} minus {d.prices[0]:g} {d.treatment_units}"
+        details = (
+            f"Original-unit prices: {d.prices[0]:g}, {d.prices[1]:g} {d.treatment_units}. "
+            f"Transform: natural log; model inputs: {math.log(d.prices[0]):.17g}, "
+            f"{math.log(d.prices[1]):.17g}. CSV X and Y are already natural logs; "
+            "CSV columns are not transformed again. No W. "
+            f"Outputs: two CDFs in {d.outcome_units}; quantiles 0.25, 0.50, 0.75, 0.90 "
+            f"and their differences; probability exceeding {d.threshold:g} {d.outcome_units} "
+            "and difference in percentage points; 90th change minus median change. "
+            "Point estimates only; support checked before Stage 2."
+        )
+    else:
+        details = (
+            "Low / center / high refer to the observed treatment's 10th / 50th / 90th "
+            "percentiles. Empirical support is checked during analysis."
+        )
     return (
         '<div class="demo-confirmation-plan"><h3>Review the analysis plan</h3>'
         "<table><thead><tr><th>Role</th><th>CSV column</th>"
@@ -223,8 +237,7 @@ def plan_html(compilation: GeminiWebsiteCompilation) -> str:
         + "".join(rows)
         + "</tbody></table>"
         + f"<p>Objective: {html.escape(objective)}. Treatment: {html.escape(direction)}.</p>"
-        + "<p>Low / center / high refer to the observed treatment's 10th / 50th / 90th "
-        "percentiles. Empirical support is checked during analysis.</p></div>"
+        + f"<p>{html.escape(details)}</p></div>"
     )
 
 

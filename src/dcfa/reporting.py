@@ -15,6 +15,10 @@ from dcfa.schemas import ResultBundle
 def render_markdown_report(bundle: ResultBundle, ledger: EvidenceLedger) -> str:
     validate_bundle_evidence(bundle, ledger)
     title = "# TabCF Analyst local development report"
+    if bundle.distribution is not None:
+        from dcfa.distribution_reporting import distribution_markdown
+
+        title += "\n\n" + distribution_markdown(bundle.distribution, bundle.queries)
     if bundle.evidence_status is EvidenceStatus.DEVELOPMENT_ONLY:
         if bundle.estimator_backend is EstimatorBackend.SKLEARN_QUANTILE_FALLBACK:
             boundary = (
@@ -86,6 +90,11 @@ def render_markdown_report(bundle: ResultBundle, ledger: EvidenceLedger) -> str:
 
 def render_bundle_plot(bundle: ResultBundle, ledger: EvidenceLedger, output_path: Path) -> None:
     validate_bundle_evidence(bundle, ledger)
+    if bundle.distribution is not None:
+        from dcfa.distribution_reporting import render_distribution_plot
+
+        render_distribution_plot(bundle, ledger, output_path)
+        return
     import os
 
     matplotlib_config = Path(gettempdir()) / "dcfa-matplotlib-cache"

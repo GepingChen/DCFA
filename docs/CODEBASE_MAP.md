@@ -281,3 +281,18 @@ track.
 These gaps block the corresponding release claims. They do not authorize a
 silent fallback, fabricated manifest, or reinterpretation of local synthetic
 artifacts.
+
+## Exact-unit distribution request (2026-09-21)
+
+- `schemas.DistributionRequest` and `agent/compiler.py`: one composite exact-price
+  request, already-log storage and explicit original units; legacy objectives unchanged.
+- `dcfa_website_demo/numeric_request.py`: row-free exact-unit proposal validation; `dialogue.py` renders the same confirmed plan.
+- `tabcf_iv/distribution.py`: CPU-only original-unit projection from existing CDF,
+  quantile and CDF-threshold predictions. No estimator or support/grid changes.
+- `distribution_reporting.py`: evidence-linked tables, two-panel plot and
+  `distribution_results.json`; `artifact_validation.py` verifies the projection.
+- `dialogue_ui.py`: completed numeric reports support cached chat follow-ups without
+  another provider request; model objects and credentials never enter session state.
+- Focused verification: `.venv/bin/python -m pytest
+  tests/integration/test_cigarette_distribution.py -q`. Existing backend, dialogue,
+  ZeroGPU and public-boundary regressions cover the shared execution path.

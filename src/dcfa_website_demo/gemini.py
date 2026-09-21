@@ -18,6 +18,7 @@ from dcfa.agent.gemini_live import (
 )
 from dcfa.canonical import content_id, file_sha256, sha256_digest, to_primitive
 from dcfa.errors import DCFAError, ErrorCode
+from dcfa.schemas import DistributionRequest
 
 PROTOCOL_VERSION = "website_demo_gemini_v2"
 GEMINI_MODEL = "gemini-3.6-flash"
@@ -48,6 +49,7 @@ class GeminiWebsiteCompilation:
     comparison_x_label: str | None
     level: float | None
     trace: dict[str, Any]
+    distribution: DistributionRequest | None = None
 
 
 def _load_config(
@@ -236,6 +238,7 @@ def _validate_proposal(
     columns: tuple[str, str, str],
     role_overrides: dict[str, str],
     csv_mode: bool,
+    allow_distribution: bool = False,
 ) -> tuple[str, str, str, str, str, str | None, float | None]:
     decision = proposal["decision"]
     reason = proposal["reason"].strip()
@@ -290,6 +293,14 @@ def _validate_proposal(
     x_label = proposal["x_label"]
     comparison_label = proposal["comparison_x_label"]
     level_label = proposal["level_label"]
+    if allow_distribution and objective == "distribution":
+        if (x_label, comparison_label, level_label) != ("exact", "exact", "quartiles_and_upper"):
+            raise DCFAError(
+                ErrorCode.LLM_OUTPUT_INVALID,
+                "Exact distribution requests cannot use symbolic interventions.",
+                stage="website_demo.gemini_output",
+            )
+        return (*role_mapping, objective, x_label, comparison_label, None)
     if objective not in SUPPORTED_OBJECTIVES or x_label not in INTERVENTION_LABELS:
         raise DCFAError(
             ErrorCode.LLM_OUTPUT_INVALID,

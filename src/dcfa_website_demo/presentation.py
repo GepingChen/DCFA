@@ -283,6 +283,18 @@ def present_units(units: str) -> str:
 
 
 def present_warning(warning: WarningRecord) -> PresentationMessage:
+    if warning.code in {
+        "DISTRIBUTIONAL_POINT_ESTIMATES",
+        "POOLED_STATE_YEAR_LIMITATIONS",
+        "QUANTILE_GRID_ENDPOINT",
+    }:
+        return PresentationMessage(
+            "Distribution scope",
+            warning.message,
+            "warning",
+            "Restrict conclusions to the evaluated distribution.",
+            True,
+        )
     return WARNING_PRESENTATION.get(warning.code, UNKNOWN_WARNING)
 
 
@@ -296,6 +308,19 @@ def present_error(code: str | ErrorCode | None) -> PresentationMessage:
 
 def present_query(query: QueryResult) -> PresentedQuery:
     claim = CLAIM_PRESENTATION.get(query.claim_type, UNKNOWN_CLAIM)
+    if re.fullmatch(
+        r"distribution:(quantile:(0\.25|0\.5|0\.75|0\.9):[01]|"
+        r"quantile_difference:(0\.25|0\.5|0\.75|0\.9)|exceedance:[01]|"
+        r"exceedance_difference|upper_minus_middle_change|threshold_cdf:[01]|cdf:[01]:[0-9]+)",
+        query.claim_type,
+    ):
+        claim = PresentationMessage(
+            "Original-unit distribution",
+            "Evidence-linked point estimate.",
+            "warning",
+            "Retain all interpretation warnings.",
+            True,
+        )
     support = SUPPORT_PRESENTATION.get(query.support_status, UNKNOWN_SUPPORT)
     warnings = tuple(present_warning(item) for item in query.warnings)
     allowed = (

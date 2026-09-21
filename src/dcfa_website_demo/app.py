@@ -1089,11 +1089,23 @@ def _execute_compiled_dataset(
             "The compiled role mapping does not match the validated dataset mapping.",
             stage="website_demo.gemini_output",
         )
-    label_values = {
-        "low": interventions[0],
-        "center": interventions[len(interventions) // 2],
-        "high": interventions[-1],
-    }
+    if compilation.distribution is not None:
+        import math
+
+        interventions = tuple(math.log(p) for p in compilation.distribution.prices)
+        x_value, comparison_value = interventions[1], interventions[0]
+    else:
+        label_values = {
+            "low": interventions[0],
+            "center": interventions[len(interventions) // 2],
+            "high": interventions[-1],
+        }
+        x_value = label_values[compilation.x_label]
+        comparison_value = (
+            None
+            if compilation.comparison_x_label is None
+            else label_values[compilation.comparison_x_label]
+        )
     request = CompilationRequest(
         dataset_hash=manifest.dataset_hash,
         outcome=outcome,
@@ -1101,12 +1113,9 @@ def _execute_compiled_dataset(
         instrument=instrument,
         objective=compilation.objective,
         intervention_grid=interventions,
-        x=label_values[compilation.x_label],
-        comparison_x=(
-            None
-            if compilation.comparison_x_label is None
-            else label_values[compilation.comparison_x_label]
-        ),
+        x=x_value,
+        comparison_x=comparison_value,
+        distribution=compilation.distribution,
         level=compilation.level,
         units=f"{outcome}_units",
         confirmed_by_user=True,
@@ -1145,7 +1154,22 @@ def _execute_compiled_dataset(
                     stage="website.presentation",
                 )
             if response.queries and present_query(response.queries[0]).allow_numeric:
-                render_visitor_plot(tool.last_run.bundle, tool.last_run.ledger, visitor_plot_path)
+                if tool.last_run.bundle.distribution is not None:
+                    from dcfa.distribution_reporting import (
+                        distribution_markdown,
+                        render_distribution_plot,
+                    )
+
+                    render_distribution_plot(
+                        tool.last_run.bundle, tool.last_run.ledger, visitor_plot_path
+                    )
+                    compilation.trace["distribution_report"] = distribution_markdown(
+                        tool.last_run.bundle.distribution, tool.last_run.bundle.queries
+                    )
+                else:
+                    render_visitor_plot(
+                        tool.last_run.bundle, tool.last_run.ledger, visitor_plot_path
+                    )
     except Exception as exc:
         if "output_dir" in locals():
             shutil.rmtree(output_dir, ignore_errors=True)
@@ -1316,6 +1340,9 @@ def _answer_markdown(response: AgentResponse, llm_trace: dict[str, Any]) -> str:
             "**Result verification failed.** Do not use a numerical result; inspect the run "
             "with the local verifier."
         )
+    if llm_trace.get("distribution_report"):
+        warnings = "\n".join(f"- {w.message}" for w in response.warnings)
+        return llm_trace["distribution_report"] + "\n\nWarnings:\n" + warnings
     return f"### Answer\n\n**{answer_sentence(response.queries[0], llm_trace.get('proposal'))}**"
 
 
@@ -1722,7 +1749,8 @@ def build_app(
                             info=(
                                 "State which header is the outcome, continuous treatment, and "
                                 "instrument. Gemini receives this text and the three header names, "
-                                "not CSV rows or actual intervention values."
+                                "including requested prices, but not CSV rows "
+                                "or observed treatment values."
                             ),
                             lines=3,
                             interactive=csv_enabled,

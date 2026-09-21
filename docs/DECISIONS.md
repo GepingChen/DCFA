@@ -903,3 +903,29 @@ Do not rewrite an accepted entry when it changes; append a superseding entry.
 - Scope: Presentation and regression coverage only. Do not change GPU duration,
   quota behavior, estimator, model, or automatic retry policy. Successful live
   CSV fitting and artifact verification remain pending quota restoration.
+
+## D-041 — Reuse local Stage 2 fits and isolate GPU prediction work
+
+- Date: 2026-09-20
+- Evidence: The local backend fitted separate identically configured TabPFN
+  regressors for mean and full predictions; both output types are supported by
+  the same fitted regressor. Space handlers previously retained the GPU through
+  rendering, artifact verification and ZIP compression.
+- Decision: Add optional `fit_mean_distribution` on local TabPFN only. Backends
+  without it preserve the existing two Stage 2 fits. Inject a stage prediction
+  runner into the deterministic pipeline, with plain array/counter/provenance
+  return values and no fitted estimators. The Space decorates only that runner.
+  Keep support checks on CPU between Stage 1 and Stage 2, requiring two GPU
+  allocations, and keep all evidence/artifact/report finalization on CPU.
+- Failure behavior: Partial run directories, public plots and ZIPs are removed.
+  CPU finalization failure is terminal for the current CSV confirmation; reset
+  is required for another run. It cannot call Gemini or automatically refit.
+  Allocation failure retains the existing editable ready-plan behavior.
+- Compatibility: Preserve deterministic calculations, grids, support decisions,
+  evidence, warnings and reports, plus session isolation and key handling. Fake
+  TabPFN comparison uses the original separate-fit path as an ordinary regression
+  test, not a new frozen baseline or release gate.
+- Measurement limits: Retain `@spaces.GPU(duration=120)`. Two allocations may add
+  queue overhead; do not claim a measured speedup or shorten duration without
+  real post-change timing. Free quota was recently exhausted, so build/UI checks
+  and deterministic fake tests are separate from pending GPU timing evidence.

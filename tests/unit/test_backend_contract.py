@@ -163,3 +163,73 @@ def test_local_tabpfn_manifest_records_frozen_runtime_settings(tmp_path) -> None
     assert parameters["model_revision"] == LOCAL_TABPFN_V2_MODEL_REVISION
     assert parameters["n_estimators"] == 1
     assert parameters["device"] == "cuda"
+
+
+@pytest.fixture
+def fake_tabpfn(monkeypatch):
+    """Exercise real adapters with a deterministic regressor, without Torch/GPU."""
+    from scipy.special import expit
+
+    instances = []
+
+    class Regressor:
+        def __init__(self, **kwargs):
+            self.outputs = []
+            self.fits = 0
+            instances.append(self)
+
+        def fit(self, features, target):
+            self.fits += 1
+            self.coefficients = np.linalg.lstsq(
+                np.column_stack([np.ones(len(features)), features]), target, rcond=None
+            )[0]
+
+        def predict(self, features, *, output_type):
+            self.outputs.append(output_type)
+            values = np.column_stack([np.ones(len(features)), features]) @ self.coefficients
+            return values if output_type == "mean" else {"criterion": None, "logits": values}
+
+    def cdf(self, features, values, *, paired):
+        full = self._full_output(features)
+        evaluation = backend_module._distribution_eval_matrix(
+            values, n_rows=len(features), paired=paired
+        )
+        result = expit(evaluation - full["logits"][:, None])
+        return result[:, 0] if paired else result
+
+    monkeypatch.setattr(TabPFNBackend, "_load_classes", lambda self: (Regressor, None))
+    monkeypatch.setattr(backend_module.TabPFNDistributionModel, "cdf", cdf)
+    return instances
+
+
+def test_shared_stage2_matches_legacy_full_artifacts(
+    fake_tabpfn, development_dataset, specification_copy, tmp_path
+):
+    from dataclasses import replace
+
+    from dcfa.artifact_validation import verify_run_directory
+    from dcfa.constants import EstimatorBackend
+    from dcfa.tabcf_iv.pipeline import TabCFAnalysisEngine
+
+    class LegacyBackend(TabPFNBackend):
+        fit_mean_distribution = None
+
+    spec = replace(specification_copy, estimator_backend=EstimatorBackend.TABPFN)
+    manifest = replace(development_dataset.manifest, estimator_backend=EstimatorBackend.TABPFN)
+    runs = []
+    for name, backend_type in (("legacy", LegacyBackend), ("shared", TabPFNBackend)):
+        run = TabCFAnalysisEngine(
+            backend_factory=lambda s, backend_type=backend_type: backend_type(
+                seed=s.seed, execution_profile=s.execution_profile
+            )
+        ).analyze(development_dataset.columns, spec, manifest, output_dir=tmp_path / name)
+        runs.append(run)
+        assert verify_run_directory(tmp_path / name)["status"] == "valid"
+    assert [run.backend_fit_calls for run in runs] == [3, 2]
+    assert len(fake_tabpfn) == 5
+    assert all(model.fits == 1 for model in fake_tabpfn)
+    assert set(fake_tabpfn[-1].outputs) == {"mean", "full"}
+    assert runs[0].bundle == runs[1].bundle
+    assert runs[0].ledger.records() == runs[1].ledger.records()
+    for path in (tmp_path / "legacy").iterdir():
+        assert path.read_bytes() == (tmp_path / "shared" / path.name).read_bytes(), path.name

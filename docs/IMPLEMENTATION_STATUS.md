@@ -2,9 +2,42 @@
 
 Last updated: 2026-09-20
 
-## Space dialogue deployment update (2026-09-20)
+## ZeroGPU fit and allocation optimization (2026-09-20)
 
-The canonical Space is running source commit `40853b131964dcbcc159c7e6dece87e882a47d9a`
+Local TabPFN now uses two fits for a supported analysis: one Stage 1 fit and one
+shared Stage 2 fit for mean/full output. Sklearn fallback and managed client
+retain their separate Stage 2 fits. The Space's preset and CSV handlers use the
+same prediction runner; only fits/predictions occupy GPU allocations. Support,
+diagnostics, integration, evidence, reporting, plots, artifact writes/verification,
+public copies, ZIP compression and cleanup execute on CPU.
+
+Fake-regressor comparison against the original three-fit path verifies identical
+bundles, evidence records and every generated artifact byte (including reports
+and plots), with `backend_fit_calls` changing from 3 to 2. Worker-boundary tests
+pickle request/results to simulate isolated execution and check CPU-only rendering,
+writing, diagnostics, verification, copying and compression. Preset and CSV tests
+cover success, allocation failure, report failure, verification failure, archive
+failure and CSV appendix failure; additional tests cover partial public files.
+Successful ZIPs are unpacked and pass `verify_run_directory`. A CSV finalization
+failure ends the request, clears temporary state, and cannot refit on another
+confirmation click; GPU allocation failure still retains the reviewed plan.
+
+Verification: `.venv/bin/python -m pytest -q` completed with **170 passed**
+(14 expected local Gradio OAuth warnings). `.venv/bin/ruff check src tests`,
+`.venv/bin/ruff format --check src tests` (87 files), and `git diff --check`
+passed. An extra repository-root lint scan included pre-existing notebook and
+third-party formatting violations; those out-of-scope files were not changed.
+
+The duration declaration remains 120 seconds. Stage 1 and Stage 2 use separate
+allocations to keep the support decision on CPU before Stage 2. Actual GPU time,
+queue overhead and end-to-end latency after this change are unmeasured; two fits
+alone do not establish a wall-clock speedup. No real GPU request is made for the
+fake tests. Deployment/build verification is recorded in the task handoff after
+pushing the verified source; the earlier deployment below is historical.
+
+## Previous Space dialogue deployment (2026-09-20)
+
+The previous canonical Space deployment ran source commit `40853b131964dcbcc159c7e6dece87e882a47d9a`
 at HF commit `90b8d7a747053c20491e4adc4b909f3b4a41e504`, with `zero-a10g`
 hardware and `spaces 0.51.3`. The live page shows build `40853B1` and the new
 CSV conversation, optional role overrides, plan card, and confirmation button.

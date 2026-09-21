@@ -171,8 +171,28 @@ row-free conversation history and returns clarification/block text or a validate
 history, ownership, request count and an editable-plan revision. That revision
 prevents a queued click on an old card from executing a newer, unseen proposal.
 `execute_prepared_local_csv` consumes the reviewed columns/proposal without Gemini;
-only its caller in `zerogpu.py` allocates a GPU. No shared statistical or research
-protocol changed. Existing single-turn entry points still use v2.
+its caller injects `gpu_predictions` from `zerogpu.py` into the shared pipeline.
+Existing single-turn entry points still use v2.
+
+`TabPFNBackend.fit_mean_distribution` fits one local Stage 2 regressor and wraps
+that same instance for mean and full-distribution predictions. Backends without
+this optional method keep separate mean/distribution fits (including sklearn
+and managed client). `pipeline.predict_backend` contains only one stage's fit
+and prediction calls and returns NumPy arrays, fit-count deltas and provenance
+metadata. `compute_predictions` orchestrates the two calls on CPU, preserving
+support rejection before Stage 2, grids and integration. The remaining `analyze`
+path finalizes evidence, reports and artifacts on CPU.
+
+Both Space preset and reviewed CSV handlers inject the same prediction runner.
+Only `gpu_predictions` has `@spaces.GPU(duration=120)`: Stage 1 and Stage 2 each
+allocate a GPU independently; fitted estimators never cross that boundary.
+Unfitted local backend configuration travels server-to-worker, never through
+Gradio state. Gemini compilation, diagnostics, report/plot rendering, writes,
+verification, public-file copying, ZIP creation and cleanup remain in the CPU
+handler. CPU finalization errors clean partial private/public results and end
+CSV execution without making the same confirmation executable again; reset is
+required to start another analysis. Allocation failures retain the ready plan.
+No research protocol, grid, evidence schema, hash or release gate was added.
 
 The password input persists across dialogue turns; request-scoped credential files
 are still deleted after each call. Generation/reset/15-minute idle expiry clear

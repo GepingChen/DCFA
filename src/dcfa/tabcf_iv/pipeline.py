@@ -161,6 +161,153 @@ def _query_value(
     raise ValueError(f"Unsupported query kind: {query.kind}")
 
 
+def predict_backend(
+    backend: StatisticalBackend,
+    stage: str,
+    features: np.ndarray,
+    target: np.ndarray,
+    prediction_features: np.ndarray | None = None,
+    y_grid: np.ndarray | None = None,
+) -> tuple[tuple[np.ndarray, ...], int, tuple[tuple[str, str], ...]]:
+    """Fit and predict one stage; return arrays and counters, never fitted models."""
+    before = backend.fit_calls
+    if stage == "stage1":
+        model = backend.fit_distribution(features, target)
+        predictions = (model.cdf(features, target, paired=True),)
+    elif stage == "stage2":
+        shared_fit = getattr(backend, "fit_mean_distribution", None)
+        if callable(shared_fit):
+            mean_model, distribution_model = shared_fit(features, target)
+        else:
+            mean_model = backend.fit_mean(features, target)
+            distribution_model = backend.fit_distribution(features, target)
+        predictions = (
+            mean_model.predict(prediction_features),
+            distribution_model.cdf(prediction_features, y_grid, paired=False),
+        )
+    else:
+        raise ValueError(f"Unknown prediction stage: {stage}")
+    return predictions, backend.fit_calls - before, tuple(getattr(backend, "audit_details", ()))
+
+
+def compute_predictions(arrays, specification, backend, run_id, audit, prediction_runner):
+    """Compute predictions without rendering or writing artifacts; never return models."""
+    roles = specification.roles
+    z = arrays[roles.instrument]
+    x = arrays[roles.treatment]
+    y = arrays[roles.outcome]
+    predictions, stage1_fits, _ = prediction_runner(backend, "stage1", z.reshape(-1, 1), x)
+    control_rank = np.clip(predictions[0], 0.0, 1.0)
+    audit.append(
+        event_type="stage1_completed",
+        stage="tabcf_iv.stage1",
+        status="completed",
+        run_id=run_id,
+    )
+
+    diagnostics, diagnostic_warnings = compute_diagnostics(z, x, y, control_rank)
+    support = assess_support(x, control_rank, specification.intervention_grid)
+    unsupported_grid = tuple(
+        assessment for assessment in support if assessment.status is SupportStatus.UNSUPPORTED
+    )
+    if unsupported_grid:
+        audit.append(
+            event_type="outside_support_blocked",
+            stage="tabcf_iv.support",
+            status="blocked_before_stage2",
+            run_id=run_id,
+            details=(("unsupported_grid_count", str(len(unsupported_grid))),),
+        )
+        raise DCFAError(
+            ErrorCode.OUTSIDE_SUPPORT,
+            "The strict intervention grid contains unsupported values; no Stage 2 fit or "
+            "causal numerical output was produced.",
+            stage="support.validation",
+            context={
+                "unsupported_interventions": [
+                    {
+                        "x": assessment.x,
+                        "coverage_score": assessment.coverage_score,
+                        "reason": assessment.reason,
+                    }
+                    for assessment in unsupported_grid
+                ]
+            },
+        )
+    for query in specification.queries:
+        query_support = [_support_for_x(support, query.x)]
+        if query.comparison_x is not None:
+            query_support.append(_support_for_x(support, query.comparison_x))
+        if _combined_support_status(*query_support) is SupportStatus.UNSUPPORTED:
+            audit.append(
+                event_type="outside_support_blocked",
+                stage="tabcf_iv.support",
+                status="blocked",
+                run_id=run_id,
+                details=(("query_id", query.query_id),),
+            )
+            raise DCFAError(
+                ErrorCode.OUTSIDE_SUPPORT,
+                "A requested intervention is outside supported regions; no causal "
+                "numerical claim was produced.",
+                stage="support.validation",
+                context={
+                    "query_id": query.query_id,
+                    "x": query.x,
+                    "comparison_x": query.comparison_x,
+                },
+            )
+
+    stage2_features = np.column_stack([x, control_rank])
+    x_grid = np.asarray(specification.intervention_grid, dtype=float)
+    y_min = float(np.min(y))
+    y_max = float(np.max(y))
+    y_span = max(y_max - y_min, 1.0)
+    y_lower = min([y_min - 0.35 * y_span, *specification.risk_thresholds])
+    y_upper = max([y_max + 0.35 * y_span, *specification.risk_thresholds])
+    y_grid = np.linspace(y_lower, y_upper, 161)
+    v_nodes, v_weights = np.polynomial.legendre.leggauss(18)
+    v_grid = 0.5 * (v_nodes + 1.0)
+    weights = 0.5 * v_weights
+
+    batched_features = np.concatenate(
+        [np.column_stack([np.full(len(v_grid), intervention), v_grid]) for intervention in x_grid],
+        axis=0,
+    )
+    predictions, stage2_fits, backend_audit_details = prediction_runner(
+        backend, "stage2", stage2_features, y, batched_features, y_grid
+    )
+    audit.append(
+        event_type="stage2_completed",
+        stage="tabcf_iv.stage2",
+        status="completed",
+        run_id=run_id,
+    )
+
+    conditional_means = predictions[0].reshape(len(x_grid), len(v_grid))
+    means = np.tensordot(conditional_means, weights, axes=([1], [0]))
+    conditional_cdf = predictions[1].reshape(len(x_grid), len(v_grid), len(y_grid))
+    cdf = np.tensordot(conditional_cdf, weights, axes=([1], [0]))
+    cdf = canonicalize_cdf(cdf)
+    quantiles = invert_cdf(cdf, y_grid, specification.quantile_levels)
+    risks = interpolate_risks(cdf, y_grid, specification.risk_thresholds)
+
+    return (
+        x_grid,
+        y_grid,
+        means,
+        cdf,
+        quantiles,
+        risks,
+        diagnostics,
+        diagnostic_warnings,
+        support,
+        stage1_fits + stage2_fits,
+        backend_audit_details,
+        audit,
+    )
+
+
 class TabCFAnalysisEngine:
     """Runs the validated vertical slice and serves cached ordinary follow-ups."""
 
@@ -169,7 +316,9 @@ class TabCFAnalysisEngine:
         *,
         backend_factory: BackendFactory = _default_backend_factory,
         cache: ResultCache | None = None,
+        prediction_runner: Callable = predict_backend,
     ) -> None:
+        self.prediction_runner = prediction_runner
         self.backend_factory = backend_factory
         self.cache = cache or ResultCache()
 
@@ -285,111 +434,22 @@ class TabCFAnalysisEngine:
             },
         )
 
-        roles = specification.roles
-        z = arrays[roles.instrument]
-        x = arrays[roles.treatment]
-        y = arrays[roles.outcome]
-        stage1_model = backend.fit_distribution(z.reshape(-1, 1), x)
-        control_rank = np.clip(stage1_model.cdf(z.reshape(-1, 1), x, paired=True), 0.0, 1.0)
-        audit.append(
-            event_type="stage1_completed",
-            stage="tabcf_iv.stage1",
-            status="completed",
-            run_id=run_id,
-        )
-
-        diagnostics, diagnostic_warnings = compute_diagnostics(z, x, y, control_rank)
-        support = assess_support(x, control_rank, specification.intervention_grid)
-        unsupported_grid = tuple(
-            assessment for assessment in support if assessment.status is SupportStatus.UNSUPPORTED
-        )
-        if unsupported_grid:
-            audit.append(
-                event_type="outside_support_blocked",
-                stage="tabcf_iv.support",
-                status="blocked_before_stage2",
-                run_id=run_id,
-                details=(("unsupported_grid_count", str(len(unsupported_grid))),),
-            )
-            raise DCFAError(
-                ErrorCode.OUTSIDE_SUPPORT,
-                "The strict intervention grid contains unsupported values; no Stage 2 fit or "
-                "causal numerical output was produced.",
-                stage="support.validation",
-                context={
-                    "unsupported_interventions": [
-                        {
-                            "x": assessment.x,
-                            "coverage_score": assessment.coverage_score,
-                            "reason": assessment.reason,
-                        }
-                        for assessment in unsupported_grid
-                    ]
-                },
-            )
-        for query in specification.queries:
-            query_support = [_support_for_x(support, query.x)]
-            if query.comparison_x is not None:
-                query_support.append(_support_for_x(support, query.comparison_x))
-            if _combined_support_status(*query_support) is SupportStatus.UNSUPPORTED:
-                audit.append(
-                    event_type="outside_support_blocked",
-                    stage="tabcf_iv.support",
-                    status="blocked",
-                    run_id=run_id,
-                    details=(("query_id", query.query_id),),
-                )
-                raise DCFAError(
-                    ErrorCode.OUTSIDE_SUPPORT,
-                    "A requested intervention is outside supported regions; no causal "
-                    "numerical claim was produced.",
-                    stage="support.validation",
-                    context={
-                        "query_id": query.query_id,
-                        "x": query.x,
-                        "comparison_x": query.comparison_x,
-                    },
-                )
-
-        stage2_features = np.column_stack([x, control_rank])
-        mean_model = backend.fit_mean(stage2_features, y)
-        distribution_model = backend.fit_distribution(stage2_features, y)
-        audit.append(
-            event_type="stage2_completed",
-            stage="tabcf_iv.stage2",
-            status="completed",
-            run_id=run_id,
-        )
-
-        x_grid = np.asarray(specification.intervention_grid, dtype=float)
-        y_min = float(np.min(y))
-        y_max = float(np.max(y))
-        y_span = max(y_max - y_min, 1.0)
-        y_lower = min([y_min - 0.35 * y_span, *specification.risk_thresholds])
-        y_upper = max([y_max + 0.35 * y_span, *specification.risk_thresholds])
-        y_grid = np.linspace(y_lower, y_upper, 161)
-        v_nodes, v_weights = np.polynomial.legendre.leggauss(18)
-        v_grid = 0.5 * (v_nodes + 1.0)
-        weights = 0.5 * v_weights
-
-        batched_features = np.concatenate(
-            [
-                np.column_stack([np.full(len(v_grid), intervention), v_grid])
-                for intervention in x_grid
-            ],
-            axis=0,
-        )
-        conditional_means = mean_model.predict(batched_features).reshape(len(x_grid), len(v_grid))
-        means = np.tensordot(conditional_means, weights, axes=([1], [0]))
-        conditional_cdf = distribution_model.cdf(
-            batched_features,
+        (
+            x_grid,
             y_grid,
-            paired=False,
-        ).reshape(len(x_grid), len(v_grid), len(y_grid))
-        cdf = np.tensordot(conditional_cdf, weights, axes=([1], [0]))
-        cdf = canonicalize_cdf(cdf)
-        quantiles = invert_cdf(cdf, y_grid, specification.quantile_levels)
-        risks = interpolate_risks(cdf, y_grid, specification.risk_thresholds)
+            means,
+            cdf,
+            quantiles,
+            risks,
+            diagnostics,
+            diagnostic_warnings,
+            support,
+            backend_fit_calls,
+            backend_audit_details,
+            audit,
+        ) = compute_predictions(
+            arrays, specification, backend, run_id, audit, self.prediction_runner
+        )
 
         global_warnings: list[WarningRecord] = []
         development_assumption: str | None = None
@@ -449,7 +509,6 @@ class TabCFAnalysisEngine:
             *((development_assumption,) if development_assumption is not None else ()),
         )
 
-        backend_audit_details = getattr(backend, "audit_details", ())
         if backend_audit_details:
             audit.append(
                 event_type="managed_service_observed",
@@ -647,7 +706,7 @@ class TabCFAnalysisEngine:
             audit=audit,
             run_manifest=run_manifest,
             artifact_paths=tuple(sorted(artifact_paths.items())),
-            backend_fit_calls=backend.fit_calls,
+            backend_fit_calls=backend_fit_calls,
         )
 
     def follow_up(self, specification: AnalysisSpecification, query_id: str) -> QueryResult:

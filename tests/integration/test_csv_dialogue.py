@@ -347,3 +347,29 @@ def test_prepared_analysis_has_no_gemini_call_and_verifies_artifact(fixture, tmp
     assert trace["confirmed_roles"]["outcome"]["column_position"] == 1
     assert trace["model_request_count"] == 1
     assert "history" not in trace and "conversation" not in trace
+
+
+def test_finalize_failure_is_terminal_without_refit_or_gemini(fixture):
+    from dcfa_website_demo.app import WebsiteFinalizationError
+
+    f = fixture
+    f.client.interactions.output_text = json.dumps(f.ready)
+    turn(f)
+    f.session.overrides = {"outcome": "", "treatment": "", "instrument": ""}
+    calls = []
+
+    def failed_finalize(*args):
+        calls.append(True)
+        raise WebsiteFinalizationError("injected archive failure")
+
+    h = handlers(None, failed_finalize)
+    args = (f.session, f.path, "", "", "", True, 123, f.session.revision, None)
+    result = list(h["generate"](*args))[-1]
+    assert "injected archive failure" in result[3]
+    assert result[5]["value"] == ""
+    assert not result[4]["interactive"]
+    assert f.session.status == "completed"
+    assert f.session.validated is None
+    list(h["generate"](*args))
+    assert calls == [True]
+    assert len(f.client.interactions.calls) == 1

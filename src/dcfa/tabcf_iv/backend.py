@@ -524,7 +524,7 @@ class TabPFNBackend:
         self.fit_calls += 1
         return estimator, torch_module
 
-    def fit_distribution(self, features: np.ndarray, target: np.ndarray) -> DistributionModel:
+    def fit_distribution(self, features: np.ndarray, target: np.ndarray) -> TabPFNDistributionModel:
         estimator, torch_module = self._fit_estimator(features, target)
         model = TabPFNDistributionModel(estimator, torch_module)
         sample_count = min(4, len(_as_feature_matrix(features)))
@@ -538,6 +538,13 @@ class TabPFNBackend:
     def fit_mean(self, features: np.ndarray, target: np.ndarray) -> MeanModel:
         estimator, _ = self._fit_estimator(features, target)
         return TabPFNMeanModel(estimator)
+
+    def fit_mean_distribution(
+        self, features: np.ndarray, target: np.ndarray
+    ) -> tuple[MeanModel, DistributionModel]:
+        """Use the same fitted local regressor for both Stage 2 output types."""
+        distribution = self.fit_distribution(features, target)
+        return TabPFNMeanModel(distribution.estimator), distribution
 
 
 def make_backend(

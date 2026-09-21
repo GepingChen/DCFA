@@ -7,6 +7,7 @@ import importlib.metadata
 import logging
 import os
 import re
+import shutil
 import subprocess
 import threading
 from dataclasses import dataclass, replace
@@ -593,6 +594,10 @@ def build_demo_theme() -> Any:
     )
 
 
+class WebsiteFinalizationError(RuntimeError):
+    """A completed computation could not be published; restarting must be explicit."""
+
+
 class _WebsiteAnalysisTool:
     """Presentation-only adapter that preserves the runtime's tool contract."""
 
@@ -835,6 +840,7 @@ def execute_local_portfolio_scenario(
     seed: int,
     *,
     model_path: Path,
+    prediction_runner: Any = None,
     question: str | None = None,
     output_root: Path = DEFAULT_OUTPUT_ROOT,
     gemini_api_key_file: Path | None = None,
@@ -885,6 +891,7 @@ def execute_local_portfolio_scenario(
         seed=seed,
         output_root=output_root,
         compilation=compilation,
+        prediction_runner=prediction_runner,
         backend_parameters=LOCAL_TABPFN_V2_BACKEND_PARAMETERS,
         backend_factory=lambda specification: make_local_tabpfn_v2_backend(
             specification, model_path=model_path
@@ -944,6 +951,7 @@ def execute_prepared_local_csv(
     seed: int,
     *,
     model_path: Path,
+    prediction_runner: Any = None,
     output_root: Path = DEFAULT_OUTPUT_ROOT,
 ) -> PortfolioDemoResult:
     """Execute an already reviewed CSV proposal without another provider request."""
@@ -973,6 +981,7 @@ def execute_prepared_local_csv(
         seed=seed,
         output_root=output_root,
         compilation=compilation,
+        prediction_runner=prediction_runner,
         backend_parameters=LOCAL_TABPFN_V2_BACKEND_PARAMETERS,
         backend_factory=lambda specification: make_local_tabpfn_v2_backend(
             specification, model_path=model_path
@@ -1067,6 +1076,7 @@ def _execute_compiled_dataset(
     compilation: GeminiWebsiteCompilation,
     backend_parameters: tuple[tuple[str, str], ...],
     backend_factory: Any,
+    prediction_runner: Any = None,
 ) -> PortfolioDemoResult:
     """Execute one compiled request through an injected deterministic backend."""
     if (outcome, treatment, instrument) != (
@@ -1106,9 +1116,24 @@ def _execute_compiled_dataset(
         backend_parameters=backend_parameters,
         seed=seed,
     )
+    predictions_completed = False
+    original_runner = prediction_runner
+
+    def tracked_predictions(*args, **kwargs):
+        nonlocal predictions_completed
+        result = original_runner(*args, **kwargs)
+        if args[1] == "stage2":
+            predictions_completed = True
+        return result
+
+    if prediction_runner is not None:
+        prediction_runner = tracked_predictions
     try:
         output_dir = _reserve_output_directory(Path(output_root), output_scenario, seed)
-        engine = TabCFAnalysisEngine(backend_factory=backend_factory)
+        engine = TabCFAnalysisEngine(
+            backend_factory=backend_factory,
+            **({"prediction_runner": prediction_runner} if prediction_runner else {}),
+        )
         tool = _WebsiteAnalysisTool(output_dir, engine)
         response = CausalAgentRuntime(analysis_tool=tool).execute(request, columns, manifest)
         visitor_plot_path = output_dir / "website_interventional_summary.png"
@@ -1121,14 +1146,20 @@ def _execute_compiled_dataset(
                 )
             if response.queries and present_query(response.queries[0]).allow_numeric:
                 render_visitor_plot(tool.last_run.bundle, tool.last_run.ledger, visitor_plot_path)
-    except Exception:
+    except Exception as exc:
         if "output_dir" in locals():
-            _remove_empty_reservation(output_dir)
+            shutil.rmtree(output_dir, ignore_errors=True)
+        if predictions_completed:
+            raise WebsiteFinalizationError(str(exc)) from exc
         raise
     if not any(output_dir.iterdir()):
         _remove_empty_reservation(output_dir)
     elif response.status == "completed":
-        write_compilation_trace(output_dir, compilation.trace)
+        try:
+            write_compilation_trace(output_dir, compilation.trace)
+        except Exception as exc:
+            shutil.rmtree(output_dir, ignore_errors=True)
+            raise WebsiteFinalizationError(str(exc)) from exc
     return PortfolioDemoResult(
         scenario=result_scenario,
         response=response,

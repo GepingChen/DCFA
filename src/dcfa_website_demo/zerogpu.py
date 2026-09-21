@@ -27,6 +27,7 @@ from dcfa.tabcf_iv.local_tabpfn import (
 )
 from dcfa_website_demo.app import (
     DEMO_CSS,
+    WebsiteFinalizationError,
     _execution_error_outputs,
     _input_error_outputs,
     _log_operator_error,
@@ -135,15 +136,19 @@ def _archive_run(root: Path) -> Path:
     archive_root = Path(os.environ.get("GRADIO_TEMP_DIR", str(DEFAULT_GRADIO_TEMP_ROOT)))
     archive_root.mkdir(parents=True, exist_ok=True)
     archive = archive_root / f"{root.name}-{uuid.uuid4().hex[:8]}.zip"
-    with zipfile.ZipFile(archive, mode="x", compression=zipfile.ZIP_DEFLATED) as stream:
-        for path in sorted(root.rglob("*")):
-            if path.is_file():
-                stream.write(path, arcname=path.relative_to(root.parent))
-    with zipfile.ZipFile(archive) as stream:
-        names = stream.namelist()
-    if not names or any(name.startswith("/") or ".." in Path(name).parts for name in names):
+    try:
+        with zipfile.ZipFile(archive, mode="x", compression=zipfile.ZIP_DEFLATED) as stream:
+            for path in sorted(root.rglob("*")):
+                if path.is_file():
+                    stream.write(path, arcname=path.relative_to(root.parent))
+        with zipfile.ZipFile(archive) as stream:
+            names = stream.namelist()
+        if not names or any(name.startswith("/") or ".." in Path(name).parts for name in names):
+            archive.unlink(missing_ok=True)
+            raise RuntimeError("The verified run archive failed its path-safety check.")
+    except Exception:
         archive.unlink(missing_ok=True)
-        raise RuntimeError("The verified run archive failed its path-safety check.")
+        raise
     return archive
 
 
@@ -153,7 +158,11 @@ def _public_plot_copy(path: Path | None) -> str | None:
     target_root = Path(os.environ.get("GRADIO_TEMP_DIR", str(DEFAULT_GRADIO_TEMP_ROOT)))
     target_root.mkdir(parents=True, exist_ok=True)
     target = target_root / f"dcfa-result-{uuid.uuid4().hex}.png"
-    shutil.copy2(path, target)
+    try:
+        shutil.copy2(path, target)
+    except Exception:
+        target.unlink(missing_ok=True)
+        raise
     return str(target)
 
 
@@ -175,6 +184,12 @@ def _verified_projection(result: Any, secret: str | None) -> tuple[Any, ...]:
             buttons_enabled=True,
             archive_path=str(archive) if archive is not None else None,
         )
+    except Exception:
+        if public_plot is not None:
+            Path(public_plot).unlink(missing_ok=True)
+        if archive is not None:
+            archive.unlink(missing_ok=True)
+        raise
     finally:
         if result.output_dir is not None and result.output_dir.is_dir():
             shutil.rmtree(result.output_dir)
@@ -209,6 +224,11 @@ def build_zerogpu_app(*, build_revision: str) -> Any:
         _require_login(profile)
 
     @spaces.GPU(duration=120)
+    def gpu_predictions(backend, stage, features, target, prediction_features=None, y_grid=None):
+        from dcfa.tabcf_iv.pipeline import predict_backend
+
+        return predict_backend(backend, stage, features, target, prediction_features, y_grid)
+
     def run_scenario(
         scenario: str,
         question: str,
@@ -224,6 +244,7 @@ def build_zerogpu_app(*, build_revision: str) -> Any:
                     rows,
                     seed,
                     question=question,
+                    prediction_runner=gpu_predictions,
                     model_path=model_path,
                     output_root=output_root,
                 )
@@ -234,6 +255,7 @@ def build_zerogpu_app(*, build_revision: str) -> Any:
                         rows,
                         seed,
                         question=question,
+                        prediction_runner=gpu_predictions,
                         model_path=model_path,
                         output_root=output_root,
                         gemini_api_key_file=secret_file,
@@ -258,26 +280,32 @@ def build_zerogpu_app(*, build_revision: str) -> Any:
                 on_request=on_request,
             )
 
-    @spaces.GPU(duration=120)
     def run_csv(validated, compilation, seed, profile: gr.OAuthProfile | None):
         _require_login(profile)
         result = execute_prepared_local_csv(
             validated,
             compilation,
             seed,
+            prediction_runner=gpu_predictions,
             model_path=model_path,
             output_root=output_root,
         )
-        from dcfa_website_demo.dialogue import plan_html
+        try:
+            from dcfa_website_demo.dialogue import plan_html
 
-        card = plan_html(compilation)
-        if result.output_dir is not None:
-            # A separate report appendix preserves the existing statistical report identities.
-            (result.output_dir / "confirmed_plan.html").write_text(card, encoding="utf-8")
-        projected = list(_verified_projection(result, secret))
-        projected[0]["value"] = card + "\n\n" + projected[0].get("value", "")
-        projected[0]["visible"] = True
-        return tuple(projected)
+            card = plan_html(compilation)
+            if result.output_dir is not None:
+                # A separate report appendix preserves the existing statistical report identities.
+                (result.output_dir / "confirmed_plan.html").write_text(card, encoding="utf-8")
+            projected = list(_verified_projection(result, secret))
+            projected[0]["value"] = card + "\n\n" + projected[0].get("value", "")
+            projected[0]["visible"] = True
+            return tuple(projected)
+        except (DCFAError, OSError, RuntimeError, TypeError, ValueError) as exc:
+            raise WebsiteFinalizationError(str(exc)) from exc
+        finally:
+            if result.output_dir is not None and result.output_dir.is_dir():
+                shutil.rmtree(result.output_dir)
 
     return build_app(
         output_root=output_root,

@@ -149,7 +149,12 @@ def bind_csv_dialogue(
         except (DCFAError, ValueError, OSError, RuntimeError, TypeError) as exc:
             result_updates = tuple(gr.skip() for _ in result_outputs[:6])
             if claimed:
-                session.status = "ready"
+                from dcfa_website_demo.app import WebsiteFinalizationError
+
+                terminal = isinstance(exc, WebsiteFinalizationError)
+                session.status = "completed" if terminal else "ready"
+                if terminal:
+                    cleanup_session(session)
                 session.release()
                 from dcfa_website_demo.app import _execution_error_outputs
 
@@ -164,7 +169,12 @@ def bind_csv_dialogue(
                     _execution_error_outputs(error), buttons_enabled=True
                 )[:6]
             yield (
-                *projection(session, str(exc), clear_key=claimed),
+                *projection(
+                    session,
+                    str(exc),
+                    clear_key=claimed,
+                    clear_file=claimed and session.status == "completed",
+                ),
                 *result_updates,
             )
 

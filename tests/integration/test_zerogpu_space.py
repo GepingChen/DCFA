@@ -5,6 +5,7 @@ import zipfile
 from pathlib import Path
 
 import gradio as gr
+import numpy as np
 import pytest
 
 import dcfa_website_demo.app as app_module
@@ -268,3 +269,160 @@ def test_duplicate_space_keeps_secret_mode_and_hides_browser_key(tmp_path: Path)
     )
     assert key_component["props"]["visible"] is False
     assert "owner-provided" in json.dumps(config, ensure_ascii=False, default=str)
+
+
+@pytest.mark.parametrize("route", ["preset", "csv"])
+@pytest.mark.parametrize("failure", [None, "gpu", "report", "verify", "archive", "appendix"])
+def test_space_compute_finalize_boundary_and_cleanup(tmp_path, monkeypatch, route, failure):
+    import pickle
+
+    import dcfa.tabcf_iv.pipeline as pipeline
+    from dcfa_website_demo.csv_upload import read_authorized_csv_columns
+
+    active = False
+    calls = []
+    cpu_calls = []
+    monkeypatch.delenv("DCFA_GEMINI_API_KEY", raising=False)
+    monkeypatch.setenv("DCFA_OUTPUT_ROOT", str(tmp_path / "runs"))
+    monkeypatch.setenv("GRADIO_TEMP_DIR", str(tmp_path / "public"))
+    monkeypatch.setattr(zerogpu_module, "resolve_preloaded_model", lambda: tmp_path / "model")
+    monkeypatch.setattr(zerogpu_module, "build_app", lambda **kwargs: kwargs)
+    monkeypatch.setattr(
+        app_module, "compile_website_question", lambda *a, **k: pytest.fail("No Gemini execution")
+    )
+
+    def gpu(*, duration):
+        assert duration == 120
+
+        def decorate(fn):
+            def wrapped(*args):
+                nonlocal active
+                calls.append(args[1])
+                if failure == "gpu":
+                    raise RuntimeError("quota unavailable")
+                active = True
+                try:
+                    # Emulate the isolated worker boundary, including loss of object mutations.
+                    result = fn(*pickle.loads(pickle.dumps(args)))
+                    assert all(isinstance(a, np.ndarray) for a in result[0])
+                    return pickle.loads(pickle.dumps(result))
+                finally:
+                    active = False
+
+            return wrapped
+
+        return decorate
+
+    monkeypatch.setattr(zerogpu_module.spaces, "GPU", gpu)
+
+    def cpu_guard(module, name, label):
+        original = getattr(module, name)
+
+        def wrapped(*args, **kwargs):
+            assert not active, label
+            cpu_calls.append(label)
+            if failure == label:
+                raise OSError(f"injected {label} failure")
+            return original(*args, **kwargs)
+
+        monkeypatch.setattr(module, name, wrapped)
+
+    for module, name, label in (
+        (pipeline, "render_markdown_report", "report"),
+        (pipeline, "render_bundle_plot", "plot"),
+        (pipeline, "_atomic_write", "write"),
+        (pipeline, "compute_diagnostics", "diagnostics"),
+        (app_module, "render_visitor_plot", "visitor_plot"),
+        (zerogpu_module, "verify_run_directory", "verify"),
+        (zerogpu_module, "_public_plot_copy", "copy"),
+        (zerogpu_module, "_archive_run", "archive"),
+    ):
+        cpu_guard(module, name, label)
+    original_write = Path.write_text
+
+    def write_text(path, *args, **kwargs):
+        if path.name == "confirmed_plan.html":
+            assert not active
+            if failure == "appendix":
+                raise OSError("injected appendix failure")
+        return original_write(path, *args, **kwargs)
+
+    monkeypatch.setattr(Path, "write_text", write_text)
+    handlers = zerogpu_module.build_zerogpu_app(build_revision="1234567")
+    if route == "preset":
+
+        def execute():
+            return handlers["space_scenario_handler"]("strong_iv", "", 128, 20260810, object())
+    else:
+        path = export_standard_demo_csv(tmp_path / "sample.csv")
+        validated = read_authorized_csv_columns(path, confirmed=True)
+        compilation = app_module._frozen_preset_compilation(DEFAULT_CSV_QUESTION)
+        compilation.trace["confirmed_roles"] = {
+            role: {"column": column, "column_position": index, "definition": "Test column"}
+            for index, (role, column) in enumerate(
+                (("outcome", "Y"), ("treatment", "X"), ("instrument", "Z")), start=1
+            )
+        }
+
+        def execute():
+            return handlers["space_csv_handler"](validated, compilation, 20260810, object())
+
+    failed = failure is not None and not (route == "preset" and failure == "appendix")
+    if failed and route == "csv":
+        with pytest.raises((RuntimeError, OSError), match="injected|quota"):
+            execute()
+    else:
+        result = execute()
+        if not failed:
+            archive = Path(result[5]["value"])
+            with zipfile.ZipFile(archive) as stream:
+                stream.extractall(tmp_path / "unpacked")
+            run = next((tmp_path / "unpacked").iterdir())
+            assert verify_run_directory(run)["status"] == "valid"
+        else:
+            assert result[5]["value"] is None
+    assert calls == (["stage1"] if failure == "gpu" else ["stage1", "stage2"])
+    assert not any(path.is_file() for path in (tmp_path / "runs").rglob("*"))
+    if failed:
+        assert not list((tmp_path / "public").glob("*"))
+    else:
+        assert {
+            "report",
+            "plot",
+            "write",
+            "diagnostics",
+            "visitor_plot",
+            "verify",
+            "copy",
+            "archive",
+        } <= set(cpu_calls)
+
+
+@pytest.mark.parametrize("operation", ["archive", "copy"])
+def test_partial_public_output_is_removed_on_io_failure(tmp_path, monkeypatch, operation):
+    monkeypatch.setenv("GRADIO_TEMP_DIR", str(tmp_path / "public"))
+    run = tmp_path / "run"
+    run.mkdir()
+    source = run / "plot.png"
+    source.write_bytes(b"partial output test")
+    if operation == "archive":
+        original = zipfile.ZipFile.write
+
+        def fail_after_write(self, *args, **kwargs):
+            original(self, *args, **kwargs)
+            raise OSError("disk full")
+
+        monkeypatch.setattr(zipfile.ZipFile, "write", fail_after_write)
+        with pytest.raises(OSError, match="disk full"):
+            zerogpu_module._archive_run(run)
+    else:
+        original = zerogpu_module.shutil.copy2
+
+        def fail_after_copy(*args, **kwargs):
+            original(*args, **kwargs)
+            raise OSError("disk full")
+
+        monkeypatch.setattr(zerogpu_module.shutil, "copy2", fail_after_copy)
+        with pytest.raises(OSError, match="disk full"):
+            zerogpu_module._public_plot_copy(source)
+    assert not list((tmp_path / "public").iterdir())

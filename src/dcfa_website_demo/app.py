@@ -1660,7 +1660,6 @@ def build_app(
 
             with gr.Column(elem_classes="demo-results", elem_id="analysis-results"):
                 state_graph = gr.HTML("", visible=False)
-                answer = gr.Markdown("", visible=False, elem_classes="demo-answer")
                 status = gr.HTML("", visible=False)
                 plot = gr.Image(
                     type="filepath",
@@ -1668,6 +1667,7 @@ def build_app(
                     show_label=False,
                     visible=False,
                 )
+                answer = gr.Markdown("", visible=False, elem_classes="demo-answer")
                 evidence = gr.HTML("", visible=False)
                 artifact_download = gr.File(label="Download analysis artifacts", visible=False)
         gr.HTML(

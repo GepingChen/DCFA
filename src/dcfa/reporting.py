@@ -14,16 +14,11 @@ from dcfa.schemas import ResultBundle
 
 def render_markdown_report(bundle: ResultBundle, ledger: EvidenceLedger) -> str:
     validate_bundle_evidence(bundle, ledger)
-    title = "# TabCF Analyst local development report"
-    if bundle.distribution is not None:
-        from dcfa.distribution_reporting import distribution_markdown
-
-        title += "\n\n" + distribution_markdown(bundle.distribution, bundle.queries)
     if bundle.evidence_status is EvidenceStatus.DEVELOPMENT_ONLY:
         if bundle.estimator_backend is EstimatorBackend.SKLEARN_QUANTILE_FALLBACK:
             boundary = (
                 "> **Development-only engineering output.** This run uses "
-                f"`{bundle.estimator_backend.value}` under `{bundle.execution_profile.value}`. "
+                "a local scikit-learn quantile approximation. "
                 "It is not a TabCF estimate, is not eligible for locked Track T evaluation, "
                 "and must not support a headline causal claim."
             )
@@ -38,29 +33,52 @@ def render_markdown_report(bundle: ResultBundle, ledger: EvidenceLedger) -> str:
             "> Locked Track T result; release eligibility still requires the release validator."
         )
     lines = [
-        title,
+        "# TabCF Analyst report",
         "",
         boundary,
         "",
-        "## Run identity",
+        "Track T · Distributional instrumental-variable analysis",
         "",
-        f"- Track: `{bundle.track.value}`",
-        f"- Run ID: `{bundle.run_id}`",
-        f"- Result bundle: `{bundle.result_bundle_id}`",
-        f"- Specification: `{bundle.specification_id}`",
-        f"- Dataset hash: `{bundle.dataset_hash}`",
-        f"- Evidence status: `{bundle.evidence_status.value}`",
+        "## Visual summary",
         "",
-        "## Evidence-linked query results",
+        "![Estimated outcome distributions and summaries](interventional_summary.png)",
         "",
-        "| Query | Claim type | Value | Support | Evidence ID |",
-        "|---|---|---:|---|---|",
+        "The chart and tables use the same validated results. Read them together with the "
+        "support diagnostics and warnings below.",
+        "",
     ]
-    for query in bundle.queries:
-        lines.append(
-            f"| `{query.query_id}` | `{query.claim_type}` | {query.value_display} "
-            f"{query.units} | `{query.support_status.value}` | `{query.evidence_id}` |"
+    if bundle.distribution is not None:
+        from dcfa.distribution_reporting import distribution_markdown
+
+        lines.append(distribution_markdown(bundle.distribution, bundle.queries))
+    else:
+        lines.extend(
+            [
+                "## Estimated outcomes",
+                "",
+                "| Estimate | Value | Support | Reference |",
+                "|---|---:|---|---|",
+            ]
         )
+        for index, query in enumerate(bundle.queries, 1):
+            label = {
+                "interventional_mean": "Estimated mean outcome",
+                "interventional_quantile": "Estimated outcome quantile",
+                "threshold_risk": "Estimated threshold probability",
+                "mean_contrast_x_minus_comparison_x": (
+                    "Mean difference (requested minus comparison)"
+                ),
+                "quantile_contrast_x_minus_comparison_x": (
+                    "Quantile difference (requested minus comparison)"
+                ),
+                "risk_contrast_x_minus_comparison_x": (
+                    "Probability difference (requested minus comparison)"
+                ),
+            }.get(query.claim_type, "Estimated outcome")
+            support = query.support_status.value.replace("_", " ").capitalize()
+            lines.append(
+                f"| {label} | {query.value_display} {query.units} | {support} | [{index}] |"
+            )
     lines.extend(
         [
             "",
@@ -77,14 +95,40 @@ def render_markdown_report(bundle: ResultBundle, ledger: EvidenceLedger) -> str:
     )
     if bundle.warnings:
         for warning in bundle.warnings:
-            lines.append(f"- `{warning.code}`: {warning.message}")
+            lines.append(f"- {warning.message}")
     else:
         lines.append(
             "- No additional empirical warning was triggered by the development thresholds."
         )
     lines.extend(["", "## Assumptions and scope", ""])
     lines.extend(f"- {assumption}" for assumption in bundle.assumptions)
-    lines.append("")
+    lines.extend(
+        [
+            "",
+            "<details>",
+            "<summary>Technical appendix and evidence index</summary>",
+            "",
+            f"- Run ID: `{bundle.run_id}`",
+            f"- Result bundle: `{bundle.result_bundle_id}`",
+            f"- Specification: `{bundle.specification_id}`",
+            f"- Dataset hash: `{bundle.dataset_hash}`",
+            f"- Evidence status: `{bundle.evidence_status.value}`",
+            "",
+            "Table references resolve to the evidence records included in this download.",
+            "Curve points are also included in this index.",
+            "",
+            "| Reference | Query | Validated value | Evidence ID |",
+            "|---|---|---|---|",
+        ]
+    )
+    for index, query in enumerate(bundle.queries, 1):
+        lines.append(
+            f"| [{index}] | `{query.query_id}` | {query.value_display} {query.units} "
+            f"| `{query.evidence_id}` |"
+        )
+    lines.extend(["", "### Warning codes", ""])
+    lines.extend(f"- `{warning.code}`: {warning.message}" for warning in bundle.warnings)
+    lines.extend(["", "</details>", ""])
     return "\n".join(lines)
 
 
@@ -127,18 +171,13 @@ def render_bundle_plot(bundle: ResultBundle, ledger: EvidenceLedger, output_path
     axes[1].set_ylabel("Outcome")
     axes[1].legend(frameon=False)
     axes[1].grid(alpha=0.25)
-    fig.suptitle(
-        f"{bundle.execution_profile.value} | {bundle.estimator_backend.value} | "
-        f"{bundle.evidence_status.value}",
-        fontsize=10,
-    )
-    evidence_ids = ", ".join(query.evidence_id for query in bundle.queries)
+    fig.suptitle("Estimated outcome distributions and summaries", fontsize=10)
     fig.text(
         0.5,
         0.01,
-        f"bundle={bundle.result_bundle_id} | evidence={evidence_ids}",
+        "Read with the report warnings and evidence appendix.",
         ha="center",
-        fontsize=6,
+        fontsize=8,
     )
     fig.tight_layout(rect=(0.0, 0.04, 1.0, 0.96))
     output_path.parent.mkdir(parents=True, exist_ok=True)

@@ -215,6 +215,17 @@ def test_composite_fake_tabpfn_two_fits_cache_and_artifact(wide_fake_ranks, tmp_
     exported = json.loads((tmp_path / "run/distribution_results.json").read_text())
     assert exported["distribution"]["quantiles"] == run.bundle.distribution["quantiles"]
     assert len(export_distribution(run.bundle, run.ledger)["evidence"]) == 340
+    report = (tmp_path / "run/report.md").read_text()
+    body, appendix = report.split("<details>", 1)
+    assert "![Estimated outcome distributions and summaries](interventional_summary.png)" in body
+    assert body.index("![") < body.index("| Quantile")
+    assert "Evidence-linked query results" not in body
+    assert "| 25% |" in body and "| 90% |" in body
+    for index, query in enumerate(run.bundle.queries, 1):
+        assert query.evidence_id not in body
+        assert f"| [{index}] | `{query.query_id}` | {query.value_display}" in appendix
+        assert f"`{query.evidence_id}`" in appendix
+    assert (tmp_path / "run/interventional_summary.png").stat().st_size > 1000
     assert any(w.code == "QUANTILE_GRID_ENDPOINT" for w in run.bundle.warnings)
 
 
@@ -246,6 +257,8 @@ def test_csv_composite_cpu_finalize(wide_fake_ranks, monkeypatch, tmp_path):
     rendered = format_portfolio_result(result)
     assert "percentage points" in rendered[2] and rendered[4]
     assert "Boundary-limited" in rendered[2]
+    assert "development_only" not in rendered[2]
+    assert all(q.evidence_id not in rendered[2] for q in result.response.queries)
 
     import zipfile
 

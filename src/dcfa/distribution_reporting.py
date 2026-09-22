@@ -30,14 +30,15 @@ def distribution_markdown(distribution, queries):
     d = distribution
     r = d["request"]
     lookup = {q.query_id: q for q in queries}
+    references = {q.query_id: i for i, q in enumerate(queries, 1)}
 
     def cell(key):
         q = lookup[key]
-        return f"{q.value_display} [`{q.evidence_id}`]"
+        return f"{q.value_display} [{references[key]}]"
 
     p0, p1 = r["prices"]
     lines = [
-        "### Distributional analysis — Track T / real-data / development_only",
+        "### Distributional analysis — Track T · Real data · Exploratory estimates",
         "",
         f"Prices: {p0:g} to {p1:g} {r['treatment_units']}. "
         f"All differences are {p1:g} minus {p0:g}.",
@@ -50,7 +51,7 @@ def distribution_markdown(distribution, queries):
     for row in d["quantiles"]:
         flags = ", ".join(str(i + 1) for i, v in enumerate(row["boundary_limited"]) if v)
         lines.append(
-            f"| {row['level']:g} | {cell(row['values'][0])} | "
+            f"| {row['level']:.0%} | {cell(row['values'][0])} | "
             f"{cell(row['values'][1])} | {cell(row['difference'])} | "
             f"{('Boundary-limited scenario ' + flags) if flags else 'None'} |"
         )
@@ -66,6 +67,8 @@ def distribution_markdown(distribution, queries):
         f"90th quantile change minus median change: {cell(d['gap_change'])} {r['outcome_units']}.",
         "",
         d["summary"],
+        "",
+        "Bracketed references link each estimate to the evidence index in the downloaded report.",
         "",
         "Point estimates only. No confidence intervals or significance conclusions. "
         "These are changes in aggregate distributions, not individual effects. "
@@ -95,7 +98,8 @@ def render_distribution_plot(bundle, ledger, output_path: Path):
     axes[0].scatter([r["threshold"]] * 2, [lookup[k] for k in d["threshold_cdf"]], s=25)
     axes[0].set(
         xlabel=r["outcome_units"],
-        ylabel="Interventional CDF",
+        ylabel="Cumulative probability",
+        title="Estimated outcome distributions",
         ylim=(0, 1),
         xlim=(d["outcome_axis"][0], d["outcome_axis"][-1]),
     )
@@ -116,17 +120,20 @@ def render_distribution_plot(bundle, ledger, output_path: Path):
     axes[1].margins(y=0.16)
     axes[1].axhline(0, color="gray", linestyle="--")
     axes[1].set(xlabel="Outcome quantile", ylabel=f"Change ({r['outcome_units']})", xticks=levels)
+    axes[1].set_title("Changes across the outcome distribution")
+    axes[1].set_xticklabels([f"{level:.0%}" for level in levels])
     axes[1].legend(fontsize=8)
     for ax in axes:
         ax.grid(alpha=0.2)
-    fig.suptitle("Exploratory point estimates | development_only | no uncertainty intervals")
+    fig.suptitle("Exploratory point estimates · Track T · No uncertainty intervals")
     fig.text(
         0.5,
         0.01,
-        f"Bundle: {bundle.result_bundle_id}; point evidence: distribution_results.json",
+        "Curves and tables use the same validated results. Evidence is included in the download.",
         ha="center",
         fontsize=7,
     )
     fig.tight_layout(rect=(0, 0.04, 1, 0.95))
+    output_path.parent.mkdir(parents=True, exist_ok=True)
     fig.savefig(output_path, dpi=160, facecolor="white")
     plt.close(fig)

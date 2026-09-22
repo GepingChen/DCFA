@@ -174,6 +174,18 @@ body,
   box-sizing: border-box !important;
 }
 
+/* Spaces can disable iframe document scrolling; keep an app-owned scroll area. */
+.gradio-container:has(.demo-space) {
+  height: 100dvh !important;
+  max-height: 100dvh !important;
+  min-height: 0 !important;
+  overflow-y: auto !important;
+}
+
+.gradio-container:has(.demo-space) .main {
+  flex-shrink: 0;
+}
+
 .demo-hero {
   padding: .5rem 0 1rem;
   border-bottom: 1px solid var(--demo-line);
@@ -1456,7 +1468,10 @@ def build_app(
             </header>
             """
         )
-        with gr.Column(elem_classes="demo-workspace", elem_id="analysis-input"):
+        with gr.Column(
+            elem_classes=["demo-workspace", "demo-space"] if is_space else ["demo-workspace"],
+            elem_id="analysis-input",
+        ):
             with gr.Column(
                 elem_classes="demo-input",
             ):

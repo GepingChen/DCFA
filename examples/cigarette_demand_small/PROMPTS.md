@@ -5,7 +5,26 @@ Use this prompt in the Space **Upload CSV** conversation after uploading
 It fits within the UI's 1000-character message limit.
 
 ```text
-Use log_packs_per_capita as outcome Y, log_real_price as continuous treatment X, and real_sales_tax as instrument Z; no W. Compare prices 100 and 120 CPI-deflated cents per pack. CSV X and Y are already natural logs; never log them again or substitute price percentiles. Return both CDFs; sales quantiles 0.25, 0.50, 0.75, 0.90 and their changes in packs per person per year; probability of sales strictly exceeding 120 packs per person per year and its change in percentage points; and change in the 90th-percentile-minus-median gap. All changes are price 120 minus price 100. Use one analysis and point estimates only. Present compact tables with clear units and change direction, normal body text, no inline evidence IDs or reference markers, and no separate warning section. Keep evidence and diagnostics in the download; note grid-limited quantiles. These are aggregate distribution changes, not individual effects. Show roles, original prices and transformed model inputs before execution.
+Roles:
+Y = log_packs_per_capita; X = log_real_price; Z = real_sales_tax. No W.
+
+Price change:
+Compare real price from 100 to 120 CPI-deflated cents per pack. X and Y are already natural logs. Do not log the CSV again or replace prices with percentiles.
+
+Distribution:
+Show both CDFs in packs per person per year.
+
+Quantiles:
+Report the 25th, 50th, 75th, and 90th quantiles and their changes in packs per person per year.
+
+Extreme value:
+Report the probability exceeding 120 packs per person per year and its change in percentage points.
+
+Upper vs. middle:
+Report the 90th-quantile change minus the median change.
+
+Reporting:
+All changes are price 120 minus price 100. Use one analysis and point estimates only. Preserve support and identification warnings in the downloadable evidence and diagnostics; flag grid-limited quantiles. Show units and model inputs before execution.
 ```
 
 If asked for scale clarification:

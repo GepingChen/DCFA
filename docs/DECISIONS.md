@@ -949,3 +949,19 @@ confirmation and download boundaries. Successful distribution reports can be rea
 again from session-local cached display data without Gemini or refitting. This
 feature remains Track T / real-data / development_only; fake success-path checks
 are engineering evidence, not a supported real-data numerical result.
+
+## D-042 — Add a bounded CDF-derived density view
+
+- Date: 2026-09-22
+- Decision: Extend the exact-price distribution figure with an approximate PDF
+  computed as adjacent-point finite differences of the already validated CDF on
+  the displayed original-unit outcome grid. Keep the original CDF and quantile
+  panels, use exact price labels and a directly labeled outcome threshold, and
+  show triggered interpretation warnings in both the browser and report.
+- Evidence: Each displayed density point is a deterministic metric with its own
+  evidence record and is recomputed by the existing artifact verifier from the
+  numerical core. Visitor tables use one decimal place; unrounded values remain
+  in the evidence appendix and machine-readable export.
+- Boundary: This is not a separate TabPFN fit or an exact analytic density. Do not
+  smooth, renormalize over the finite grid, or extrapolate tails. The model fit,
+  support decisions, estimand, GPU duration and release status remain unchanged.

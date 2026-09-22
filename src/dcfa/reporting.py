@@ -7,12 +7,18 @@ from tempfile import gettempdir
 
 import numpy as np
 
+from dcfa.canonical import is_sha256_digest
 from dcfa.constants import EstimatorBackend, EvidenceStatus
 from dcfa.evidence import EvidenceLedger, validate_bundle_evidence
-from dcfa.schemas import ResultBundle
+from dcfa.schemas import BackendManifest, ResultBundle
 
 
-def render_markdown_report(bundle: ResultBundle, ledger: EvidenceLedger) -> str:
+def render_markdown_report(
+    bundle: ResultBundle,
+    ledger: EvidenceLedger,
+    *,
+    backend_manifest: BackendManifest | None = None,
+) -> str:
     validate_bundle_evidence(bundle, ledger)
     if bundle.evidence_status is EvidenceStatus.DEVELOPMENT_ONLY:
         if bundle.estimator_backend is EstimatorBackend.SKLEARN_QUANTILE_FALLBACK:
@@ -22,11 +28,29 @@ def render_markdown_report(bundle: ResultBundle, ledger: EvidenceLedger) -> str:
                 "It is not a TabCF estimate, is not eligible for locked Track T evaluation, "
                 "and must not support a headline causal claim."
             )
-        else:
+        elif backend_manifest is not None and is_sha256_digest(
+            backend_manifest.model_artifact_hash
+        ):
+            boundary = (
+                "> **Development-only local TabPFN v2 output.** The model artifact identity "
+                "is recorded, but the ZeroGPU runtime is not release-locked. This run is not "
+                "eligible for locked Track T evaluation and must not support a release claim."
+            )
+        elif (
+            backend_manifest is not None
+            and backend_manifest.model_artifact_hash
+            == "managed_service_checkpoint_not_locally_available"
+        ):
             boundary = (
                 "> **Development-only managed TabPFN output.** This run is service-version-"
                 "traceable but not checkpoint/image-hash reproducible, is not eligible for "
                 "locked Track T evaluation, and must not support a release claim."
+            )
+        else:
+            boundary = (
+                "> **Development-only TabPFN output.** Use the recorded backend manifest to "
+                "identify the execution profile. This run is not eligible for locked Track T "
+                "evaluation and must not support a release claim."
             )
     else:
         boundary = (
@@ -91,14 +115,18 @@ def render_markdown_report(bundle: ResultBundle, ledger: EvidenceLedger) -> str:
             "",
         ]
     )
-    if bundle.distribution is None:
-        lines.extend(["## Warnings", ""])
-        if bundle.warnings:
-            lines.extend(f"- {warning.message}" for warning in bundle.warnings)
-        else:
-            lines.append(
-                "- No additional empirical warning was triggered by the development thresholds."
-            )
+    lines.extend(["## Interpretation limits", ""])
+    visible_warnings = tuple(
+        warning
+        for warning in bundle.warnings
+        if warning.code != "DEVELOPMENT_TABPFN_NOT_RELEASE_ELIGIBLE"
+    )
+    if visible_warnings:
+        lines.extend(f"- {warning.message}" for warning in visible_warnings)
+    else:
+        lines.append(
+            "- No additional empirical warning was triggered by the development thresholds."
+        )
     lines.extend(["", "## Assumptions and scope", ""])
     lines.extend(f"- {assumption}" for assumption in bundle.assumptions)
     lines.extend(
@@ -125,14 +153,8 @@ def render_markdown_report(bundle: ResultBundle, ledger: EvidenceLedger) -> str:
             f"| [{index}] | `{query.query_id}` | {query.value_display} {query.units} "
             f"| `{query.evidence_id}` |"
         )
-    if bundle.distribution is None:
-        lines.extend(["", "### Warning codes", ""])
-        lines.extend(f"- `{warning.code}`: {warning.message}" for warning in bundle.warnings)
-    if bundle.distribution is not None:
-        # Retain validation metadata without rendering a warning section.
-        lines.extend(["", "<!--"])
-        lines.extend(f"{warning.code}: {warning.message}" for warning in bundle.warnings)
-        lines.append("-->")
+    lines.extend(["", "### Warning codes", ""])
+    lines.extend(f"- `{warning.code}`: {warning.message}" for warning in bundle.warnings)
     lines.extend(["", "</details>", ""])
     return "\n".join(lines)
 

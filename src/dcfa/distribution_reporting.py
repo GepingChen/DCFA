@@ -32,8 +32,7 @@ def distribution_markdown(distribution, queries):
     lookup = {q.query_id: q for q in queries}
 
     def cell(key):
-        q = lookup[key]
-        return q.value_display
+        return f"{float(lookup[key].value_raw):.1f}"
 
     p0, p1 = r["prices"]
     lines = [
@@ -87,6 +86,10 @@ def distribution_markdown(distribution, queries):
         "",
         d["summary"],
         "",
+        "The PDF panel is an approximate probability density obtained by finite-differencing "
+        "the displayed CDF grid. It is not a separate fitted model, is not smoothed, and does "
+        "not extrapolate beyond the evaluated outcome range.",
+        "",
         "The downloaded technical appendix contains the evidence index for these estimates.",
         "",
         "Point estimates only. No confidence intervals or significance conclusions. "
@@ -106,53 +109,120 @@ def render_distribution_plot(bundle, ledger, output_path: Path):
     d = bundle.distribution
     r = d["request"]
     lookup = {q.query_id: q.value_raw for q in bundle.queries}
-    fig, axes = plt.subplots(1, 2, figsize=(12, 4.8))
-    for curve in d["curves"]:
-        axes[0].plot(
+    colors = ("#2563eb", "#f97316")
+    fig, axes = plt.subplot_mosaic([["cdf", "pdf"], ["quantile", "quantile"]], figsize=(12, 8.6))
+    for index, curve in enumerate(d["curves"]):
+        axes["cdf"].plot(
             d["outcome_axis"],
             [lookup[k] for k in curve["cdf"]],
-            label=f"{curve['price']:g} {r['treatment_units']}",
+            color=colors[index],
+            label=f"Price = {curve['price']:g}",
         )
-    axes[0].axvline(r["threshold"], color="gray", linestyle="--")
-    axes[0].scatter([r["threshold"]] * 2, [lookup[k] for k in d["threshold_cdf"]], s=25)
-    axes[0].set(
+    axes["cdf"].axvline(r["threshold"], color="gray", linestyle="--")
+    for index, (cdf_key, probability_key) in enumerate(
+        zip(d["threshold_cdf"], d["probabilities"], strict=True)
+    ):
+        cdf_value = lookup[cdf_key]
+        axes["cdf"].scatter([r["threshold"]], [cdf_value], color=colors[index], s=28, zorder=3)
+        axes["cdf"].annotate(
+            f"P(> threshold) = {lookup[probability_key]:.1f}%",
+            (r["threshold"], cdf_value),
+            xytext=(7, 10 if index else -14),
+            textcoords="offset points",
+            fontsize=8,
+            color=colors[index],
+        )
+    axes["cdf"].annotate(
+        f"Outcome threshold = {r['threshold']:g}",
+        (r["threshold"], 0.99),
+        xytext=(6, -4),
+        textcoords="offset points",
+        va="top",
+        fontsize=8,
+        color="dimgray",
+    )
+    axes["cdf"].set(
         xlabel=r["outcome_units"],
-        ylabel="Cumulative probability",
-        title="Estimated outcome distributions",
+        ylabel="P(sales ≤ outcome under intervention)",
+        title="Interventional CDFs",
         ylim=(0, 1),
         xlim=(d["outcome_axis"][0], d["outcome_axis"][-1]),
     )
-    axes[0].legend(fontsize=8)
+    axes["cdf"].legend(fontsize=8)
+
+    for index, density in enumerate(d["densities"]):
+        axes["pdf"].plot(
+            d["density_axis"],
+            [lookup[k] for k in density["pdf"]],
+            color=colors[index],
+            label=f"Price = {density['price']:g}",
+        )
+    axes["pdf"].set(
+        xlabel=r["outcome_units"],
+        ylabel="Approximate probability density",
+        title="CDF-derived approximate density (PDF)",
+        xlim=(d["outcome_axis"][0], d["outcome_axis"][-1]),
+    )
+    axes["pdf"].legend(fontsize=8)
+
     levels = [row["level"] for row in d["quantiles"]]
     values = [lookup[row["difference"]] for row in d["quantiles"]]
-    axes[1].plot(levels, values, "o-", label="Second price minus first")
+    axes["quantile"].plot(
+        levels,
+        values,
+        "o-",
+        color="#0f766e",
+        label=f"Price {r['prices'][1]:g} − price {r['prices'][0]:g}",
+    )
     for row, value in zip(d["quantiles"], values, strict=True):
+        axes["quantile"].annotate(
+            f"{value:.1f}",
+            (row["level"], value),
+            fontsize=8,
+            xytext=(0, 9),
+            textcoords="offset points",
+            ha="center",
+        )
         if any(row["boundary_limited"]):
-            axes[1].annotate(
-                "grid endpoint",
+            axes["quantile"].scatter(
+                [row["level"]],
+                [value],
+                facecolors="white",
+                edgecolors="#0f766e",
+                linewidths=2,
+                s=55,
+                zorder=4,
+            )
+            axes["quantile"].annotate(
+                "grid boundary",
                 (row["level"], value),
                 fontsize=8,
-                xytext=(0, 8),
+                xytext=(0, -16),
                 textcoords="offset points",
                 ha="center",
             )
-    axes[1].margins(y=0.16)
-    axes[1].axhline(0, color="gray", linestyle="--")
-    axes[1].set(xlabel="Outcome quantile", ylabel=f"Change ({r['outcome_units']})", xticks=levels)
-    axes[1].set_title("Changes across the outcome distribution")
-    axes[1].set_xticklabels([f"{level:.0%}" for level in levels])
-    axes[1].legend(fontsize=8)
-    for ax in axes:
+    axes["quantile"].margins(y=0.22)
+    axes["quantile"].axhline(0, color="gray", linestyle="--")
+    axes["quantile"].set(
+        xlabel="Outcome quantile",
+        ylabel=f"Change ({r['outcome_units']})",
+        xticks=levels,
+    )
+    axes["quantile"].set_title("Quantile changes across the outcome distribution")
+    axes["quantile"].set_xticklabels([f"{level:.0%}" for level in levels])
+    axes["quantile"].legend(fontsize=8)
+    for ax in axes.values():
         ax.grid(alpha=0.2)
     fig.suptitle("Exploratory point estimates · Track T · No uncertainty intervals")
     fig.text(
         0.5,
-        0.01,
-        "Curves and tables use the same validated results. Evidence is included in the download.",
+        0.025,
+        "PDF = finite-difference slope of the displayed CDF, with no smoothing or tail "
+        "extrapolation. Curves and tables use the same validated result bundle.",
         ha="center",
-        fontsize=7,
+        fontsize=8,
     )
-    fig.tight_layout(rect=(0, 0.04, 1, 0.95))
+    fig.tight_layout(rect=(0, 0.06, 1, 0.96))
     output_path.parent.mkdir(parents=True, exist_ok=True)
     fig.savefig(output_path, dpi=160, facecolor="white")
     plt.close(fig)

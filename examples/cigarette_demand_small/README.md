@@ -43,15 +43,18 @@ must pass the existing support checks.
 
 ## Expected result package after implementation
 
-1. Two interventional CDF curves, labeled **price = 100** and **price = 120**, on
-   an outcome axis in packs per person per year.
+1. Two interventional CDF curves, plus a CDF-derived approximate probability
+   density (PDF), labeled **price = 100** and **price = 120** on an outcome axis
+   in packs per person per year. The PDF uses finite differences only, with no
+   smoothing or tail extrapolation.
 2. A table and a quantile-change plot at the 25th, 50th, 75th and 90th percentiles,
    reporting both intervention-specific values and **120 minus 100** differences.
 3. The probability of annual sales exceeding **120 packs per capita** under each
    price, and its difference in percentage points. This is an illustrative
    threshold near the observed outcome's 75th percentile, not a health standard.
 4. A short comparison of the median change and upper-quantile changes, with all
-   support, identification, weak-IV and numerical-grid warnings retained.
+   support, identification, weak-IV and numerical-grid warnings visible in the
+   report as well as retained in the download.
 
 The two occurrences of 120 have different units: **120 cents** is the intervention;
 **120 packs per person per year** is the outcome threshold.
@@ -66,12 +69,14 @@ The two occurrences of 120 have different units: **120 cents** is the interventi
    PROMPTS.md. Preparing or correcting the plan must not fit TabPFN.
 4. Before confirmation, the card must explicitly show the three roles above,
    prices 100/120 in real cents, their log-scale mapping, the four outcome
-   quantiles, the 120-packs threshold, and the contrast direction 120 minus 100.
-   If it shows only low/high, a single median contrast, or missing units, stop.
+   quantiles, both CDFs, the CDF-derived approximate PDF, the 120-packs threshold,
+   and the contrast direction 120 minus 100. If it shows only low/high, a single
+   median contrast, or missing units, stop.
 5. Confirm once. All requested results should reuse the same two fitted stages
    and one validated result bundle; no separate fit per chart or statistic.
-6. Download the verified ZIP: `report.md`, `interventional_summary.png` (two
-   panels), `distribution_results.json` (curve/table values and evidence mapping),
+6. Download the verified ZIP: `report.md`, `interventional_summary.png` (CDF,
+   CDF-derived PDF and quantile-change panels), `distribution_results.json`
+   (curve/table/density values and evidence mapping),
    `result_bundle.json`, `evidence_records.jsonl`, warnings, specification and
    `confirmed_plan.html`. The figure and tables use the same bundle.
 7. Ordinary chat follow-ups return the cached report without Gemini or fitting.

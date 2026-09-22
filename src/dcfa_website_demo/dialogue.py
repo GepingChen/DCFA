@@ -220,10 +220,11 @@ def plan_html(compilation: GeminiWebsiteCompilation) -> str:
             f"Transform: natural log; model inputs: {math.log(d.prices[0]):.17g}, "
             f"{math.log(d.prices[1]):.17g}. CSV X and Y are already natural logs; "
             "CSV columns are not transformed again. No W. "
-            f"Outputs: two CDFs in {d.outcome_units}; quantiles 0.25, 0.50, 0.75, 0.90 "
-            f"and their differences; probability exceeding {d.threshold:g} {d.outcome_units} "
-            "and difference in percentage points; 90th change minus median change. "
-            "Point estimates only; support checked before Stage 2."
+            f"Outputs: two CDFs in {d.outcome_units}; a finite-difference approximate PDF "
+            "derived from the displayed CDF grid with no smoothing or tail extrapolation; "
+            "quantiles 0.25, 0.50, 0.75, 0.90 and their differences; probability exceeding "
+            f"{d.threshold:g} {d.outcome_units} and difference in percentage points; 90th "
+            "change minus median change. Point estimates only; support checked before Stage 2."
         )
     else:
         details = (

@@ -293,7 +293,8 @@ artifacts.
 - `dcfa_website_demo/numeric_request.py`: row-free exact-unit proposal validation; `dialogue.py` renders the same confirmed plan.
 - `tabcf_iv/distribution.py`: CPU-only original-unit projection from existing CDF,
   quantile and CDF-threshold predictions. No estimator or support/grid changes.
-- `distribution_reporting.py`: evidence-linked tables, two-panel plot and
+- `distribution_reporting.py`: rounded visitor tables, visible interpretation
+  limits, a three-panel CDF/CDF-derived-PDF/quantile plot and
   `distribution_results.json`; `artifact_validation.py` verifies the projection.
 - `dialogue_ui.py`: completed numeric reports support cached chat follow-ups without
   another provider request; model objects and credentials never enter session state.

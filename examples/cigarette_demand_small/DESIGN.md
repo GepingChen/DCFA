@@ -12,6 +12,8 @@ Compare the marginal interventional distributions at **P = 100 and P = 120**:
 
 - Model-scale interventions: x0 = ln(100), x1 = ln(120).
 - CDF on the display scale: G_p(c) = F_Y(ln(c); do(X = ln(p))) for c > 0.
+- Approximate PDF on each evaluated interval: the finite-difference slope of
+  G_p(c) on the existing original-unit CDF grid.
 - Outcome quantiles: q_p(tau) = exp(Q_Y(tau; do(X = ln(p)))).
 - Quantile difference: D(tau) = q_120(tau) - q_100(tau), in packs/person/year.
 - Exceedance: R_p = 1 - G_p(120).
@@ -30,20 +32,27 @@ not an intervention that raises tax by 20 cents.
 
 ## Result presentation
 
-### Figure 1: two interventional CDFs
+### Figure 1: CDF, CDF-derived PDF and quantile changes
 
 One shared outcome axis in packs/person/year and a probability axis from 0 to 1.
 Label the curves with actual prices and units. Add a vertical marker at 120 packs
 and mark each curve's CDF value there. Use the existing evaluated Y grid, mapped
-through exp; do not invent an additional density estimate or extrapolated tail.
-Describe this as the estimated CDF over the evaluated range, not exact knowledge
-of the entire unbounded distribution.
+through exp. Label the threshold directly and show the corresponding exceedance
+probabilities. Describe this as the estimated CDF over the evaluated range, not
+exact knowledge of the entire unbounded distribution.
+
+The PDF panel is the adjacent-point finite-difference slope of those same CDF
+curves on the original-unit outcome grid. It adds evidence-linked deterministic
+projections but no fit, smoothing bandwidth or extrapolated tail. Call it a
+**CDF-derived approximate density**, not an exact TabPFN density. Because the
+displayed grid may omit tail mass, the displayed density need not integrate to
+one over that finite range.
 
 At a fixed outcome c, a larger G_120(c) means a larger probability of sales at or
 below c under the higher price. If curves cross, report the crossing rather than
 claiming a uniform downward shift or proven stochastic dominance.
 
-### Table and Figure 2: where the quantile changes occur
+### Table and quantile-change panel: where the changes occur
 
 The following is an **uncomputed output layout**, not mock numerical results.
 
@@ -78,11 +87,12 @@ event explicit. No expected sign or minimum effect size is imposed.
 
 ### Report and downloadable data
 
-The intended package includes the two figures, the quantile table, the probability
-table, machine-readable curve/table data, source result bundle, evidence records,
-warnings and the confirmed analysis plan. Existing artifact verification must
-cover the displayed/exported claims using the current evidence mechanism.
-All three outputs reuse the same fit; download and explanation do not refit.
+The intended package includes the three-panel figure, the quantile table, the
+probability table, machine-readable CDF/PDF/table data, source result bundle,
+evidence records, visible warnings and the confirmed analysis plan. Existing
+artifact verification must cover the displayed/exported claims using the current
+evidence mechanism. All outputs reuse the same fit; download and explanation do
+not refit.
 
 ## Computation and implementation boundary
 
@@ -94,18 +104,19 @@ before Stage 2. Being inside the marginal observed range is not enough.
 
 Stage 1 is fitted once and Stage 2 uses one local TabPFN estimator for mean/full
 output. The existing full predictions yield both CDFs in one batched evaluation.
-Additional quantiles, complements, unit conversions and tables are deterministic
-CPU operations on that result, not separate GPU fits. Retain the existing GPU
-duration declaration. No bootstrap or parameter sweep is part of this first run.
+Additional quantiles, complements, unit conversions, finite-difference density
+and tables are deterministic CPU operations on that result, not separate GPU
+fits. Retain the existing GPU duration declaration. No bootstrap, density
+smoothing or parameter sweep is part of this first run.
 
 The Space dialogue now exposes this composite request through a typed
 `DistributionRequest`. It validates exact user-supplied prices and units plus an
 explicit already-log declaration; the confirmation card computes the logs in
 Python. The compiler produces exactly two intervention points. CPU projection
-creates evidence-linked original-unit quantiles, differences, exceedance and gap
-change, and one evidence record for every evaluated CDF point. All results are
-cached together. Saved-artifact verification recomputes the deterministic
-projection from the numerical core without fitting.
+creates evidence-linked original-unit quantiles, differences, exceedance, gap
+change, and CDF-derived density, with one evidence record for every evaluated CDF
+and density point. All results are cached together. Saved-artifact verification
+recomputes the deterministic projection from the numerical core without fitting.
 
 Two important arithmetic details from the inspected core:
 
@@ -123,9 +134,10 @@ the grid or present a clipped endpoint as a well-resolved upper quantile.
 
 ## What can and cannot be concluded
 
-An implemented, supported run can give estimated CDFs, quantile changes, exceedance
-probabilities and a descriptive comparison of middle versus upper-quantile changes.
-The outcome may be a negative, null, positive, mixed or unsupported result.
+An implemented, supported run can give estimated CDFs, their finite-difference
+approximate PDFs, quantile changes, exceedance probabilities and a descriptive
+comparison of middle versus upper-quantile changes. The outcome may be a negative,
+null, positive, mixed or unsupported result.
 
 The first run supplies **point estimates only**. Differences across outcome
 quantiles are distributional features, not confidence intervals. No confidence

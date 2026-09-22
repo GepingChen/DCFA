@@ -15,6 +15,7 @@ from dcfa.artifact_validation import verify_run_directory
 from dcfa.constants import EstimatorBackend
 from dcfa.distribution_reporting import export_distribution
 from dcfa.errors import DCFAError
+from dcfa.reporting import render_markdown_report
 from dcfa.tabcf_iv.backend import TabPFNBackend
 from dcfa.tabcf_iv.distribution import derive_distribution
 from dcfa.tabcf_iv.pipeline import TabCFAnalysisEngine, predict_backend
@@ -37,9 +38,10 @@ PROMPT = (
     "Use log_packs_per_capita as Y, log_real_price as X, real_sales_tax as Z; no W. "
     "Price from 100 to 120 CPI-deflated cents per pack. "
     "The CSV already contains natural-log sales and natural-log real prices. "
-    "Return both CDFs, quantiles .25/.50/.75/.90, second minus first differences in "
-    "packs per person per year, probability exceeding 120 packs per person per year, "
-    "percentage-point difference and 90th change minus median change."
+    "Return both CDFs and their finite-difference approximate PDF, quantiles "
+    ".25/.50/.75/.90, second minus first differences in packs per person per year, "
+    "probability exceeding 120 packs per person per year, percentage-point difference "
+    "and 90th change minus median change."
 )
 
 
@@ -117,6 +119,7 @@ def test_compile_units_card_and_no_fit():
     card = plan_html(c)
     assert "4.60517018598809" in card and "4.78749174278204" in card
     assert "CPI-deflated cents per pack" in card and "not transformed again" in card
+    assert "finite-difference approximate PDF" in card
     assert "percentiles" not in card
     spec = SpecificationCompiler().compile(request()).specification
     assert spec.intervention_grid == (math.log(100), math.log(120))
@@ -167,6 +170,12 @@ def test_nontrivial_original_unit_hand_calculation():
     assert m["exceedance:0"] == pytest.approx(30)
     assert m["exceedance:1"] == pytest.approx(20)
     assert m["exceedance_difference"] == pytest.approx(-10)
+    assert np.allclose(result["density_axis"], [55.0, 150.0])
+    assert np.allclose(
+        [[m[key] for key in curve["pdf"]] for curve in result["densities"]],
+        [[0.4 / 90.0, 0.45 / 100.0], [0.4 / 90.0, 0.3 / 100.0]],
+    )
+    assert result["density_method"] == "finite_difference_of_cdf_on_evaluated_outcome_grid"
     assert "mixed signs" in result["summary"] and "curves cross" in result["summary"]
     assert np.allclose(result["outcome_axis"], [10, 100, 200])
     q[1, 3] = y[-1]
@@ -205,25 +214,35 @@ def test_composite_fake_tabpfn_two_fits_cache_and_artifact(wide_fake_ranks, tmp_
     assert len(fake_tabpfn) == 2 and all(m.fits == 1 for m in fake_tabpfn)
     assert set(fake_tabpfn[1].outputs) == {"mean", "full"}
     assert len(run.bundle.x_grid) == 2 and len(run.bundle.y_grid) == 161
-    assert len(run.bundle.queries) == 340
+    assert len(run.bundle.queries) == 660
     for q in run.bundle.queries:
         assert engine.follow_up(spec, q.query_id) == q
         assert run.ledger.resolve(q.evidence_id).value_raw == q.value_raw
     assert engine.analyze(data.columns, spec, data.manifest).backend_fit_calls == 0
     assert len(fake_tabpfn) == 2
     assert verify_run_directory(tmp_path / "run")["status"] == "valid"
+    local_manifest = TabPFNBackend(
+        seed=spec.seed,
+        execution_profile=spec.execution_profile,
+        model_artifact_hash="sha256:" + "a" * 64,
+    ).manifest
+    assert "Development-only local TabPFN v2 output" in render_markdown_report(
+        run.bundle, run.ledger, backend_manifest=local_manifest
+    )
     exported = json.loads((tmp_path / "run/distribution_results.json").read_text())
     assert exported["distribution"]["quantiles"] == run.bundle.distribution["quantiles"]
-    assert len(export_distribution(run.bundle, run.ledger)["evidence"]) == 340
+    assert len(export_distribution(run.bundle, run.ledger)["evidence"]) == 660
     report = (tmp_path / "run/report.md").read_text()
     body, appendix = report.split("<details>", 1)
     assert "![Estimated outcome distributions and summaries](interventional_summary.png)" in body
     assert body.index("![") < body.index("| Quantile")
     assert "Evidence-linked query results" not in body
     assert "| 25% |" in body and "| 90% |" in body
-    assert "## Warnings" not in report and "### Warning codes" not in report
+    assert "## Interpretation limits" in body and "### Warning codes" in appendix
+    assert "finite-differencing the displayed CDF grid" in body
     assert "Grid endpoint flags" not in body
     assert "Change (120 − 100)" in body
+    assert "| 25% | 38.8 | 31.9 | -6.9 |" in body
     for index, query in enumerate(run.bundle.queries, 1):
         assert query.evidence_id not in body
         assert f"| [{index}] | `{query.query_id}` | {query.value_display}" in appendix
@@ -258,11 +277,14 @@ def test_csv_composite_cpu_finalize(wide_fake_ranks, monkeypatch, tmp_path):
     assert len(fake_tabpfn) == 2
     assert verify_run_directory(result.output_dir)["status"] == "valid"
     rendered = format_portfolio_result(result)
-    assert "percentage points" in rendered[2] and rendered[4]
+    assert "Completed with important limitations" in rendered[0]
+    assert "percentage points" in rendered[2]
+    assert rendered[4] is not None
     assert "Boundary-limited" in rendered[2]
     assert "development_only" not in rendered[2]
     assert "Warnings:" not in rendered[2]
-    assert "Important warnings" not in rendered[3]
+    assert "Important warnings" in rendered[3]
+    assert "local TabPFN v2 result" in rendered[3]
     assert all(q.evidence_id not in rendered[2] for q in result.response.queries)
 
     import zipfile

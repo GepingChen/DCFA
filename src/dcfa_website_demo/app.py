@@ -995,6 +995,9 @@ def _execute_compiled_dataset(
     prediction_runner: Any = None,
 ) -> PortfolioDemoResult:
     """Execute one compiled request through an injected deterministic backend."""
+    compilation.trace["backend_access_mode"] = dict(backend_parameters).get(
+        "access_mode", "unknown"
+    )
     if (outcome, treatment, instrument) != (
         compilation.outcome,
         compilation.treatment,
@@ -1126,7 +1129,10 @@ def _status_html(result: PortfolioDemoResult) -> str:
             "No numerical result is displayed.</div>"
         )
     presented = present_query(response.queries[0])
-    if any(item.severity == "caution" for item in presented.warnings):
+    if any(
+        item.severity in {"caution", "warning"} and item.title != "Development result"
+        for item in presented.warnings
+    ):
         return (
             '<div class="demo-status demo-status--warning" role="status" aria-live="polite">'
             "<strong>Completed with important limitations</strong>"
@@ -1261,7 +1267,12 @@ def _answer_markdown(response: AgentResponse, llm_trace: dict[str, Any]) -> str:
     return f"### Answer\n\n**{answer_sentence(response.queries[0], llm_trace.get('proposal'))}**"
 
 
-def _evidence_card_html(response: AgentResponse, *, show_warnings: bool = True) -> str:
+def _evidence_card_html(
+    response: AgentResponse,
+    *,
+    show_warnings: bool = True,
+    backend_access_mode: str = "unknown",
+) -> str:
     if not response.queries:
         return (
             '<div class="demo-evidence-card demo-evidence-placeholder">'
@@ -1306,11 +1317,20 @@ def _evidence_card_html(response: AgentResponse, *, show_warnings: bool = True) 
         )
     if not show_warnings:
         warning_html = ""
+    development_description = (
+        "This local TabPFN v2 result is tied to the recorded checkpoint artifact, but the "
+        "ZeroGPU runtime remains development-only and is not release-ready causal evidence."
+        if backend_access_mode == "local_model"
+        else "This managed TabPFN result is service-version-traceable, development-only, and "
+        "not release-ready causal evidence."
+        if backend_access_mode == "managed_client"
+        else "This TabPFN result uses a recorded development-only backend profile and is not "
+        "release-ready causal evidence."
+    )
     development_html = (
         '<section class="demo-result-detail demo-result-detail--development">'
         "<h3>Development-only</h3>"
-        "<p>This managed-service result is for local demonstration, not published or "
-        "production causal evidence.</p></section>"
+        f"<p>{html.escape(development_description)}</p></section>"
     )
     return (
         '<div class="demo-evidence-card demo-result-details">'
@@ -1372,7 +1392,9 @@ def format_portfolio_result(
         _state_graph_html(result.response, result.llm_trace),
         _answer_markdown(result.response, result.llm_trace),
         _evidence_card_html(
-            result.response, show_warnings=not bool(result.llm_trace.get("distribution_report"))
+            result.response,
+            show_warnings=True,
+            backend_access_mode=str(result.llm_trace.get("backend_access_mode", "unknown")),
         ),
         (
             str(result.plot_path)

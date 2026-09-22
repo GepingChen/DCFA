@@ -15,6 +15,7 @@ from dcfa.canonical import (
     canonical_json_bytes,
     content_id,
     file_sha256,
+    is_sha256_digest,
     sha256_digest,
 )
 from dcfa.constants import EstimatorBackend, SupportStatus, WarningSeverity
@@ -483,10 +484,24 @@ class TabCFAnalysisEngine:
                     source="backend.contract",
                 )
             )
-            development_assumption = (
-                "Managed-service TabPFN is service-version-traceable rather than bitwise "
-                "reproducible and cannot enter locked Track T evidence."
-            )
+            if is_sha256_digest(backend_manifest.model_artifact_hash):
+                development_assumption = (
+                    "Local TabPFN v2 uses the recorded checkpoint artifact, but the current "
+                    "runtime image is not release-locked and cannot enter locked Track T evidence."
+                )
+            elif (
+                backend_manifest.model_artifact_hash
+                == "managed_service_checkpoint_not_locally_available"
+            ):
+                development_assumption = (
+                    "Managed-service TabPFN is service-version-traceable rather than bitwise "
+                    "reproducible and cannot enter locked Track T evidence."
+                )
+            else:
+                development_assumption = (
+                    "This TabPFN development profile is recorded in the backend manifest and "
+                    "cannot enter locked Track T evidence."
+                )
         global_warnings.extend(diagnostic_warnings)
         if any(item.status is SupportStatus.WEAK_SUPPORT for item in support):
             global_warnings.append(
@@ -722,7 +737,9 @@ class TabCFAnalysisEngine:
             _write_jsonl(artifact_paths["audit"], audit.events())
             _atomic_write(
                 artifact_paths["report"],
-                render_markdown_report(bundle, ledger).encode("utf-8"),
+                render_markdown_report(bundle, ledger, backend_manifest=backend_manifest).encode(
+                    "utf-8"
+                ),
             )
             render_bundle_plot(bundle, ledger, artifact_paths["plot"])
             artifact_paths["report_manifest"] = output_dir / "report_manifest.json"

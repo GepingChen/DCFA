@@ -12,7 +12,7 @@ Price change:
 Compare real price from 100 to 120 CPI-deflated cents per pack. X and Y are already natural logs. Do not log the CSV again or replace prices with percentiles.
 
 Distribution:
-Show both CDFs in packs per person per year.
+Show both CDFs and a finite-difference approximate PDF derived from the same CDF grid; no smoothing or tail extrapolation.
 
 Quantiles:
 Report the 25th, 50th, 75th, and 90th quantiles and their changes in packs per person per year.
@@ -35,8 +35,9 @@ The CSV X and Y are already natural logs. Prices are from 100 to 120 CPI-deflate
 
 The confirmation card must show the Y/X/Z roles, no W, both original prices,
 natural-log transform, model inputs approximately 4.605170185988092 and
-4.787491742782046, all four outcome quantiles, the 120-packs threshold and the
-second-minus-first direction. A low/high card does not answer this question.
+4.787491742782046, both CDFs, the CDF-derived approximate PDF, all four outcome
+quantiles, the 120-packs threshold and the second-minus-first direction. A
+low/high card does not answer this question.
 
 Click **Confirm and generate report** once. Typing “confirm” or “确认” does not
 execute. The button makes no additional Gemini request. Keep the key in its

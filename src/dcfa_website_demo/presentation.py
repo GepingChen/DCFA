@@ -144,7 +144,8 @@ UNKNOWN_SUPPORT = PresentationMessage(
 WARNING_PRESENTATION: dict[str, PresentationMessage] = {
     "DEVELOPMENT_TABPFN_NOT_RELEASE_ELIGIBLE": PresentationMessage(
         "Development result",
-        "This managed-service result is for local demonstration and is not release-ready evidence.",
+        "This TabPFN result uses a recorded development-only backend profile and is not "
+        "release-ready evidence.",
         "info",
         "Do not use it as a published or production causal claim.",
         True,
@@ -311,7 +312,8 @@ def present_query(query: QueryResult) -> PresentedQuery:
     if re.fullmatch(
         r"distribution:(quantile:(0\.25|0\.5|0\.75|0\.9):[01]|"
         r"quantile_difference:(0\.25|0\.5|0\.75|0\.9)|exceedance:[01]|"
-        r"exceedance_difference|upper_minus_middle_change|threshold_cdf:[01]|cdf:[01]:[0-9]+)",
+        r"exceedance_difference|upper_minus_middle_change|threshold_cdf:[01]|"
+        r"cdf:[01]:[0-9]+|density:[01]:[0-9]+)",
         query.claim_type,
     ):
         claim = PresentationMessage(

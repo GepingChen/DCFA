@@ -55,10 +55,21 @@ def derive_distribution(
     qlog = np.asarray(quantiles, dtype=float)
     q = np.exp(qlog)
     axis = np.exp(y)
+    widths = np.diff(axis)
+    cdf_increments = np.diff(f, axis=1)
     risk = 1.0 - np.asarray(risks, dtype=float)[:, 0]
     bounded = (qlog <= y[0]) | (qlog >= y[-1])
     if not np.all(np.isfinite(axis)) or not np.all(np.isfinite(q)):
         raise ValueError("Original-unit projection overflowed; no extrapolation is available.")
+    if len(axis) < 2 or np.any(widths <= 0.0):
+        raise ValueError("The evaluated original-unit outcome grid must be strictly increasing.")
+    if np.any(cdf_increments < -1e-12):
+        raise ValueError("CDF-derived density requires nondecreasing evaluated CDF curves.")
+    # Canonical CDFs are monotone; remove round-off only, without smoothing or extrapolation.
+    density = np.maximum(cdf_increments, 0.0) / widths[None, :]
+    density_axis = 0.5 * (axis[:-1] + axis[1:])
+    if not np.all(np.isfinite(density)):
+        raise ValueError("CDF-derived density contains non-finite values.")
     metrics = []
 
     def add(key, value, units):
@@ -120,10 +131,18 @@ def derive_distribution(
     for i in range(2):
         keys = [add(f"cdf:{i}:{j}", value, "probability") for j, value in enumerate(f[i])]
         curves.append({"price": d.prices[i], "cdf": keys})
+    densities = []
+    density_units = "probability density"
+    for i in range(2):
+        keys = [add(f"density:{i}:{j}", value, density_units) for j, value in enumerate(density[i])]
+        densities.append({"price": d.prices[i], "pdf": keys})
     return {
         "request": asdict(d),
         "outcome_axis": axis.tolist(),
         "curves": curves,
+        "density_axis": density_axis.tolist(),
+        "densities": densities,
+        "density_method": "finite_difference_of_cdf_on_evaluated_outcome_grid",
         "quantiles": rows,
         "probabilities": probabilities,
         "probability_difference": difference,

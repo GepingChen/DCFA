@@ -221,6 +221,9 @@ def test_composite_fake_tabpfn_two_fits_cache_and_artifact(wide_fake_ranks, tmp_
     assert body.index("![") < body.index("| Quantile")
     assert "Evidence-linked query results" not in body
     assert "| 25% |" in body and "| 90% |" in body
+    assert "## Warnings" not in report and "### Warning codes" not in report
+    assert "Grid endpoint flags" not in body
+    assert "Change (120 − 100)" in body
     for index, query in enumerate(run.bundle.queries, 1):
         assert query.evidence_id not in body
         assert f"| [{index}] | `{query.query_id}` | {query.value_display}" in appendix
@@ -258,6 +261,8 @@ def test_csv_composite_cpu_finalize(wide_fake_ranks, monkeypatch, tmp_path):
     assert "percentage points" in rendered[2] and rendered[4]
     assert "Boundary-limited" in rendered[2]
     assert "development_only" not in rendered[2]
+    assert "Warnings:" not in rendered[2]
+    assert "Important warnings" not in rendered[3]
     assert all(q.evidence_id not in rendered[2] for q in result.response.queries)
 
     import zipfile

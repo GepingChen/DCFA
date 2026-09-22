@@ -44,7 +44,7 @@ def render_markdown_report(bundle: ResultBundle, ledger: EvidenceLedger) -> str:
         "![Estimated outcome distributions and summaries](interventional_summary.png)",
         "",
         "The chart and tables use the same validated results. Read them together with the "
-        "support diagnostics and warnings below.",
+        "support diagnostics and interpretation limits below.",
         "",
     ]
     if bundle.distribution is not None:
@@ -89,17 +89,16 @@ def render_markdown_report(bundle: ResultBundle, ledger: EvidenceLedger) -> str:
             "Diagnostic numbers are available in the machine-readable result bundle and are "
             "not evidence that IV validity or identification has been proved.",
             "",
-            "## Warnings",
-            "",
         ]
     )
-    if bundle.warnings:
-        for warning in bundle.warnings:
-            lines.append(f"- {warning.message}")
-    else:
-        lines.append(
-            "- No additional empirical warning was triggered by the development thresholds."
-        )
+    if bundle.distribution is None:
+        lines.extend(["## Warnings", ""])
+        if bundle.warnings:
+            lines.extend(f"- {warning.message}" for warning in bundle.warnings)
+        else:
+            lines.append(
+                "- No additional empirical warning was triggered by the development thresholds."
+            )
     lines.extend(["", "## Assumptions and scope", ""])
     lines.extend(f"- {assumption}" for assumption in bundle.assumptions)
     lines.extend(
@@ -126,8 +125,14 @@ def render_markdown_report(bundle: ResultBundle, ledger: EvidenceLedger) -> str:
             f"| [{index}] | `{query.query_id}` | {query.value_display} {query.units} "
             f"| `{query.evidence_id}` |"
         )
-    lines.extend(["", "### Warning codes", ""])
-    lines.extend(f"- `{warning.code}`: {warning.message}" for warning in bundle.warnings)
+    if bundle.distribution is None:
+        lines.extend(["", "### Warning codes", ""])
+        lines.extend(f"- `{warning.code}`: {warning.message}" for warning in bundle.warnings)
+    if bundle.distribution is not None:
+        # Retain validation metadata without rendering a warning section.
+        lines.extend(["", "<!--"])
+        lines.extend(f"{warning.code}: {warning.message}" for warning in bundle.warnings)
+        lines.append("-->")
     lines.extend(["", "</details>", ""])
     return "\n".join(lines)
 

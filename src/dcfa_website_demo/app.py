@@ -377,10 +377,30 @@ body,
 
 .demo-answer p {
   max-width: 52rem;
-  margin-bottom: 0 !important;
+  margin: .6rem 0 !important;
   font-family: inherit;
-  font-size: clamp(1.35rem, 3vw, 2rem);
-  line-height: 1.35;
+  font-size: .95rem !important;
+  line-height: 1.55;
+}
+
+.demo-answer { overflow-x: auto; min-width: 0; }
+
+.demo-answer table {
+  width: 100%;
+  min-width: 32rem;
+  table-layout: auto;
+  font-size: .9rem;
+  line-height: 1.4;
+}
+
+.demo-answer table th, .demo-answer table td {
+  padding: .45rem .7rem !important;
+  height: auto !important;
+  vertical-align: middle;
+  white-space: nowrap;
+  word-break: normal;
+  overflow-wrap: normal;
+  font-variant-numeric: tabular-nums;
 }
 
 .demo-answer code {
@@ -420,7 +440,7 @@ body,
 
 .demo-result-details {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(16rem, 1fr));
   gap: .8rem;
 }
 
@@ -1110,7 +1130,7 @@ def _status_html(result: PortfolioDemoResult) -> str:
         return (
             '<div class="demo-status demo-status--warning" role="status" aria-live="polite">'
             "<strong>Completed with important limitations</strong>"
-            "The result passed evidence validation; review the warnings below.</div>"
+            "The result passed evidence validation; review the interpretation limits.</div>"
         )
     return (
         '<div class="demo-status" role="status" aria-live="polite">'
@@ -1237,12 +1257,11 @@ def _answer_markdown(response: AgentResponse, llm_trace: dict[str, Any]) -> str:
             "with the local verifier."
         )
     if llm_trace.get("distribution_report"):
-        warnings = "\n".join(f"- {w.message}" for w in response.warnings)
-        return llm_trace["distribution_report"] + "\n\nWarnings:\n" + warnings
+        return llm_trace["distribution_report"]
     return f"### Answer\n\n**{answer_sentence(response.queries[0], llm_trace.get('proposal'))}**"
 
 
-def _evidence_card_html(response: AgentResponse) -> str:
+def _evidence_card_html(response: AgentResponse, *, show_warnings: bool = True) -> str:
     if not response.queries:
         return (
             '<div class="demo-evidence-card demo-evidence-placeholder">'
@@ -1285,6 +1304,8 @@ def _evidence_card_html(response: AgentResponse) -> str:
             '<section class="demo-result-detail"><h3>Important warnings</h3>'
             "<p>No additional empirical warning was triggered.</p></section>"
         )
+    if not show_warnings:
+        warning_html = ""
     development_html = (
         '<section class="demo-result-detail demo-result-detail--development">'
         "<h3>Development-only</h3>"
@@ -1350,7 +1371,9 @@ def format_portfolio_result(
         _status_html(result),
         _state_graph_html(result.response, result.llm_trace),
         _answer_markdown(result.response, result.llm_trace),
-        _evidence_card_html(result.response),
+        _evidence_card_html(
+            result.response, show_warnings=not bool(result.llm_trace.get("distribution_report"))
+        ),
         (
             str(result.plot_path)
             if result.plot_path is not None and presented is not None and presented.allow_numeric

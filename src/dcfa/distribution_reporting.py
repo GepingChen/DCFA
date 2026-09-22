@@ -30,11 +30,10 @@ def distribution_markdown(distribution, queries):
     d = distribution
     r = d["request"]
     lookup = {q.query_id: q for q in queries}
-    references = {q.query_id: i for i, q in enumerate(queries, 1)}
 
     def cell(key):
         q = lookup[key]
-        return f"{q.value_display} [{references[key]}]"
+        return q.value_display
 
     p0, p1 = r["prices"]
     lines = [
@@ -43,32 +42,52 @@ def distribution_markdown(distribution, queries):
         f"Prices: {p0:g} to {p1:g} {r['treatment_units']}. "
         f"All differences are {p1:g} minus {p0:g}.",
         "",
-        f"Quantiles and changes: {r['outcome_units']}.",
+        "**Sales quantiles**",
         "",
-        f"| Quantile | At {p0:g} | At {p1:g} | Difference | Grid endpoint flags |",
-        "|---|---:|---:|---:|---|",
+        f"Levels and changes are in {r['outcome_units']}. "
+        "Each row describes a percentile of the estimated sales distribution; "
+        "the median is the 50th percentile.",
+        "",
+        f"| Quantile | Price {p0:g} | Price {p1:g} | Change ({p1:g} − {p0:g}) |",
+        "|:---|---:|---:|---:|",
     ]
+    boundary_notes = []
     for row in d["quantiles"]:
-        flags = ", ".join(str(i + 1) for i, v in enumerate(row["boundary_limited"]) if v)
+        prices = ", ".join(
+            f"{price:g}"
+            for price, limited in zip(r["prices"], row["boundary_limited"], strict=True)
+            if limited
+        )
+        if prices:
+            boundary_notes.append(f"{row['level']:.0%} at price {prices}")
         lines.append(
             f"| {row['level']:.0%} | {cell(row['values'][0])} | "
-            f"{cell(row['values'][1])} | {cell(row['difference'])} | "
-            f"{('Boundary-limited scenario ' + flags) if flags else 'None'} |"
+            f"{cell(row['values'][1])} | {cell(row['difference'])} |"
         )
+    if boundary_notes:
+        lines += [
+            "",
+            "Boundary-limited quantiles: " + "; ".join(boundary_notes) + ". "
+            "These estimates reach the evaluated grid endpoint.",
+        ]
     lines += [
         "",
-        f"Probability of sales strictly exceeding {r['threshold']:g} {r['outcome_units']}:",
+        "**Probability above the sales threshold**",
         "",
-        f"| At {p0:g} (%) | At {p1:g} (%) | Difference (percentage points) |",
+        f"Sales strictly exceeding {r['threshold']:g} {r['outcome_units']}. "
+        "Levels are percentages; the change is in percentage points.",
+        "",
+        f"| Price {p0:g} (%) | Price {p1:g} (%) | Change (percentage points) |",
         "|---:|---:|---:|",
         f"| {cell(d['probabilities'][0])} | {cell(d['probabilities'][1])} | "
         f"{cell(d['probability_difference'])} |",
         "",
-        f"90th quantile change minus median change: {cell(d['gap_change'])} {r['outcome_units']}.",
+        "**Change in the 90th-percentile–median gap:** "
+        f"{cell(d['gap_change'])} {r['outcome_units']}.",
         "",
         d["summary"],
         "",
-        "Bracketed references link each estimate to the evidence index in the downloaded report.",
+        "The downloaded technical appendix contains the evidence index for these estimates.",
         "",
         "Point estimates only. No confidence intervals or significance conclusions. "
         "These are changes in aggregate distributions, not individual effects. "

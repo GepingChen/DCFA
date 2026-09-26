@@ -1,7 +1,5 @@
 # DCFA implementation status
 
-Last updated: 2026-09-20
-
 ## ZeroGPU fit and allocation optimization (2026-09-20)
 
 Local TabPFN now uses two fits for a supported analysis: one Stage 1 fit and one

@@ -8,7 +8,6 @@
   <a href="https://arxiv.org/abs/2605.05993"><img src="https://img.shields.io/badge/arXiv-2605.05993-b31b1b.svg" alt="arXiv:2605.05993"></a>
   <a href="https://github.com/GepingChen/TabCF"><img src="https://img.shields.io/badge/Method-TabCF-2563eb.svg" alt="TabCF method"></a>
   <img src="https://img.shields.io/badge/Python-3.11%2B-0f766e.svg" alt="Python 3.11+">
-  <img src="https://img.shields.io/badge/Status-research%20prototype-7c3aed.svg" alt="Research prototype">
 </p>
 
 <p align="center">
@@ -112,9 +111,7 @@ number of turns. Invalid replies retain the completed conversation for correctio
 The final report view includes the reviewed plan; the ZIP includes its
 `confirmed_plan.html` appendix and the final role definitions/request count in
 `gemini_compilation.json`, without exporting the full conversation. Reset to start
-another analysis; report follow-up chat is not included. This source update does
-not itself deploy the linked live Space. Presets and the local/Colab single-turn
-workflow retain their existing behavior.
+another analysis; report follow-up chat is not included.
 
 The ZeroGPU, Colab, and local managed-service paths are `development_only`. Provider
 availability, quotas, charges, and Colab resources are not guaranteed. Do not use

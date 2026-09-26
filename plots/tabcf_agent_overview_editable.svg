@@ -18,7 +18,7 @@
     </marker>
   </defs>
   <rect fill="#FCFCFB" height="2160" width="3840" x="0" y="0"/>
-  <text fill="#202734" font-family="Arial" font-size="92" font-weight="800" text-anchor="middle" x="1920.0" y="105">TabCF-Agent</text>
+  <text fill="#202734" font-family="Arial" font-size="92" font-weight="800" text-anchor="middle" x="1920.0" y="105">Agentic TabCF</text>
   <text fill="#202734" font-family="Arial" font-size="44" font-weight="600" text-anchor="middle" x="1920.0" y="178">An Auditable Causal Agent for Continuous-Treatment IV Analysis</text>
   <text fill="#5F6B7A" font-family="Arial" font-size="30" font-style="italic" font-weight="400" text-anchor="middle" x="1920.0" y="228">LLM compiles intent · deterministic tools compute · evidence gates decide what can be shown</text>
   <rect fill="#F4F7FF" height="58" rx="29.0" ry="29.0" stroke="#2A5BD7" stroke-width="3" width="570" x="750" y="252"/>

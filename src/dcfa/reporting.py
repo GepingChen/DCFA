@@ -57,7 +57,7 @@ def render_markdown_report(
             "> Locked Track T result; release eligibility still requires the release validator."
         )
     lines = [
-        "# TabCF Analyst report",
+        "# Agentic TabCF report",
         "",
         boundary,
         "",

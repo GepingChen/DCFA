@@ -84,9 +84,9 @@ def build_app() -> Any:
             "Install the optional UI with: python -m pip install -e '.[ui]'"
         ) from exc
 
-    with gr.Blocks(title="DCFA TabCF Analyst development demo") as app:
+    with gr.Blocks(title="Agentic TabCF development demo") as app:
         gr.Markdown(
-            "# TabCF Analyst — local development demo\n"
+            "# Agentic TabCF — local development demo\n"
             "Continuous treatment, scalar IV, continuous outcome, and no baseline covariates W. "
             "The local sklearn fallback validates workflow mechanics only and is not TabCF."
         )

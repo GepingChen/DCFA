@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Generate an editable SVG and a 4K PNG for the TabCF-Agent overview figure."""
+"""Generate an editable SVG and a 4K PNG for the Agentic TabCF overview figure."""
 
 from __future__ import annotations
 
@@ -376,7 +376,7 @@ def build_figure() -> svgwrite.Drawing:
         add_marker(dwg, marker_id, COLORS[color_key])
 
     # Title region: normal SVG text avoids any artificial stretching or word gaps.
-    add_text(dwg, WIDTH / 2, 105, "TabCF-Agent", size=92, weight=800, anchor="middle")
+    add_text(dwg, WIDTH / 2, 105, "Agentic TabCF", size=92, weight=800, anchor="middle")
     add_text(
         dwg,
         WIDTH / 2,

@@ -1,4 +1,4 @@
-# TabCF-Agent overview figure
+# Agentic TabCF overview figure
 
 This package contains a reproducible, editable version of the architecture figure.
 

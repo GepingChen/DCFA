@@ -1,4 +1,4 @@
-<h1 align="center">TabCF-Agent</h1>
+<h1 align="center">Agentic TabCF</h1>
 
 <p align="center">
   <strong>An auditable causal agent for continuous-treatment distributional IV analysis</strong>
@@ -21,8 +21,9 @@
   <a href="https://arxiv.org/abs/2605.05993"><strong>Read the paper</strong></a>
 </p>
 
-**TabCF-Agent** (implemented here as the `dcfa` package) is the agentic system
-built on the method introduced in our arXiv paper,
+**Agentic TabCF** is the agentic system hosted in the `DCFA` repository and
+implemented as the `dcfa` package. It builds on the method introduced in our
+arXiv paper,
 **[TabCF: Distributional Control Function Estimation with Tabular Foundation
 Models](https://arxiv.org/abs/2605.05993)**. The paper introduces TabCF for
 distributional control-function estimation; this repository adds a bounded agent
@@ -35,16 +36,16 @@ evidence.
 
 <p align="center">
   <a href="plots/tabcf_agent_overview_4k.png">
-    <img src="plots/tabcf_agent_overview_editable.svg" alt="TabCF-Agent architecture: bounded language compilation, explicit agent runtime, deterministic TabCF-IV engine, evidence validation, and visitor or audit outputs" width="100%">
+    <img src="plots/tabcf_agent_overview_editable.svg" alt="Agentic TabCF architecture: bounded language compilation, explicit agent runtime, deterministic TabCF-IV engine, evidence validation, and visitor or audit outputs" width="100%">
   </a>
 </p>
 
 <p align="center"><sub>Click the architecture figure to open the 4K version. The editable SVG and deterministic generator are in <a href="plots/">plots/</a>.</sub></p>
 
-## Why TabCF-Agent?
+## Why Agentic TabCF?
 
 Many causal-agent demos blur together language-model reasoning, statistical
-estimation, and presentation. TabCF-Agent keeps those responsibilities separate:
+estimation, and presentation. Agentic TabCF keeps those responsibilities separate:
 
 1. **A bounded compiler** turns a natural-language request into an immutable,
    typed analysis specification. For an uploaded CSV, Gemini sees the question or conversation,
@@ -195,7 +196,7 @@ The repository separates three questions that must not be merged into one claim:
 
 Hillstrom is an isolated randomized-policy evaluation environment. It is **not a
 TabCF validation dataset**, is never encoded as a continuous-treatment problem,
-and is not exposed through the public TabCF Analyst workflow.
+and is not exposed through the public Agentic TabCF workflow.
 
 ## What is implemented
 

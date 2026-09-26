@@ -252,6 +252,20 @@ coverage, identification, policy improvement, or release readiness. Generated
 outputs are immutable and belong under ignored `artifacts/local/` paths; use a
 fresh versioned destination for every run.
 
+## License
+
+Project-authored software code is available under the [MIT License](LICENSE)
+(copyright 2026 Geping Chen). The pinned [`third_party/TabCF`](third_party/TabCF)
+submodule retains its [own MIT license](https://github.com/GepingChen/TabCF/blob/main/LICENSE)
+and attribution.
+
+The [cigarette-demand example](examples/cigarette_demand_small/README.md) includes
+a prepared extract from `Ecdat::Cigarette`. Its [source and attribution notes](examples/cigarette_demand_small/SOURCE.md)
+and [GPL-2.0 text](examples/cigarette_demand_small/GPL-2.0.txt) accompany the
+source package terms. The package metadata does not establish a separate
+license for the original observations; this repository's MIT license does not
+relicense those data rows.
+
 ## Citation
 
 If this project or the underlying method is useful in your work, please cite the

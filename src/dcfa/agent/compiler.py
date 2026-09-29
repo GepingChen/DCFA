@@ -156,7 +156,11 @@ class SpecificationCompiler:
         risk_thresholds = (float(request.threshold),) if request.threshold is not None else ()
         if request.distribution is not None:
             quantile_levels = request.distribution.quantile_levels
-            risk_thresholds = (math.log(request.distribution.threshold),)
+            risk_thresholds = (
+                (math.log(request.distribution.threshold),)
+                if request.distribution.threshold is not None
+                else ()
+            )
         specification = AnalysisSpecification(
             dataset_hash=request.dataset_hash,
             roles=CausalRoles(

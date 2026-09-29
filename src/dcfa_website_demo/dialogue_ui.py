@@ -159,7 +159,7 @@ def bind_csv_dialogue(
             )
             result = execute_handler(session.validated, session.compilation, selected_seed, profile)
             if session.compilation.distribution is not None and result[0].get("value"):
-                session.cached_answer = result[0]["value"]
+                session.cached_answer = result[0]["value"] + "\n\n" + (result[3].get("value") or "")
             session.status = "completed"
             session.release()
             cleanup_session(session)

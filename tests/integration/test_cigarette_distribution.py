@@ -39,9 +39,8 @@ PROMPT = (
     "Price from 100 to 120 CPI-deflated cents per pack. "
     "The CSV already contains natural-log sales and natural-log real prices. "
     "Return both CDFs and their finite-difference approximate PDF, quantiles "
-    ".25/.50/.75/.90, second minus first differences in packs per person per year, "
-    "probability exceeding 120 packs per person per year, percentage-point difference "
-    "and 90th change minus median change."
+    ".25/.50/.75, second minus first differences in packs per person per year, "
+    "probability exceeding 120 packs per person per year and percentage-point difference."
 )
 
 
@@ -56,7 +55,7 @@ def proposal():
         "objective": "distribution",
         "x_label": "exact",
         "comparison_x_label": "exact",
-        "level_label": "quartiles_and_upper",
+        "level_label": "quartiles",
         "distribution": {
             "prices": [100, 120],
             "threshold": 120,
@@ -123,7 +122,7 @@ def test_compile_units_card_and_no_fit():
     assert "percentiles" not in card
     spec = SpecificationCompiler().compile(request()).specification
     assert spec.intervention_grid == (math.log(100), math.log(120))
-    assert spec.quantile_levels == (0.25, 0.5, 0.75, 0.9)
+    assert spec.quantile_levels == (0.25, 0.5, 0.75)
     assert spec.risk_thresholds == (math.log(120),)
     for grid in ((100.0, 120.0), (math.log(math.log(100)), math.log(math.log(120)))):
         with pytest.raises(DCFAError):
@@ -161,12 +160,12 @@ def test_nontrivial_original_unit_hand_calculation():
     d = compilation().distribution
     y = np.log([10.0, 100.0, 200.0])
     f = [[0.1, 0.5, 0.95], [0.2, 0.6, 0.9]]
-    q = np.log([[40.0, 80.0, 130.0, 170.0], [35.0, 90.0, 120.0, 145.0]])
+    q = np.log([[40.0, 80.0, 130.0], [35.0, 90.0, 120.0]])
     result = derive_distribution(d, y, f, q, [[0.7], [0.8]])
     m = {v["key"]: v["value"] for v in result["metrics"]}
     assert m["quantile_difference:0.5"] == pytest.approx(10)
-    assert m["quantile_difference:0.9"] == pytest.approx(-25)
-    assert m["upper_minus_middle_change"] == pytest.approx(-35)
+    assert m["quantile_difference:0.75"] == pytest.approx(-10)
+    assert "upper_minus_middle_change" not in m
     assert m["exceedance:0"] == pytest.approx(30)
     assert m["exceedance:1"] == pytest.approx(20)
     assert m["exceedance_difference"] == pytest.approx(-10)
@@ -176,12 +175,12 @@ def test_nontrivial_original_unit_hand_calculation():
         [[0.4 / 90.0, 0.45 / 100.0], [0.4 / 90.0, 0.3 / 100.0]],
     )
     assert result["density_method"] == "finite_difference_of_cdf_on_evaluated_outcome_grid"
-    assert "mixed signs" in result["summary"] and "curves cross" in result["summary"]
+    assert result["summary"] == "" and result["gap_change"] is None
     assert np.allclose(result["outcome_axis"], [10, 100, 200])
-    q[1, 3] = y[-1]
+    q[1, 2] = y[-1]
     limited = derive_distribution(d, y, f, q, [[0.7], [0.8]])
-    assert limited["quantiles"][3]["boundary_limited"] == [False, True]
-    assert "no resolved" in limited["summary"]
+    assert limited["quantiles"][2]["boundary_limited"] == [False, True]
+    assert limited["summary"] == ""
 
 
 @pytest.fixture
@@ -202,10 +201,13 @@ def wide_fake_ranks(fake_tabpfn, monkeypatch):
     return fake_tabpfn
 
 
-def test_composite_fake_tabpfn_two_fits_cache_and_artifact(wide_fake_ranks, tmp_path):
+@pytest.mark.parametrize("threshold", [None, 120.0])
+def test_composite_fake_tabpfn_two_fits_cache_and_artifact(wide_fake_ranks, tmp_path, threshold):
     fake_tabpfn = wide_fake_ranks
     _, data = dataset()
-    spec = SpecificationCompiler().compile(request()).specification
+    req = request()
+    req = replace(req, distribution=replace(req.distribution, threshold=threshold))
+    spec = SpecificationCompiler().compile(req).specification
     engine = TabCFAnalysisEngine(
         backend_factory=lambda s: TabPFNBackend(seed=s.seed, execution_profile=s.execution_profile)
     )
@@ -214,7 +216,8 @@ def test_composite_fake_tabpfn_two_fits_cache_and_artifact(wide_fake_ranks, tmp_
     assert len(fake_tabpfn) == 2 and all(m.fits == 1 for m in fake_tabpfn)
     assert set(fake_tabpfn[1].outputs) == {"mean", "full"}
     assert len(run.bundle.x_grid) == 2 and len(run.bundle.y_grid) == 161
-    assert len(run.bundle.queries) == 660
+    expected_count = 651 if threshold is None else 656
+    assert len(run.bundle.queries) == expected_count
     for q in run.bundle.queries:
         assert engine.follow_up(spec, q.query_id) == q
         assert run.ledger.resolve(q.evidence_id).value_raw == q.value_raw
@@ -231,15 +234,20 @@ def test_composite_fake_tabpfn_two_fits_cache_and_artifact(wide_fake_ranks, tmp_
     )
     exported = json.loads((tmp_path / "run/distribution_results.json").read_text())
     assert exported["distribution"]["quantiles"] == run.bundle.distribution["quantiles"]
-    assert len(export_distribution(run.bundle, run.ledger)["evidence"]) == 660
+    assert len(export_distribution(run.bundle, run.ledger)["evidence"]) == expected_count
     report = (tmp_path / "run/report.md").read_text()
     body, appendix = report.split("<details>", 1)
     assert "![Estimated outcome distributions and summaries](interventional_summary.png)" in body
     assert body.index("![") < body.index("| Quantile")
     assert "Evidence-linked query results" not in body
-    assert "| 25% |" in body and "| 90% |" in body
-    assert "## Interpretation limits" in body and "### Warning codes" in appendix
-    assert "finite-differencing the displayed CDF grid" in body
+    assert "| 25% |" in body and "| 75% |" in body and "| 90% |" not in body
+    assert "Warnings and interpretation limits" not in body
+    assert "### Warning codes" in appendix
+    assert report.index("</details>") < report.index("Warnings and interpretation limits")
+    assert "<small " in report and report.rstrip().endswith("</small></div>")
+    assert "finite-differencing the displayed CDF grid" in report
+    assert ("Probability above" in body) == (threshold is not None)
+    assert not any(word in body for word in ("gap", "narrows", "widens", "cross"))
     assert "Grid endpoint flags" not in body
     assert "Change (120 − 100)" in body
     assert "| 25% | 38.8 | 31.9 | -6.9 |" in body
@@ -277,14 +285,15 @@ def test_csv_composite_cpu_finalize(wide_fake_ranks, monkeypatch, tmp_path):
     assert len(fake_tabpfn) == 2
     assert verify_run_directory(result.output_dir)["status"] == "valid"
     rendered = format_portfolio_result(result)
-    assert "Completed with important limitations" in rendered[0]
+    assert "Analysis completed" in rendered[0]
     assert "percentage points" in rendered[2]
     assert rendered[4] is not None
-    assert "Boundary-limited" in rendered[2]
+    assert "Not resolved on grid" in rendered[2]
     assert "development_only" not in rendered[2]
     assert "Warnings:" not in rendered[2]
-    assert "Important warnings" in rendered[3]
-    assert "local TabPFN v2 result" in rendered[3]
+    assert "Warnings and interpretation limits" in rendered[3]
+    assert "<small " in rendered[3]
+    assert "Instrument exclusion and exogeneity remain assumptions" in rendered[3]
     assert all(q.evidence_id not in rendered[2] for q in result.response.queries)
 
     import zipfile
@@ -407,3 +416,77 @@ def test_actual_cpu_finalize_failure_does_not_retry_fits(wide_fake_ranks, monkey
         )
     assert len(wide_fake_ranks) == 2
     assert not list((tmp_path / "runs").rglob("*.json"))
+
+
+def test_default_prompt_and_optional_threshold_validation():
+    from dcfa_website_demo.dialogue import plan_html
+
+    prompt = (
+        Path("examples/cigarette_demand_small/PROMPTS.md")
+        .read_text()
+        .split("```text\n")[1]
+        .split("```")[0]
+        .strip()
+    )
+    assert len(prompt) <= 1000
+    p = proposal()
+    p["distribution"]["threshold"] = None
+    p["distribution"]["scale_quote"] = "X and Y are already natural logs."
+    history = [{"role": "user", "content": prompt}]
+    parsed, values, d = numeric_proposal(p, history, COLUMNS, {})
+    c = replace(compilation(), distribution=d)
+    spec = SpecificationCompiler().compile(replace(request(), distribution=d)).specification
+    assert d.threshold is None and spec.risk_thresholds == ()
+    assert "exceeding" not in plan_html(c)
+    assert "0.90" not in plan_html(c)
+    p["distribution"]["threshold"] = 120
+    with pytest.raises(ValueError, match="threshold must be explicit"):
+        numeric_proposal(p, history, COLUMNS, {})
+    p["distribution"]["threshold"] = None
+    with pytest.raises(ValueError, match="cannot be silently omitted"):
+        numeric_proposal(
+            p,
+            [
+                {
+                    "role": "user",
+                    "content": prompt + " Probability exceeding 120 packs per person per year.",
+                }
+            ],
+            COLUMNS,
+            {},
+        )
+
+
+def test_tiny_changes_do_not_generate_narrative():
+    from types import SimpleNamespace
+
+    from dcfa.distribution_reporting import distribution_markdown
+
+    d = replace(compilation().distribution, threshold=None)
+    y = np.log([1.0, 50.0, 150.0, 200.0])
+    q = np.log([[60.0, 80.0, 100.0], [60.0, 80.0 - 1e-10, 100.0 - 2e-10]])
+    f = [[0.0, 0.2, 0.8, 1.0], [0.0, 0.2 + 1e-15, 0.8 - 1e-15, 1.0]]
+    result = derive_distribution(d, y, f, q, [[], []])
+    queries = [SimpleNamespace(query_id=m["key"], value_raw=m["value"]) for m in result["metrics"]]
+    report = distribution_markdown(result, queries)
+    assert result["summary"] == "" and result["gap_change"] is None
+    assert "-0.0" not in report
+    assert not any(word in report for word in ("narrows", "widens", "cross", "magnitude", "gap"))
+
+
+def test_saved_four_quantile_projection_remains_verifiable(wide_fake_ranks, tmp_path):
+    _, data = dataset()
+    req = request()
+    req = replace(
+        req, distribution=replace(req.distribution, quantile_levels=(0.25, 0.5, 0.75, 0.9))
+    )
+    spec = SpecificationCompiler().compile(req).specification
+    engine = TabCFAnalysisEngine(
+        backend_factory=lambda s: TabPFNBackend(seed=s.seed, execution_profile=s.execution_profile)
+    )
+    run = engine.analyze(data.columns, spec, data.manifest, output_dir=tmp_path / "legacy")
+    assert len(run.bundle.queries) == 660
+    assert run.bundle.distribution["gap_change"] == "upper_minus_middle_change"
+    assert verify_run_directory(tmp_path / "legacy")["status"] == "valid"
+    body = (tmp_path / "legacy/report.md").read_text().split("<details>")[0]
+    assert "| 90% |" not in body and "gap" not in body

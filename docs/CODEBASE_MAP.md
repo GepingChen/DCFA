@@ -289,12 +289,13 @@ artifacts.
 ## Exact-unit distribution request (2026-09-21)
 
 - `schemas.DistributionRequest` and `agent/compiler.py`: one composite exact-price
-  request, already-log storage and explicit original units; legacy objectives unchanged.
+  request, already-log storage and explicit original units; default quartiles
+  (25/50/75), with a threshold only on explicit request. Legacy objectives unchanged.
 - `dcfa_website_demo/numeric_request.py`: row-free exact-unit proposal validation; `dialogue.py` renders the same confirmed plan.
 - `tabcf_iv/distribution.py`: CPU-only original-unit projection from existing CDF,
   quantile and CDF-threshold predictions. No estimator or support/grid changes.
 - `distribution_reporting.py`: rounded visitor tables, visible interpretation
-  limits, a three-panel CDF/CDF-derived-PDF/quantile plot and
+  limits at the end in small text, a two-panel CDF/CDF-derived-PDF plot and
   `distribution_results.json`; `artifact_validation.py` verifies the projection.
 - `dialogue_ui.py`: completed numeric reports support cached chat follow-ups without
   another provider request; model objects and credentials never enter session state.

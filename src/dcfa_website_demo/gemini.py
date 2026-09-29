@@ -294,7 +294,7 @@ def _validate_proposal(
     comparison_label = proposal["comparison_x_label"]
     level_label = proposal["level_label"]
     if allow_distribution and objective == "distribution":
-        if (x_label, comparison_label, level_label) != ("exact", "exact", "quartiles_and_upper"):
+        if (x_label, comparison_label, level_label) != ("exact", "exact", "quartiles"):
             raise DCFAError(
                 ErrorCode.LLM_OUTPUT_INVALID,
                 "Exact distribution requests cannot use symbolic interventions.",

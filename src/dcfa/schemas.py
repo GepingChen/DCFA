@@ -43,10 +43,10 @@ class DistributionRequest:
     prices: tuple[float, float]
     treatment_units: str
     outcome_units: str
-    threshold: float
+    threshold: float | None = None
     treatment_scale: str = "stored_natural_log"
     outcome_scale: str = "stored_natural_log"
-    quantile_levels: tuple[float, ...] = (0.25, 0.50, 0.75, 0.90)
+    quantile_levels: tuple[float, ...] = (0.25, 0.50, 0.75)
 
 
 @dataclass(frozen=True)

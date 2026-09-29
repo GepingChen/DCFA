@@ -155,7 +155,8 @@ def validate_tabcf_specification(specification: AnalysisSpecification) -> None:
         if (
             specification.intervention_grid != tuple(math.log(p) for p in d.prices)
             or specification.quantile_levels != d.quantile_levels
-            or specification.risk_thresholds != (math.log(d.threshold),)
+            or specification.risk_thresholds
+            != ((math.log(d.threshold),) if d.threshold is not None else ())
             or len(specification.queries) != 1
             or specification.queries[0].kind != "distribution"
         ):

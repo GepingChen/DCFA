@@ -63,14 +63,17 @@ def numeric_proposal(proposal, history, columns, overrides):
     for unit in (d.treatment_units, d.outcome_units):
         if unit not in text:
             raise ValueError("Original-unit labels must quote the user.")
-    threshold_pattern = rf"(?:exceeding|exceeds|above|超过)\s*{d.threshold:g}(?![\d.])"
-    if not re.search(threshold_pattern, text, re.I):
-        raise ValueError("The original-unit exceedance threshold must be explicit.")
+    if d.threshold is not None:
+        threshold_pattern = rf"(?:exceeding|exceeds|above|超过)\s*{d.threshold:g}(?![\d.])"
+        if not re.search(threshold_pattern, text, re.I):
+            raise ValueError("The original-unit exceedance threshold must be explicit.")
+    elif re.search(r"(?:exceeding|exceeds|above|超过)\s*\d", text, re.I):
+        raise ValueError("An explicit exceedance request cannot be silently omitted.")
     if (
         proposal.get("objective") != "distribution"
         or proposal.get("x_label") != "exact"
         or proposal.get("comparison_x_label") != "exact"
-        or proposal.get("level_label") != "quartiles_and_upper"
+        or proposal.get("level_label") != "quartiles"
     ):
         raise ValueError("Numeric distribution requests cannot use symbolic interventions.")
     parsed = _parse_proposal(json.dumps({k: v for k, v in proposal.items() if k != "distribution"}))

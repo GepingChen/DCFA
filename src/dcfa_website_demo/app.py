@@ -1076,6 +1076,7 @@ def _execute_compiled_dataset(
                 if tool.last_run.bundle.distribution is not None:
                     from dcfa.distribution_reporting import (
                         distribution_markdown,
+                        distribution_warning_html,
                         render_distribution_plot,
                     )
 
@@ -1084,6 +1085,9 @@ def _execute_compiled_dataset(
                     )
                     compilation.trace["distribution_report"] = distribution_markdown(
                         tool.last_run.bundle.distribution, tool.last_run.bundle.queries
+                    )
+                    compilation.trace["distribution_warnings"] = distribution_warning_html(
+                        tool.last_run.bundle
                     )
                 else:
                     render_visitor_plot(
@@ -1127,6 +1131,11 @@ def _status_html(result: PortfolioDemoResult) -> str:
             '<div class="demo-status demo-status--blocked" role="status" aria-live="polite">'
             f"<strong>{html.escape(presentation.title)}</strong>"
             "No numerical result is displayed.</div>"
+        )
+    if result.llm_trace.get("distribution_report"):
+        return (
+            '<div class="demo-status" role="status" aria-live="polite">'
+            "<strong>Analysis completed</strong></div>"
         )
     presented = present_query(response.queries[0])
     if any(
@@ -1391,10 +1400,14 @@ def format_portfolio_result(
         _status_html(result),
         _state_graph_html(result.response, result.llm_trace),
         _answer_markdown(result.response, result.llm_trace),
-        _evidence_card_html(
-            result.response,
-            show_warnings=True,
-            backend_access_mode=str(result.llm_trace.get("backend_access_mode", "unknown")),
+        (
+            result.llm_trace["distribution_warnings"]
+            if result.llm_trace.get("distribution_report")
+            else _evidence_card_html(
+                result.response,
+                show_warnings=True,
+                backend_access_mode=str(result.llm_trace.get("backend_access_mode", "unknown")),
+            )
         ),
         (
             str(result.plot_path)
@@ -1713,8 +1726,8 @@ def build_app(
                     visible=False,
                 )
                 answer = gr.Markdown("", visible=False, elem_classes="demo-answer")
-                evidence = gr.HTML("", visible=False)
                 artifact_download = gr.File(label="Download analysis artifacts", visible=False)
+                evidence = gr.HTML("", visible=False)
         gr.HTML(
             f'<footer class="demo-footer">'
             f"<span>{environment_label} · Build {visible_revision}</span>"

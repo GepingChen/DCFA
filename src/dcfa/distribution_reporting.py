@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import html
 from pathlib import Path
 
 from dcfa.canonical import to_primitive
@@ -32,7 +33,8 @@ def distribution_markdown(distribution, queries):
     lookup = {q.query_id: q for q in queries}
 
     def cell(key):
-        return f"{float(lookup[key].value_raw):.1f}"
+        display = f"{float(lookup[key].value_raw):.1f}"
+        return "0.0" if display == "-0.0" else display
 
     p0, p1 = r["prices"]
     lines = [
@@ -40,6 +42,15 @@ def distribution_markdown(distribution, queries):
         "",
         f"Prices: {p0:g} to {p1:g} {r['treatment_units']}. "
         f"All differences are {p1:g} minus {p0:g}.",
+        "",
+        (
+            "State-year sales per capita; each observation has equal weight."
+            if any(
+                warning.code == "POOLED_STATE_YEAR_LIMITATIONS"
+                for warning in getattr(queries[0], "warnings", ())
+            )
+            else ""
+        ),
         "",
         "**Sales quantiles**",
         "",
@@ -50,52 +61,83 @@ def distribution_markdown(distribution, queries):
         f"| Quantile | Price {p0:g} | Price {p1:g} | Change ({p1:g} − {p0:g}) |",
         "|:---|---:|---:|---:|",
     ]
-    boundary_notes = []
     for row in d["quantiles"]:
-        prices = ", ".join(
-            f"{price:g}"
-            for price, limited in zip(r["prices"], row["boundary_limited"], strict=True)
-            if limited
-        )
-        if prices:
-            boundary_notes.append(f"{row['level']:.0%} at price {prices}")
-        lines.append(
-            f"| {row['level']:.0%} | {cell(row['values'][0])} | "
-            f"{cell(row['values'][1])} | {cell(row['difference'])} |"
-        )
-    if boundary_notes:
+        if row["level"] not in (0.25, 0.5, 0.75):
+            continue
+        values = [
+            "Not resolved on grid" if limited else cell(key)
+            for key, limited in zip(row["values"], row["boundary_limited"], strict=True)
+        ]
+        change = "Not resolved on grid" if any(row["boundary_limited"]) else cell(row["difference"])
+        lines.append(f"| {row['level']:.0%} | {values[0]} | {values[1]} | {change} |")
+    if r["threshold"] is not None:
         lines += [
             "",
-            "Boundary-limited quantiles: " + "; ".join(boundary_notes) + ". "
-            "These estimates reach the evaluated grid endpoint.",
+            "**Probability above the specified sales threshold**",
+            "",
+            f"Sales strictly exceeding {r['threshold']:g} {r['outcome_units']}. "
+            "Levels are percentages; the change is in percentage points.",
+            "",
+            f"| Price {p0:g} (%) | Price {p1:g} (%) | Change (percentage points) |",
+            "|---:|---:|---:|",
+            f"| {cell(d['probabilities'][0])} | {cell(d['probabilities'][1])} | "
+            f"{cell(d['probability_difference'])} |",
         ]
-    lines += [
+    return "\n".join(lines)
+
+
+def distribution_warning_html(bundle, *, boundary=""):
+    """Keep all limitations visible at the end, without competing with the results."""
+    notes = [warning.message for warning in bundle.warnings]
+    notes.extend(bundle.assumptions)
+    notes.append(bundle.diagnostics.interpretation)
+    notes.append(
+        "The PDF is an approximate density from finite-differencing the displayed CDF grid; "
+        "it is not separately fitted or smoothed. No tail extrapolation is performed."
+    )
+    if boundary:
+        notes.append(boundary.replace("> ", "").replace("**", ""))
+    notes = list(dict.fromkeys(notes))
+    items = "".join(f"<li>{html.escape(note)}</li>" for note in notes)
+    return (
+        '<div class="distribution-warnings" style="font-size:0.875em;line-height:1.5">'
+        '<small style="font-size:inherit"><strong>Warnings and interpretation limits</strong><ul>'
+        + items
+        + "</ul></small></div>"
+    )
+
+
+def distribution_report(bundle, *, boundary=""):
+    """Compact downloadable report with a collapsed evidence appendix and final warnings."""
+    lines = [
+        "# Agentic TabCF report",
         "",
-        "**Probability above the sales threshold**",
+        "![Estimated outcome distributions and summaries](interventional_summary.png)",
         "",
-        f"Sales strictly exceeding {r['threshold']:g} {r['outcome_units']}. "
-        "Levels are percentages; the change is in percentage points.",
+        distribution_markdown(bundle.distribution, bundle.queries),
         "",
-        f"| Price {p0:g} (%) | Price {p1:g} (%) | Change (percentage points) |",
-        "|---:|---:|---:|",
-        f"| {cell(d['probabilities'][0])} | {cell(d['probabilities'][1])} | "
-        f"{cell(d['probability_difference'])} |",
+        "<details>",
+        "<summary>Technical appendix and evidence index</summary>",
         "",
-        "**Change in the 90th-percentile–median gap:** "
-        f"{cell(d['gap_change'])} {r['outcome_units']}.",
+        f"- Run ID: `{bundle.run_id}`",
+        f"- Result bundle: `{bundle.result_bundle_id}`",
+        f"- Specification: `{bundle.specification_id}`",
+        f"- Dataset hash: `{bundle.dataset_hash}`",
+        f"- Evidence status: `{bundle.evidence_status.value}`",
         "",
-        d["summary"],
+        "Diagnostic values and support assessments are retained in result_bundle.json.",
         "",
-        "The PDF panel is an approximate probability density obtained by finite-differencing "
-        "the displayed CDF grid. It is not a separate fitted model, is not smoothed, and does "
-        "not extrapolate beyond the evaluated outcome range.",
-        "",
-        "The downloaded technical appendix contains the evidence index for these estimates.",
-        "",
-        "Point estimates only. No confidence intervals or significance conclusions. "
-        "These are changes in aggregate distributions, not individual effects. "
-        "CDFs show only the evaluated outcome range; no tail extrapolation.",
+        "| Reference | Query | Validated value | Evidence ID |",
+        "|---|---|---|---|",
     ]
+    for index, query in enumerate(bundle.queries, 1):
+        lines.append(
+            f"| [{index}] | `{query.query_id}` | {query.value_display} {query.units} "
+            f"| `{query.evidence_id}` |"
+        )
+    lines += ["", "### Warning codes", ""]
+    lines.extend(f"- `{warning.code}`" for warning in bundle.warnings)
+    lines += ["", "</details>", "", distribution_warning_html(bundle, boundary=boundary), ""]
     return "\n".join(lines)
 
 
@@ -110,7 +152,7 @@ def render_distribution_plot(bundle, ledger, output_path: Path):
     r = d["request"]
     lookup = {q.query_id: q.value_raw for q in bundle.queries}
     colors = ("#2563eb", "#f97316")
-    fig, axes = plt.subplot_mosaic([["cdf", "pdf"], ["quantile", "quantile"]], figsize=(12, 8.6))
+    fig, axes = plt.subplot_mosaic([["cdf", "pdf"]], figsize=(12, 4.6))
     for index, curve in enumerate(d["curves"]):
         axes["cdf"].plot(
             d["outcome_axis"],
@@ -118,29 +160,30 @@ def render_distribution_plot(bundle, ledger, output_path: Path):
             color=colors[index],
             label=f"Price = {curve['price']:g}",
         )
-    axes["cdf"].axvline(r["threshold"], color="gray", linestyle="--")
-    for index, (cdf_key, probability_key) in enumerate(
-        zip(d["threshold_cdf"], d["probabilities"], strict=True)
-    ):
-        cdf_value = lookup[cdf_key]
-        axes["cdf"].scatter([r["threshold"]], [cdf_value], color=colors[index], s=28, zorder=3)
+    if r["threshold"] is not None:
+        axes["cdf"].axvline(r["threshold"], color="gray", linestyle="--")
+        for index, (cdf_key, probability_key) in enumerate(
+            zip(d["threshold_cdf"], d["probabilities"], strict=True)
+        ):
+            cdf_value = lookup[cdf_key]
+            axes["cdf"].scatter([r["threshold"]], [cdf_value], color=colors[index], s=28, zorder=3)
+            axes["cdf"].annotate(
+                f"P(> threshold) = {lookup[probability_key]:.1f}%",
+                (r["threshold"], cdf_value),
+                xytext=(7, 10 if index else -14),
+                textcoords="offset points",
+                fontsize=8,
+                color=colors[index],
+            )
         axes["cdf"].annotate(
-            f"P(> threshold) = {lookup[probability_key]:.1f}%",
-            (r["threshold"], cdf_value),
-            xytext=(7, 10 if index else -14),
+            f"Outcome threshold = {r['threshold']:g}",
+            (r["threshold"], 0.99),
+            xytext=(6, -4),
             textcoords="offset points",
+            va="top",
             fontsize=8,
-            color=colors[index],
+            color="dimgray",
         )
-    axes["cdf"].annotate(
-        f"Outcome threshold = {r['threshold']:g}",
-        (r["threshold"], 0.99),
-        xytext=(6, -4),
-        textcoords="offset points",
-        va="top",
-        fontsize=8,
-        color="dimgray",
-    )
     axes["cdf"].set(
         xlabel=r["outcome_units"],
         ylabel="P(sales ≤ outcome under intervention)",
@@ -165,64 +208,18 @@ def render_distribution_plot(bundle, ledger, output_path: Path):
     )
     axes["pdf"].legend(fontsize=8)
 
-    levels = [row["level"] for row in d["quantiles"]]
-    values = [lookup[row["difference"]] for row in d["quantiles"]]
-    axes["quantile"].plot(
-        levels,
-        values,
-        "o-",
-        color="#0f766e",
-        label=f"Price {r['prices'][1]:g} − price {r['prices'][0]:g}",
-    )
-    for row, value in zip(d["quantiles"], values, strict=True):
-        axes["quantile"].annotate(
-            f"{value:.1f}",
-            (row["level"], value),
-            fontsize=8,
-            xytext=(0, 9),
-            textcoords="offset points",
-            ha="center",
-        )
-        if any(row["boundary_limited"]):
-            axes["quantile"].scatter(
-                [row["level"]],
-                [value],
-                facecolors="white",
-                edgecolors="#0f766e",
-                linewidths=2,
-                s=55,
-                zorder=4,
-            )
-            axes["quantile"].annotate(
-                "grid boundary",
-                (row["level"], value),
-                fontsize=8,
-                xytext=(0, -16),
-                textcoords="offset points",
-                ha="center",
-            )
-    axes["quantile"].margins(y=0.22)
-    axes["quantile"].axhline(0, color="gray", linestyle="--")
-    axes["quantile"].set(
-        xlabel="Outcome quantile",
-        ylabel=f"Change ({r['outcome_units']})",
-        xticks=levels,
-    )
-    axes["quantile"].set_title("Quantile changes across the outcome distribution")
-    axes["quantile"].set_xticklabels([f"{level:.0%}" for level in levels])
-    axes["quantile"].legend(fontsize=8)
     for ax in axes.values():
         ax.grid(alpha=0.2)
-    fig.suptitle("Exploratory point estimates · Track T · No uncertainty intervals")
+    fig.suptitle("Exploratory distribution estimates · Track T")
     fig.text(
         0.5,
         0.025,
-        "PDF = finite-difference slope of the displayed CDF, with no smoothing or tail "
-        "extrapolation. Curves and tables use the same validated result bundle.",
+        "PDF = finite-difference slope of the displayed CDF. Point estimates only; no uncertainty "
+        "intervals, smoothing or tail extrapolation.",
         ha="center",
         fontsize=8,
     )
-    fig.tight_layout(rect=(0, 0.06, 1, 0.96))
+    fig.tight_layout(rect=(0, 0.09, 1, 0.94))
     output_path.parent.mkdir(parents=True, exist_ok=True)
     fig.savefig(output_path, dpi=160, facecolor="white")
     plt.close(fig)

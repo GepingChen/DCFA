@@ -56,6 +56,10 @@ def render_markdown_report(
         boundary = (
             "> Locked Track T result; release eligibility still requires the release validator."
         )
+    if bundle.distribution is not None:
+        from dcfa.distribution_reporting import distribution_report
+
+        return distribution_report(bundle, boundary=boundary)
     lines = [
         "# Agentic TabCF report",
         "",
@@ -71,38 +75,29 @@ def render_markdown_report(
         "support diagnostics and interpretation limits below.",
         "",
     ]
-    if bundle.distribution is not None:
-        from dcfa.distribution_reporting import distribution_markdown
-
-        lines.append(distribution_markdown(bundle.distribution, bundle.queries))
-    else:
-        lines.extend(
-            [
-                "## Estimated outcomes",
-                "",
-                "| Estimate | Value | Support | Reference |",
-                "|---|---:|---|---|",
-            ]
-        )
-        for index, query in enumerate(bundle.queries, 1):
-            label = {
-                "interventional_mean": "Estimated mean outcome",
-                "interventional_quantile": "Estimated outcome quantile",
-                "threshold_risk": "Estimated threshold probability",
-                "mean_contrast_x_minus_comparison_x": (
-                    "Mean difference (requested minus comparison)"
-                ),
-                "quantile_contrast_x_minus_comparison_x": (
-                    "Quantile difference (requested minus comparison)"
-                ),
-                "risk_contrast_x_minus_comparison_x": (
-                    "Probability difference (requested minus comparison)"
-                ),
-            }.get(query.claim_type, "Estimated outcome")
-            support = query.support_status.value.replace("_", " ").capitalize()
-            lines.append(
-                f"| {label} | {query.value_display} {query.units} | {support} | [{index}] |"
-            )
+    lines.extend(
+        [
+            "## Estimated outcomes",
+            "",
+            "| Estimate | Value | Support | Reference |",
+            "|---|---:|---|---|",
+        ]
+    )
+    for index, query in enumerate(bundle.queries, 1):
+        label = {
+            "interventional_mean": "Estimated mean outcome",
+            "interventional_quantile": "Estimated outcome quantile",
+            "threshold_risk": "Estimated threshold probability",
+            "mean_contrast_x_minus_comparison_x": ("Mean difference (requested minus comparison)"),
+            "quantile_contrast_x_minus_comparison_x": (
+                "Quantile difference (requested minus comparison)"
+            ),
+            "risk_contrast_x_minus_comparison_x": (
+                "Probability difference (requested minus comparison)"
+            ),
+        }.get(query.claim_type, "Estimated outcome")
+        support = query.support_status.value.replace("_", " ").capitalize()
+        lines.append(f"| {label} | {query.value_display} {query.units} | {support} | [{index}] |")
     lines.extend(
         [
             "",

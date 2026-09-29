@@ -965,3 +965,21 @@ are engineering evidence, not a supported real-data numerical result.
 - Boundary: This is not a separate TabPFN fit or an exact analytic density. Do not
   smooth, renormalize over the finite grid, or extrapolate tails. The model fit,
   support decisions, estimand, GPU duration and release status remain unchanged.
+
+
+## 2026-09-29 — Compact cigarette distribution reports
+
+User-authorized refinement of the editable example: retain CDF and CDF-derived
+PDF; default to a 25th/50th/75th percentile table, without a duplicate quantile
+plot. Threshold probabilities are optional and require an explicit user request;
+remove the extreme-value framing. New requests do not compute upper-minus-middle
+gap summaries or generate automatic direction/magnitude/crossing narratives.
+This avoids interpreting arbitrarily small numerical differences as substantive
+patterns. Historical four-quantile artifact projections remain verifiable.
+
+Warnings and assumptions remain visible, at the end in smaller text, in the
+browser, cached report and download. Diagnostics and evidence stay in technical
+records. Grid-endpoint values remain recorded but are labeled unresolved in the
+main table. No estimator, support rule, input CSV, integration grid, backend,
+bootstrap, release gate or frozen protocol changes. This supersedes the default
+three-panel presentation in D-042, while retaining its approximate density method.

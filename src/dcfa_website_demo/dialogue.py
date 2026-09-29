@@ -146,6 +146,10 @@ def compile_csv_turn(
         client, version = load_gemini_client(key)
         if version != GOOGLE_GENAI_VERSION:
             raise ValueError("The Gemini SDK does not match the supported Space profile.")
+        # In pinned SDK 2.18.1, HttpRetryOptions(attempts=0) is normalized to 1,
+        # then incorrectly treated as one retry by Interactions. Set its actual
+        # retry count directly so a rate limit cannot repeat the provider call.
+        client.interactions.sdk_configuration.retry_config.max_retries = 0
     try:
         on_request()
         interaction = client.interactions.create(

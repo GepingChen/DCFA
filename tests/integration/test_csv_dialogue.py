@@ -146,6 +146,38 @@ def test_provider_error_is_actionable_without_leaking_secrets(fixture, caplog, s
     assert not f.session.busy
 
 
+def test_real_sdk_does_not_retry_rate_limits(fixture, monkeypatch):
+    import httpx
+
+    attempts = []
+    sleeps = []
+
+    def limited(self, request, *args, **kwargs):
+        attempts.append(request.method)
+        return httpx.Response(
+            429,
+            json={
+                "error": {"code": 429, "message": "Quota exhausted", "status": "RESOURCE_EXHAUSTED"}
+            },
+            headers={"Retry-After": "60"},
+            request=request,
+        )
+
+    monkeypatch.setattr(httpx.Client, "send", limited)
+    monkeypatch.setattr(time, "sleep", sleeps.append)
+    with pytest.raises(DCFAError, match="quota_exceeded"):
+        compile_csv_turn(
+            [{"role": "user", "content": "Median high minus low"}],
+            ("Y", "X", "Z"),
+            {},
+            api_key_file=fixture.key,
+            on_request=fixture.session.count_request,
+        )
+    assert attempts == ["POST"]
+    assert sleeps == []
+    assert fixture.session.request_count == 1
+
+
 def test_waiting_notice_and_provider_failure_restore_controls(fixture):
     f = fixture
 

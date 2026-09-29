@@ -52,6 +52,13 @@ included in the installed Python wheel. The dialogue profile reserves 4096
 output tokens with low thinking because the previous 1024-token medium-thinking
 budget was exhausted by a live clarification response, returning incomplete JSON.
 
+CSV dialogue displays a waiting notice while Gemini prepares a plan. A failed
+request restores the controls and reports a safe error category and HTTP status;
+provider response bodies and credentials are not logged. HTTP 429 means the
+visitor must check Gemini rate limits, quota, or billing. The pinned SDK's
+Interactions retry count is explicitly zero: each Send action makes at most one
+provider request, including when the provider returns a Retry-After header.
+
 The ZeroGPU runtime is `development_only`. Its package, model revision, model
 hash, Space commit, and DCFA commit are recorded, but it has no immutable
 container-image digest and cannot enter locked Track T evidence.

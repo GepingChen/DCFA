@@ -983,3 +983,20 @@ records. Grid-endpoint values remain recorded but are labeled unresolved in the
 main table. No estimator, support rule, input CSV, integration grid, backend,
 bootstrap, release gate or frozen protocol changes. This supersedes the default
 three-panel presentation in D-042, while retaining its approximate density method.
+
+## 2026-09-29 — Surface dialogue failures and disable SDK-level retries
+
+A real cigarette dialogue request returned HTTP 429 with a free-tier daily
+request-limit message. A repeated diagnostic took 148.9 seconds before failure.
+An offline test using the installed google-genai 2.18.1 HTTP transport confirmed
+four POST attempts for one Interactions call. The old fake-client tests counted
+only calls to `interactions.create`, missing the transport retries.
+
+The Space dialogue now displays a waiting notice and safe, actionable error
+categories. Logs contain only category and status, never provider bodies or
+credentials. Set the pinned Interactions resource's actual `max_retries` to zero:
+its public `HttpRetryOptions(attempts=0)` is normalized to 1 and then interpreted
+as one retry, as verified with the real SDK and a mocked HTTP transport. The
+regression test verifies one POST and no sleeping even with Retry-After. This
+enforces the existing one-request policy only for Space dialogue; other client
+paths, model selection, estimator behavior and research protocols are unchanged.

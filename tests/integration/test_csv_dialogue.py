@@ -10,7 +10,7 @@ from types import SimpleNamespace
 import gradio as gr
 import pytest
 
-from dcfa.errors import DCFAError
+from dcfa.errors import DCFAError, ErrorCode
 from dcfa_website_demo.app import build_app, execute_prepared_local_csv
 from dcfa_website_demo.csv_upload import export_standard_demo_csv
 from dcfa_website_demo.dialogue import CSVConversation, compile_csv_turn, prepare_turn
@@ -113,6 +113,67 @@ def test_provider_failure_counts_once_and_does_not_retry(fixture):
     assert f.session.request_count == 1
     assert len(f.client.interactions.calls) == 1
     assert f.session.history == [] and not f.session.busy
+
+
+@pytest.mark.parametrize(
+    ("status", "category"),
+    [
+        (400, "invalid_request"),
+        (401, "access_denied"),
+        (403, "access_denied"),
+        (404, "model_unavailable"),
+        (429, "quota_exceeded"),
+        (503, "provider_unavailable"),
+    ],
+)
+def test_provider_error_is_actionable_without_leaking_secrets(fixture, caplog, status, category):
+    f = fixture
+
+    class ProviderError(Exception):
+        status_code = status
+
+    def fail(**kwargs):
+        raise ProviderError("test_key_not_a_real_credential private conversation provider body")
+
+    f.client.interactions.create = fail
+    with pytest.raises(DCFAError) as caught:
+        turn(f)
+    assert caught.value.context == {"category": category, "http_status": status}
+    visible = str(caught.value) + caplog.text
+    assert category in visible
+    assert "test_key_not_a_real_credential" not in visible
+    assert "private conversation" not in visible
+    assert not f.session.busy
+
+
+def test_waiting_notice_and_provider_failure_restore_controls(fixture):
+    f = fixture
+
+    def fail(*args):
+        raise DCFAError(
+            ErrorCode.LLM_API_FAILED,
+            "The dialogue request failed (quota_exceeded).",
+            stage="website_demo.dialogue",
+        )
+
+    h = handlers(fail, None)
+    waiting = h["show_talking"]()
+    assert "Preparing your analysis plan" in waiting[-1]
+    assert all(update["interactive"] is False for update in waiting[:-1])
+    result = h["talk"](
+        f.session,
+        f.path,
+        "",
+        None,
+        None,
+        None,
+        True,
+        "Analyze median high minus low.",
+        SimpleNamespace(username="alice"),
+    )
+    assert "quota_exceeded" in result[3]
+    assert result[13]["interactive"]  # Send
+    assert result[14]["interactive"]  # Reset
 
 
 def test_installed_space_can_load_external_dialogue_profile(fixture, monkeypatch, tmp_path):

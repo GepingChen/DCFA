@@ -257,13 +257,18 @@ def bind_csv_dialogue(
     )
 
     def show_talking():
-        return (gr.update(interactive=False),) * (2 + len(controls))
+        return (
+            *((gr.update(interactive=False),) * (2 + len(controls))),
+            "Preparing your analysis plan with Gemini… Please wait. "
+            "No statistical analysis is running yet. "
+            "Controls will return when the request finishes.",
+        )
 
     for submit in (send.click, message.submit):
         submit(
             fn=show_talking,
             inputs=None,
-            outputs=(confirm, key, *controls),
+            outputs=(confirm, key, *controls, notice),
             queue=False,
             api_name=False,
         ).success(**event_args)

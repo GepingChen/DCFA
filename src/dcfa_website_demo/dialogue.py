@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import html
 import json
+import logging
 import os
 import threading
 import time
@@ -34,6 +35,44 @@ DIALOGUE_CONFIG = Path(__file__).resolve().parents[2] / (
 SESSION_SECONDS = 900
 _SESSION_LOCK = threading.RLock()
 ROLES = ("outcome", "treatment", "instrument")
+_LOGGER = logging.getLogger(__name__)
+
+
+def _request_error(exc: Exception) -> DCFAError:
+    """Expose actionable categories without logging provider bodies or credentials."""
+    status = getattr(exc, "status_code", None)
+    if not isinstance(status, int):
+        status = getattr(exc, "code", None)
+    if not isinstance(status, int):
+        status = None
+    name = type(exc).__name__
+    category, advice = "provider_error", "Please try again."
+    if status in (401, 403):
+        category, advice = "access_denied", "Check the Gemini API key and its project permissions."
+    elif status == 429:
+        category, advice = "quota_exceeded", "Check your Gemini quota and billing before retrying."
+    elif status == 400:
+        category, advice = "invalid_request", "Gemini rejected the request parameters or API key."
+    elif status == 404:
+        category, advice = (
+            "model_unavailable",
+            "The configured Gemini model or endpoint is unavailable.",
+        )
+    elif status is not None and status >= 500:
+        category, advice = "provider_unavailable", "Gemini is temporarily unavailable; retry later."
+    elif "timeout" in name.lower():
+        category, advice = "timeout", "Gemini did not respond in time; please retry."
+    elif "connection" in name.lower() or "connect" in name.lower():
+        category, advice = "connection_failed", "Could not connect to Gemini; please retry later."
+    _LOGGER.warning("Gemini dialogue failed: category=%s status=%s", category, status)
+    return DCFAError(
+        ErrorCode.LLM_API_FAILED,
+        f"The dialogue request failed ({category}"
+        + (f", HTTP {status}" if status is not None else "")
+        + f"). {advice} Your inputs are retained; no analysis was run.",
+        stage="website_demo.dialogue",
+        context={"category": category, "http_status": status},
+    )
 
 
 @dataclass
@@ -126,11 +165,7 @@ def compile_csv_turn(
             timeout=float(config["timeout_seconds"]),
         )
     except Exception as exc:
-        raise DCFAError(
-            ErrorCode.LLM_API_FAILED,
-            "The dialogue request failed. Your previous messages are retained; you may retry.",
-            stage="website_demo.dialogue",
-        ) from exc
+        raise _request_error(exc) from exc
     finally:
         close = getattr(client, "close", None)
         if callable(close):

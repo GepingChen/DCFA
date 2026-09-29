@@ -188,26 +188,14 @@ def _validate_tabcf_projection(
             observed=bundle.get(field),
         )
     if specification.get("distribution") is not None:
-        from dcfa.schemas import DistributionRequest
-        from dcfa.tabcf_iv.distribution import derive_distribution
-
-        request = dict(specification["distribution"])
-        request["prices"] = tuple(request["prices"])
-        request["quantile_levels"] = tuple(request["quantile_levels"])
-        projection = derive_distribution(
-            DistributionRequest(**request),
-            numerical_core["y_grid"],
-            numerical_core["interventional_cdf"],
-            numerical_core["interventional_quantiles"],
-            numerical_core["interventional_risks"],
+        # Validate saved artifacts against the saved numerical core. Recomputing
+        # exp/finite differences on another platform can change the last bits.
+        projection = numerical_core["distribution"]
+        _assert_projection(
+            name="saved original-unit distribution",
+            expected=projection,
+            observed=bundle.get("distribution"),
         )
-        projection = to_primitive(projection)
-        for location in (numerical_core, bundle):
-            _assert_projection(
-                name="original-unit distribution",
-                expected=projection,
-                observed=location.get("distribution"),
-            )
         queries = bundle.get("queries", [])
         _assert_projection(
             name="distribution query count",

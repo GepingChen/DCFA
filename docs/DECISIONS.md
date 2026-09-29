@@ -1000,3 +1000,17 @@ as one retry, as verified with the real SDK and a mocked HTTP transport. The
 regression test verifies one POST and no sleeping even with Retry-After. This
 enforces the existing one-request policy only for Space dialogue; other client
 paths, model selection, estimator behavior and research protocols are unchanged.
+
+
+## 2026-09-29 — Verify saved distributions without cross-platform recomputation
+
+The successful Space cigarette run failed local macOS artifact verification at
+24 floating-point values, with a maximum absolute difference of 2.84e-14.
+Recomputing the original-unit distribution before exact comparison made this
+check depend on platform floating-point math. At the user's explicit request,
+remove that recomputation check. Compare the saved distribution and its query
+records with the saved numerical core instead. Existing artifact identities,
+export consistency, evidence, warning and support checks remain in place.
+This no longer independently rederives the distribution during artifact
+verification; deterministic distribution tests remain responsible for that
+calculation. No estimator or reported value changes.

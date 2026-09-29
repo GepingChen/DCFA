@@ -474,7 +474,7 @@ def test_tiny_changes_do_not_generate_narrative():
     assert not any(word in report for word in ("narrows", "widens", "cross", "magnitude", "gap"))
 
 
-def test_saved_four_quantile_projection_remains_verifiable(wide_fake_ranks, tmp_path):
+def test_saved_four_quantile_projection_remains_verifiable(wide_fake_ranks, tmp_path, monkeypatch):
     _, data = dataset()
     req = request()
     req = replace(
@@ -487,6 +487,11 @@ def test_saved_four_quantile_projection_remains_verifiable(wide_fake_ranks, tmp_
     run = engine.analyze(data.columns, spec, data.manifest, output_dir=tmp_path / "legacy")
     assert len(run.bundle.queries) == 660
     assert run.bundle.distribution["gap_change"] == "upper_minus_middle_change"
+
+    def unavailable_projection(*args, **kwargs):
+        raise AssertionError("Artifact verification must not recompute saved distributions")
+
+    monkeypatch.setattr("dcfa.tabcf_iv.distribution.derive_distribution", unavailable_projection)
     assert verify_run_directory(tmp_path / "legacy")["status"] == "valid"
     body = (tmp_path / "legacy/report.md").read_text().split("<details>")[0]
     assert "| 90% |" not in body and "gap" not in body

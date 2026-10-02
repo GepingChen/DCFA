@@ -1014,3 +1014,15 @@ export consistency, evidence, warning and support checks remain in place.
 This no longer independently rederives the distribution during artifact
 verification; deterministic distribution tests remain responsible for that
 calculation. No estimator or reported value changes.
+
+## 2026-10-02 — Default public Space to a saved real cigarette report
+
+At the user's request, visitors can inspect the final delivery without entering
+an LLM API key or signing in. The Example report tab uses a real ZeroGPU run with
+the unchanged cigarette CSV, prices 100 and 120, seed 20260920 and the default
+three quartiles. Its files are packaged with the website module; viewing only
+reads those files. The original report is preserved, with the audit reported
+separately. Upload CSV and live synthetic examples retain their existing
+authorization, privacy, provider and support boundaries. This adds no research
+freeze or verification mechanism. The user authorized the real run, public
+showcase assets and deployment to GPChen01/dcfa-zerogpu.

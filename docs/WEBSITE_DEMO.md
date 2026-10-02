@@ -14,8 +14,15 @@ four paths is locked Track T evidence or a general causal-analysis service.
 
 ## Hugging Face ZeroGPU path
 
-The canonical Space is `GPChen01/dcfa-zerogpu`. It requires Hugging Face login
-before any GPU event and runs the three synthetic presets with a frozen typed
+The canonical Space is `GPChen01/dcfa-zerogpu`. Its default **Example report**
+tab displays a saved real cigarette analysis without login, an API key, a provider
+request or GPU allocation. The CSV and original report ZIP are downloadable.
+The report retains its run version, evidence appendix and interpretation warnings;
+it is an exploratory Track T real-data demonstration, not a new analysis.
+
+**Upload CSV** and **Run synthetic example** retain their live execution flows.
+The Space requires Hugging Face login before any GPU event and runs the three
+synthetic presets with a frozen typed
 median contrast, so those preset runs make no Gemini or Prior Labs request.
 It preloads and hash-checks `Prior-Labs/TabPFN-v2-reg` at revision
 `4972a65a1b30806315c6f92499959ffbfc69a673`, uses one CUDA estimator, and

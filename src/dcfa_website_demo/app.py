@@ -1507,8 +1507,6 @@ def build_app(
         fill_width=True,
         delete_cache=(300, 900) if is_space else None,
     ) as app:
-        if is_space:
-            gr.LoginButton(value="Sign in with Hugging Face", size="sm")
         environment_label = "ZeroGPU demo" if is_space else "Local demo"
         attribution = (
             '<p class="demo-attribution"><strong>Built with PriorLabs-TabPFN</strong> · '
@@ -1516,12 +1514,17 @@ def build_app(
             if is_space
             else ""
         )
+        hero_copy = (
+            "Explore a complete example report, or upload your data to start an analysis."
+            if is_space
+            else "Upload your data. Describe your question. Explore treatment effects."
+        )
         gr.HTML(
-            """
+            f"""
             <header class="demo-hero">
               <h1>Agentic TabCF</h1>
               <p class="demo-hero-copy">
-                Upload your data. Describe your question. Explore treatment effects.
+                {hero_copy}
               </p>
             </header>
             """
@@ -1533,8 +1536,15 @@ def build_app(
             with gr.Column(
                 elem_classes="demo-input",
             ):
-                with gr.Tabs(selected="csv", elem_id="input-tabs"):
+                with gr.Tabs(selected="saved_example" if is_space else "csv", elem_id="input-tabs"):
+                    if is_space:
+                        with gr.Tab("Example report", id="saved_example"):
+                            from dcfa_website_demo.prepared_report import render_prepared_report
+
+                            render_prepared_report()
                     with gr.Tab("Upload CSV", id="csv"):
+                        if is_space:
+                            gr.LoginButton(value="Sign in with Hugging Face", size="sm")
                         gr.Markdown(
                             "Three numeric columns: outcome, continuous treatment, "
                             "and instrument. "
@@ -1662,7 +1672,13 @@ def build_app(
                             csv_reset = gr.Button(
                                 "Reset conversation", variant="secondary", size="sm"
                             )
-                    with gr.Tab("Try an example", id="example"):
+                    with gr.Tab(
+                        "Run synthetic example" if is_space else "Try an example", id="example"
+                    ):
+                        if is_space:
+                            gr.Markdown(
+                                "Sign in on the **Upload CSV** tab before running a live example."
+                            )
                         gr.Markdown(
                             "Explore a synthetic example with strong instruments, "
                             "weak instruments, "

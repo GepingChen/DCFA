@@ -39,6 +39,9 @@ dcfa-website-demo = "dcfa_website_demo.app:main"
 [tool.setuptools.packages.find]
 where = ["src"]
 
+[tool.setuptools.package-data]
+dcfa_website_demo = ["assets/cigarette_v1/*"]
+
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 addopts = "-ra"

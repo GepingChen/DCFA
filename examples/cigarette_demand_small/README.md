@@ -4,9 +4,11 @@
 > state-year annual cigarette sales per capita differ between real prices of
 > 100 and 120 CPI-deflated cents per pack?
 
-This is an exploratory Track T real-data demonstration with engineering tests
-using fake providers. The example does not supply a real GPU numerical result
-or timing measurement.
+This is an exploratory Track T real-data demonstration. A real ZeroGPU run from
+2026-10-02 is available in the Space's default **Example report** tab, without
+login or an API key. See [the report review](../../docs/CIGARETTE_REPORT_REVIEW_20261002.md)
+for verification and limitations. Engineering tests also use fake providers;
+neither those tests nor the saved run establish statistical quality or a timing benchmark.
 
 ## Data
 

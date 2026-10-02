@@ -86,7 +86,7 @@ Choose the path that matches what you want to inspect:
 
 | Path | What happens | Providers and data boundary |
 |---|---|---|
-| **[Live ZeroGPU demo](https://huggingface.co/spaces/GPChen01/dcfa-zerogpu)** | Runs authenticated presets or a bounded Y/X/Z CSV with pinned local TabPFN v2 | Presets make no provider call; temporary-key CSV sends the question, three header names, and optional role overrides to Gemini; development-only |
+| **[Live ZeroGPU demo](https://huggingface.co/spaces/GPChen01/dcfa-zerogpu)** | Opens a saved real cigarette report immediately; also runs authenticated presets or a bounded Y/X/Z CSV with local TabPFN v2 | Viewing the saved example needs no login, API key or GPU; live CSV uses Gemini; development-only |
 | **[Prepared demo](https://gepingchen.github.io/projects/dcfa/)** | Replays one hash-bound, independently verified synthetic result | Static GitHub Pages; no provider call at view time |
 | **[Colab workflow](https://colab.research.google.com/github/GepingChen/DCFA/blob/main/notebooks/DCFA_Custom_Analysis_Colab.ipynb)** | Runs one bounded custom CSV analysis in your own ephemeral runtime | Your question goes to Google; only separately authorized Y/X/Z rows and prediction grids go to Prior Labs |
 | **Local operator demo** | Runs the guided Gradio workflow and preserves full audit artifacts | Uses your repository-external Gemini and TabPFN Client credentials |

@@ -302,3 +302,14 @@ artifacts.
 - Focused verification: `.venv/bin/python -m pytest
   tests/integration/test_cigarette_distribution.py -q`. Existing backend, dialogue,
   ZeroGPU and public-boundary regressions cover the shared execution path.
+
+## Saved cigarette example in the ZeroGPU UI
+
+`dcfa_website_demo.prepared_report` reads the curated public files in
+`src/dcfa_website_demo/assets/cigarette_v1/`, included as wheel package data.
+The Space defaults to a static Example report tab; the local app retains its
+upload-first UI. The example has no provider, GPU or conversation event handlers.
+Its original report and PNG match the saved ZIP; the CSV matches the checked-in
+cigarette example. Missing files show an unavailable message without computation.
+
+Targeted verification: `.venv/bin/python -m pytest tests/integration/test_prepared_report.py tests/integration/test_zerogpu_space.py tests/integration/test_website_demo.py`.

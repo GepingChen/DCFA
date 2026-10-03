@@ -27,10 +27,10 @@ from dcfa.tabcf_iv.backend import (
     _distribution_eval_matrix,
 )
 
-MANAGED_CLIENT_PROTOCOL_VERSION = "tabpfn_client_managed_demo_v2"
-MANAGED_CLIENT_VERSION = "0.3.3"
-MANAGED_SERVICE_PACKAGE_VERSION = "8.3.0"
-MANAGED_MODEL_PATH = "v2.5_default"
+MANAGED_CLIENT_PROTOCOL_VERSION = "tabpfn_client_managed_demo_v3"
+MANAGED_CLIENT_VERSION = "0.6.1"
+MANAGED_SERVICE_PACKAGE_VERSION = "9.0.0"
+MANAGED_MODEL_PATH = "v3.5_default"
 MANAGED_N_ESTIMATORS = 1
 MANAGED_MAX_TRAIN_ROWS = 256
 MANAGED_MAX_PREDICT_ROWS = 400
@@ -279,7 +279,6 @@ class TabPFNClientBackend:
                 random_state=self.seed,
                 ignore_pretraining_limits=False,
                 thinking_mode=False,
-                force_refit=False,
             )
         except Exception as exc:
             raise BackendError(
@@ -350,6 +349,7 @@ class TabPFNClientBackend:
                     "observed": observed_version or "missing",
                 },
             )
+        config = metadata.get("tabpfn_config") or {}
         self.api_prediction_calls += 1
         trace_id = str(getattr(estimator, "_last_trace_id", "unavailable"))
         self._observations.append(
@@ -358,6 +358,12 @@ class TabPFNClientBackend:
                 ("rows", str(len(matrix))),
                 ("columns", str(matrix.shape[1])),
                 ("service_package_version", observed_version),
+                ("model_path", str(config.get("model_path", "unavailable"))),
+                (
+                    "billing_model_version",
+                    str(metadata.get("billing_model_version", "unavailable")),
+                ),
+                ("n_estimators", str(metadata.get("n_estimators", "unavailable"))),
                 ("trace_id", trace_id),
             )
         )

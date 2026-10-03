@@ -70,6 +70,36 @@ The ZeroGPU runtime is `development_only`. Its package, model revision, model
 hash, Space commit, and DCFA commit are recorded, but it has no immutable
 container-image digest and cannot enter locked Track T evidence.
 
+## Default local API model and quota
+
+`dcfa-ui` (alias `dcfa-website-demo`) uses TabPFN-3.5 through the official
+`tabpfn-client==0.6.1`, selecting `v3.5_default` explicitly. The managed profile
+uses one estimator, disables Thinking, retains 256 training / 400 prediction
+row caps, and records the service-resolved model path and package version.
+The existing service-version check now expects `9.0.0`. A version mismatch or
+quota error stops the affected run without a different backend or model.
+There is no subscription, credit purchase, or paid-provider switch in this path;
+account billing and free entitlement are controlled by Prior Labs. Keep the
+account on its free plan for free-only operation.
+
+On 2026-10-03, an authenticated development account returned 5,000,000 daily and
+20,000,000 monthly tokens, with zero Thinking fits. A real 128-row synthetic
+analysis made three predictions and consumed 30,000 tokens. Dimension-only
+server quotes for 256 training rows and 320 Stage-2 prediction rows also returned
+10,000 tokens per request. At this bounded size, budget approximately 666
+completed analyses per month (about 21 per day across a 31-day month), or at
+most 166 in one day if monthly quota remains. Other clients share the allowance;
+failed calls and reruns can consume it. This is an account-specific observation,
+not a guaranteed public free-tier allowance or an estimate for large datasets.
+
+Check current allowance at <https://platform.priorlabs.ai/account/usage>.
+The API reports daily and monthly reset timestamps; do not assume the older
+client README's daily-only reset applies to both. See
+<https://github.com/PriorLabs/tabpfn-client#usage-limits> for dimension-only
+`estimate_cost` queries. These are table-compute tokens, not Gemini text tokens;
+Gemini has its own quota. Existing saved reports and cached runtime follow-ups
+do not refit; launching a new analysis does.
+
 ## What is ready
 
 Run the website-oriented shell locally:

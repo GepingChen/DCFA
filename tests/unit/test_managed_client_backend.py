@@ -77,3 +77,50 @@ def test_managed_specification_is_development_only_and_exact(
     )
     assert backend.manifest.evidence_status is EvidenceStatus.DEVELOPMENT_ONLY
     assert backend.manifest.model_artifact_hash.startswith("managed_service_")
+
+
+def test_managed_estimator_uses_explicit_35_without_removed_client_options() -> None:
+    class Regressor:
+        def __init__(
+            self,
+            *,
+            model_path,
+            n_estimators,
+            random_state,
+            ignore_pretraining_limits,
+            thinking_mode,
+        ):
+            assert model_path == "v3.5_default"
+            assert n_estimators == 1
+            assert random_state == 7
+            assert not ignore_pretraining_limits
+            assert not thinking_mode
+
+    backend = TabPFNClientBackend(
+        seed=7, regressor_class=Regressor, client_version=MANAGED_CLIENT_VERSION
+    )
+    assert isinstance(backend._new_estimator(), Regressor)
+
+
+def test_managed_service_observation_records_resolved_model_and_preserves_version_check() -> None:
+    class Regressor:
+        _last_meta = {
+            "package_version": "9.0.0",
+            "billing_model_version": "v3.5",
+            "n_estimators": 1,
+            "tabpfn_config": {"model_path": "/app/tabpfn_models/tabpfn-v3.5.safetensors"},
+        }
+
+    backend = TabPFNClientBackend(
+        seed=7, regressor_class=Regressor, client_version=MANAGED_CLIENT_VERSION
+    )
+    estimator = Regressor()
+    backend._record_observation(estimator, "full", np.zeros((2, 1)))
+    details = dict(backend.audit_details)
+    assert details["request_1_billing_model_version"] == "v3.5"
+    assert details["request_1_model_path"].endswith("tabpfn-v3.5.safetensors")
+    estimator._last_meta = {"package_version": "unexpected"}
+    with pytest.raises(BackendError) as raised:
+        backend._record_observation(estimator, "full", np.zeros((2, 1)))
+    assert raised.value.code is ErrorCode.UNSUPPORTED_BACKEND_PROFILE
+    assert backend.api_prediction_calls == 1

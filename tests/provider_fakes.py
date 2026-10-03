@@ -12,7 +12,7 @@ class FakeClientRegressor:
     prediction_calls = 0
 
     def __init__(self, **kwargs: Any) -> None:
-        assert kwargs["model_path"] == "v2.5_default"
+        assert kwargs["model_path"] == "v3.5_default"
         assert kwargs["n_estimators"] == 1
         assert kwargs["thinking_mode"] is False
         self._last_meta: dict[str, Any] = {}
@@ -33,7 +33,7 @@ class FakeClientRegressor:
         matrix = np.asarray(features, dtype=float)
         means = np.column_stack([np.ones(len(matrix)), matrix]) @ self.coefficients
         type(self).prediction_calls += 1
-        self._last_meta = {"package_version": "8.3.0"}
+        self._last_meta = {"package_version": "9.0.0"}
         if output_type == "mean":
             return means
         assert output_type == "full"

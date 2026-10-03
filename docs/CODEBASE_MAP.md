@@ -58,7 +58,11 @@ backend lazily imports packages and fails with a typed error; locked execution
 also requires a hashed checkpoint and runtime image digest before import.
 
 `managed_client.py` is a separate development-only implementation of the same
-backend contract. `managed_smoke.py` exposes one fixed 128-row synthetic fixture;
+backend contract. The current managed development profile uses
+`tabpfn-client==0.6.1`, `v3.5_default`, service package `9.0.0`, one estimator,
+and Thinking disabled. `dcfa-ui` and `dcfa-website-demo` enter the same managed
+service; `dcfa-dev-ui` explicitly selects the credential-free mechanics UI.
+`managed_smoke.py` exposes one fixed 128-row synthetic fixture;
 `dcfa_website_demo` reuses the same profile for three bounded synthetic presets
 and one explicitly confirmed local CSV route through the existing typed agent
 state machine. `csv_upload.py` accepts exactly three mapped numeric Y/X/Z
@@ -144,7 +148,7 @@ completed an authenticated standard-CSV compile and managed analysis.
 .venv/bin/ruff format --check src tests
 .venv/bin/python -m pytest
 .venv/bin/dcfa --help
-.venv-managed/bin/dcfa managed-agent-smoke --token-file <outside-repo-file> --output-dir <fresh-directory>
+.venv/bin/dcfa managed-agent-smoke --token-file <outside-repo-file> --output-dir <fresh-directory>
 .venv-gemini/bin/dcfa gemini-agent-smoke --api-key-file <outside-repo-file> --output-dir <fresh-directory>
 .venv/bin/dcfa verify-gemini-agent-smoke <run-directory>
 .venv/bin/dcfa verify-artifacts <run-directory>

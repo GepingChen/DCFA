@@ -37,10 +37,12 @@ posthog==7.38.5
 pyarrow==23.0.1
 pydantic==2.13.4
 pydantic_core==2.46.4
+pydantic-settings==2.15.0
 Pygments==2.20.0
 pyparsing==3.3.2
 pytest==8.4.2
 python-dateutil==2.9.0.post0
+python-dotenv==1.2.4
 pytz==2026.3.post1
 PyYAML==6.0.3
 requests==2.34.2
@@ -50,7 +52,7 @@ scikit-learn==1.9.0
 scipy==1.17.1
 six==1.17.0
 sseclient-py==1.9.0
-tabpfn-client==0.3.3
+tabpfn-client==0.6.1
 tabpfn-common-utils==0.2.19
 threadpoolctl==3.6.0
 tqdm==4.67.3

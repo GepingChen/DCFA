@@ -10,6 +10,7 @@ from typing import Any
 from dcfa import __version__
 from dcfa.agent.gemini_live import read_gemini_api_key
 from dcfa.errors import DCFAError
+from dcfa.tabcf_iv.managed_client import MANAGED_MODEL_PATH
 from dcfa.tabcf_iv.managed_smoke import read_managed_token_file
 from dcfa_website_demo.app import (
     DEFAULT_OUTPUT_ROOT,
@@ -75,7 +76,7 @@ def build_service() -> Any:
                 "version": __version__,
                 "evidence_status": "development_only",
                 "backend": "tabpfn_client_managed",
-                "model": "v2.5_default",
+                "model": MANAGED_MODEL_PATH,
                 "llm_provider": "google_gemini_developer_api",
                 "llm_model": GEMINI_MODEL,
             },

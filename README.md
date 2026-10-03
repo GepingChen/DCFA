@@ -119,6 +119,14 @@ sensitive, confidential, personally identifiable, or otherwise unshareable data.
 
 ### Local setup
 
+The default local analysis UI (`dcfa-ui`, also available as `dcfa-website-demo`)
+uses the managed **TabPFN-3.5 API** with your account quota, one estimator and
+Thinking disabled. Install `requirements-website-demo.lock` and supply the
+external credentials as shown below. The explicit `dcfa-dev-ui` and `tabcf-demo`
+commands remain credential-free sklearn mechanics demonstrations. The deployed
+ZeroGPU path continues to use its separately configured local v2 backend.
+
+
 For everyday core development, you can reuse an existing compatible Conda
 environment without creating `.venv` or installing DCFA into that environment.
 See [shared local environments](docs/LOCAL_ENVIRONMENTS.md) for commands,
@@ -146,7 +154,7 @@ This command explicitly uses the local
 `sklearn_quantile_fallback`. Its output is `development_only`, is **not a TabCF
 result**, and cannot enter locked Track T evidence.
 
-To run the managed website demo, install the combined environment and place both
+To run the default TabPFN-3.5 API workflow, install the combined environment and place both
 credentials outside the repository:
 
 ```bash
@@ -154,7 +162,7 @@ credentials outside the repository:
 .venv/bin/python -m pip install -e . --no-deps
 chmod 600 ~/.config/dcfa/gemini_api_key
 chmod 600 ~/.config/dcfa/tabpfn_api_key
-.venv/bin/dcfa-website-demo
+.venv/bin/dcfa-ui
 ```
 
 Open `http://127.0.0.1:7860`. See

@@ -1026,3 +1026,23 @@ separately. Upload CSV and live synthetic examples retain their existing
 authorization, privacy, provider and support boundaries. This adds no research
 freeze or verification mechanism. The user authorized the real run, public
 showcase assets and deployment to GPChen01/dcfa-zerogpu.
+
+
+## 2026-10-03 — Default local TabPFN-3.5 managed API
+
+- User requested the supplied repository-external key and free account quota
+  as the default local statistical backend. `dcfa-ui` now enters the managed
+  service; `dcfa-dev-ui` retains the explicit sklearn mechanics shell.
+- Upgrade the existing managed development profile to v3: client 0.6.1,
+  explicit `v3.5_default`, observed service package 9.0.0, one estimator,
+  Thinking off. Remove `force_refit`, which the new client no longer accepts.
+  Record the returned model path, billing model version and estimator count.
+- Preserve existing row limits, consent, version checks, CDF calculation,
+  error/no-fallback behavior, and development-only evidence status. No new
+  protocol freeze or gate is introduced. Historical decisions and results remain
+  intact. The dedicated ZeroGPU deployment and locked research runtime are not
+  migrated by this local default change.
+- Real API measurement on a 128-row synthetic fixture consumed 30,000 tokens
+  across three predictions. Account response and dimension-only quotes inform
+  the bounded quota estimate documented in WEBSITE_DEMO.md; they do not establish
+  statistical quality or account-independent free entitlement.

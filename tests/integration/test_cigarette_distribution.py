@@ -371,7 +371,8 @@ def test_csv_handler_cached_followup_and_repeated_click(tmp_path, monkeypatch):
         calls.append(True)
         return "Review the plan", c
 
-    def execute(*args):
+    def execute(*args, analysis_mode):
+        assert analysis_mode == "api_preferred"
         executions.append(True)
         return tuple(gr.update(value="Cached evidence-backed report") for _ in range(9))
 
@@ -416,6 +417,31 @@ def test_actual_cpu_finalize_failure_does_not_retry_fits(wide_fake_ranks, monkey
         )
     assert len(wide_fake_ranks) == 2
     assert not list((tmp_path / "runs").rglob("*.json"))
+
+
+def test_measurement_write_failure_is_terminal(wide_fake_ranks, monkeypatch, tmp_path):
+    from dcfa_website_demo.app import WebsiteFinalizationError
+
+    monkeypatch.setattr(
+        "dcfa_website_demo.app.make_local_tabpfn_v2_backend",
+        lambda s, **k: TabPFNBackend(seed=s.seed, execution_profile=s.execution_profile),
+    )
+
+    def fail(*args):
+        raise OSError("disk unavailable")
+
+    monkeypatch.setattr("dcfa_website_demo.daily.write_record", fail)
+    validated, _ = dataset()
+    with pytest.raises(WebsiteFinalizationError, match="no refit"):
+        execute_prepared_local_csv(
+            validated,
+            compilation(),
+            20260920,
+            model_path=tmp_path / "fake",
+            prediction_runner=predict_backend,
+            output_root=tmp_path / "runs",
+        )
+    assert len(wide_fake_ranks) == 2
 
 
 def test_default_prompt_and_optional_threshold_validation():

@@ -10,6 +10,7 @@ import re
 import shutil
 import subprocess
 import threading
+import time
 from dataclasses import dataclass, replace
 from pathlib import Path
 from typing import Any
@@ -1125,8 +1126,10 @@ def _execute_compiled_dataset(
         backend_parameters=backend_parameters,
         seed=seed,
     )
+    started = time.perf_counter()
+    measurements = {"provider_server_seconds": None, "stages": []}
     predictions_completed = False
-    if preserve_failure and prediction_runner is None:
+    if prediction_runner is None:
         from dcfa.tabcf_iv.pipeline import predict_backend
 
         prediction_runner = predict_backend
@@ -1134,11 +1137,20 @@ def _execute_compiled_dataset(
 
     def tracked_predictions(*args, **kwargs):
         nonlocal predictions_completed
+        stage_started = time.perf_counter()
         try:
             result = original_runner(*args, **kwargs)
         except DCFAError as exc:
             exc.context["analysis_stage"] = args[1]
             raise
+        finally:
+            measurements["stages"].append(
+                {
+                    "stage": args[1],
+                    "client_wall_seconds": time.perf_counter() - stage_started,
+                    "backend_observations": dict(getattr(args[0], "audit_details", ())),
+                }
+            )
         if args[1] == "stage2":
             predictions_completed = True
         return result
@@ -1199,6 +1211,16 @@ def _execute_compiled_dataset(
             if not preserve_failure:
                 shutil.rmtree(output_dir, ignore_errors=True)
             raise WebsiteFinalizationError(str(exc)) from exc
+    from dcfa_website_demo.daily import write_record
+
+    measurements["analysis_and_report_seconds"] = time.perf_counter() - started
+    if output_dir.is_dir():
+        try:
+            write_record(output_dir / "execution_measurement.json", measurements)
+        except OSError as exc:
+            raise WebsiteFinalizationError(
+                "Execution measurement could not be saved; no refit was attempted."
+            ) from exc
     return PortfolioDemoResult(
         scenario=result_scenario,
         response=response,
@@ -1578,6 +1600,9 @@ def build_app(
     space_scenario_handler: Any | None = None,
     space_csv_handler: Any | None = None,
     space_csv_chat_handler: Any | None = None,
+    fixed_analysis_mode: str | None = None,
+    presentation_title: str = "Agentic TabCF",
+    local_csv_dialogue: bool = False,
 ) -> Any:
     """Build the optional website demo while keeping Gradio a lazy dependency."""
     try:
@@ -1600,10 +1625,22 @@ def build_app(
         or space_csv_handler is None
     ):
         raise ValueError("ZeroGPU deployment requires explicit authenticated event handlers.")
+    from dcfa_website_demo.daily import AnalysisMode
+
+    if fixed_analysis_mode is not None:
+        fixed_analysis_mode = AnalysisMode(fixed_analysis_mode).value
+    initial_mode = fixed_analysis_mode or "api_preferred"
+    dialogue_enabled = is_space or local_csv_dialogue
+    if local_csv_dialogue and not is_space:
+        from dcfa_website_demo.local_dialogue import local_handlers
+
+        space_authorize_handler, space_csv_chat_handler, space_csv_handler = local_handlers(
+            output_root=output_root, fixed_analysis_mode=fixed_analysis_mode
+        )
     scenario_choices = [(item.label, key) for key, item in SCENARIOS.items()]
     visible_revision = html.escape(build_revision or resolve_build_revision())
     with gr.Blocks(
-        title="Agentic TabCF",
+        title=presentation_title,
         analytics_enabled=False,
         fill_width=True,
         delete_cache=(300, 900) if is_space else None,
@@ -1623,7 +1660,7 @@ def build_app(
         gr.HTML(
             f"""
             <header class="demo-hero">
-              <h1>Agentic TabCF</h1>
+              <h1>{html.escape(presentation_title)}</h1>
               <p class="demo-hero-copy">
                 {hero_copy}
               </p>
@@ -1633,17 +1670,23 @@ def build_app(
         from dcfa_website_demo.daily import MODE_CHOICES, transfer_notice
 
         analysis_mode = gr.Radio(
-            choices=MODE_CHOICES,
-            value="api_preferred",
+            choices=[c for c in MODE_CHOICES if c[1] == fixed_analysis_mode]
+            if fixed_analysis_mode
+            else MODE_CHOICES,
+            value=initial_mode,
+            visible=fixed_analysis_mode is None,
             label="Analysis mode",
             elem_id="analysis-mode",
         )
         policy_notice = gr.Markdown(
             transfer_notice(
-                "api_preferred", v2_location="this Hugging Face Space" if is_space else None
+                initial_mode, v2_location="this Hugging Face Space" if is_space else None
             )
         )
-        v2_status = gr.Markdown("Checking v2 endpoint availability…", visible=not is_space)
+        v2_status = gr.Markdown(
+            "Checking v2 endpoint availability…",
+            visible=not is_space and fixed_analysis_mode != "api_only",
+        )
         with gr.Column(
             elem_classes=["demo-workspace", "demo-space"] if is_space else ["demo-workspace"],
             elem_id="analysis-input",
@@ -1675,7 +1718,7 @@ def build_app(
                             interactive=csv_enabled,
                         )
                         csv_question = gr.Textbox(
-                            value="" if is_space else DEFAULT_CSV_QUESTION,
+                            value="" if dialogue_enabled else DEFAULT_CSV_QUESTION,
                             placeholder="Describe your variables and the analysis you want.",
                             label="Describe your question",
                             elem_id="csv-question",
@@ -1767,12 +1810,12 @@ def build_app(
                             )
                         )
                         csv_run_button = gr.Button(
-                            "Send message" if is_space else "Run uploaded CSV",
+                            "Send message" if dialogue_enabled else "Run uploaded CSV",
                             variant="primary",
                             elem_id="run-csv-button",
                             interactive=csv_enabled,
                         )
-                        if is_space:
+                        if dialogue_enabled:
                             csv_chat = gr.Chatbot(
                                 label="Prepare your analysis",
                                 render_markdown=False,
@@ -1869,7 +1912,7 @@ def build_app(
             f"{attribution}</footer>"
         )
 
-        if not is_space:
+        if not is_space and fixed_analysis_mode != "api_only":
             from dcfa_website_demo.v2_remote import availability_notice
 
             app.load(availability_notice, outputs=v2_status, api_name=False)
@@ -1912,7 +1955,7 @@ def build_app(
                     selected_seed,
                     question=selected_question,
                     output_root=output_root,
-                    analysis_mode=selected_mode,
+                    analysis_mode=fixed_analysis_mode or selected_mode,
                 )
                 from dcfa_website_demo.daily import archive_daily_result
 
@@ -2012,7 +2055,7 @@ def build_app(
                     selected_seed,
                     question=selected_question,
                     output_root=output_root,
-                    analysis_mode=selected_mode,
+                    analysis_mode=fixed_analysis_mode or selected_mode,
                 )
                 from dcfa_website_demo.daily import archive_daily_result
 
@@ -2052,7 +2095,7 @@ def build_app(
                 analysis_mode,
             )
         )
-        if is_space and csv_enabled:
+        if dialogue_enabled and csv_enabled:
             from dcfa_website_demo.dialogue_ui import bind_csv_dialogue
 
             bind_csv_dialogue(
@@ -2080,6 +2123,8 @@ def build_app(
                 temporary_key_enabled=temporary_key_enabled,
                 analysis_mode=analysis_mode,
                 policy_notice=policy_notice,
+                local_session=not is_space,
+                fixed_analysis_mode=fixed_analysis_mode,
             )
         elif not is_space:
             csv_run_button.click(

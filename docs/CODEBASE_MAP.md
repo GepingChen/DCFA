@@ -352,3 +352,27 @@ Its original report and PNG match the saved ZIP; the CSV matches the checked-in
 cigarette example. Missing files show an unavailable message without computation.
 
 Targeted verification: `.venv/bin/python -m pytest tests/integration/test_prepared_report.py tests/integration/test_zerogpu_space.py tests/integration/test_website_demo.py`.
+
+## Local entry and model comparison (2026-10-04)
+
+`dcfa_website_demo.local_dialogue` adapts the existing CSV conversation to local
+credential files. `build_app`/`build_service` accept `fixed_analysis_mode`,
+`presentation_title` and `local_csv_dialogue`; omitted options preserve the daily
+UI. The dedicated entry selects API-only and the reviewed local conversation.
+
+`dcfa compare-tabpfn --output-dir <fresh-dir> --source-ref cd48df9` runs five paired
+128-row seeds through the existing v2/3.5 paths, using that commit's statistical
+runtime and verifier. `--resume` retains prior results and ambiguous submissions;
+it inherits a saved runtime commit. Match the source ref to the remote deployment.
+Measurement records include errors, warnings, model metadata, usage and client
+wall time; server time is null when unavailable. Logs and results are local outputs.
+
+`submission/build_bundle.py --output-dir <fresh-dir> --results-dir <public-results>`
+builds the current committed parent wheel plus a thin Apache entry, exports parent
+source, copies the two runtime configs, locks, notices and public example. Install
+from the exported directory with `pip install -r requirements.lock`, then run
+`agentic-tabcf`. Parent and data licenses remain independent.
+
+Focused checks: `tests/unit/test_model_comparison.py` and
+`tests/integration/test_local_submission.py`; existing daily/CSV/Space checks cover
+shared callback and consent behavior. See `HACKATHON_IMPLEMENTATION_20261004.md`.

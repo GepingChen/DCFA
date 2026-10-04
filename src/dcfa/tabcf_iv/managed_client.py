@@ -52,7 +52,11 @@ def _numpy_bar_distribution_cdf(
     logits: np.ndarray,
     evaluation_values: np.ndarray,
 ) -> np.ndarray:
-    """Match TabPFN 8.3.0 ``BarDistribution.cdf`` without importing Torch."""
+    """Match TabPFN 9.0.0 ``BarDistribution.cdf`` without importing Torch.
+
+    FullSupportBarDistribution inherits this CDF; its mean has separate tail
+    handling and is obtained from the service's mean prediction, not this grid.
+    """
     border_values = np.asarray(borders, dtype=float)
     transported_logits = np.asarray(logits, dtype=float)
     evaluation = np.asarray(evaluation_values, dtype=float)
@@ -414,7 +418,7 @@ class TabPFNClientBackend:
             seed=self.seed,
             package_versions=(("tabpfn-client", self.client_version),),
             cdf_rule=(
-                "NumPy parity with TabPFN 8.3.0 BarDistribution.cdf over managed borders and "
+                "NumPy parity with TabPFN 9.0.0 BarDistribution.cdf over managed borders and "
                 "logits; client JSON null logits restore exact zero probability"
             ),
             quantile_monotonicity_rule=(

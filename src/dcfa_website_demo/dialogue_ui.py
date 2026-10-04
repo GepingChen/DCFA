@@ -23,6 +23,8 @@ def bind_csv_dialogue(
     temporary_key_enabled: bool,
     analysis_mode: Any,
     policy_notice: Any,
+    local_session: bool = False,
+    fixed_analysis_mode: str | None = None,
 ) -> None:
     (
         upload,
@@ -123,7 +125,7 @@ def bind_csv_dialogue(
         z,
         approved,
         text,
-        profile: gr.OAuthProfile | None,
+        profile: gr.OAuthProfile | None = None,
         selected_mode="api_preferred",
     ):
         session = session or CSVConversation()
@@ -149,6 +151,8 @@ def bind_csv_dialogue(
                 raise ValueError("The Space dialogue provider is unavailable.")
             from dcfa_website_demo.daily import AnalysisMode
 
+            if fixed_analysis_mode and selected_mode != fixed_analysis_mode:
+                raise ValueError("This entry point uses a fixed model policy.")
             session.analysis_mode = AnalysisMode(selected_mode).value
             prepare_turn(
                 session,
@@ -177,7 +181,7 @@ def bind_csv_dialogue(
         approved,
         selected_seed,
         reviewed_revision,
-        profile: gr.OAuthProfile | None,
+        profile: gr.OAuthProfile | None = None,
         selected_mode="api_preferred",
     ):
         session = session or CSVConversation()
@@ -306,8 +310,16 @@ def bind_csv_dialogue(
             clear_file=True,
         )
 
+    def local_talk(session, path, credential, y, x, z, approved, text, selected_mode):
+        return talk(session, path, credential, y, x, z, approved, text, None, selected_mode)
+
+    def local_generate(session, path, y, x, z, approved, selected_seed, revision, selected_mode):
+        yield from generate(
+            session, path, y, x, z, approved, selected_seed, revision, None, selected_mode
+        )
+
     event_args = dict(
-        fn=talk,
+        fn=local_talk if local_session else talk,
         inputs=(
             state,
             upload,
@@ -342,7 +354,7 @@ def bind_csv_dialogue(
             api_name=False,
         ).success(**event_args)
     confirm.click(
-        fn=generate,
+        fn=local_generate if local_session else generate,
         inputs=(
             state,
             upload,
@@ -423,7 +435,9 @@ def bind_csv_dialogue(
                 "Review the selected policy and authorize data use again.",
                 clear_consent=True,
             ),
-            transfer_notice(selected_mode, v2_location="this Hugging Face Space"),
+            transfer_notice(
+                selected_mode, v2_location=None if local_session else "this Hugging Face Space"
+            ),
         )
 
     analysis_mode.input(

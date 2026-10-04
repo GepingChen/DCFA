@@ -2,7 +2,17 @@
 
 Implementation plan — 2026-10-03
 
-Status: planning document; implementation and submission are not initiated by saving this file.
+Status (2026-10-04): implementation authorized and underway. The 3.5 migration
+was already committed before this task. Local reviewed-dialogue entry, bounded
+comparison, measurements and package builder are implemented. Five paired real
+v2/3.5 seeds completed; details and limitations are in
+[the implementation record](HACKATHON_IMPLEMENTATION_20261004.md).
+The real cigarette browser journey and downloaded ZIP verification passed.
+Final clean-package acceptance is tracked separately.
+No new repository, deployment or contest submission is authorized.
+
+The original planning snapshot below is retained as history; it is not current
+Git/deployment status.
 
 ## Agreed direction
 

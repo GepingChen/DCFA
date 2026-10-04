@@ -49,7 +49,12 @@ def require_available_port(host: str, port: int) -> None:
             ) from exc
 
 
-def build_service() -> Any:
+def build_service(
+    *,
+    fixed_analysis_mode: str | None = None,
+    presentation_title: str = "Agentic TabCF",
+    local_csv_dialogue: bool = False,
+) -> Any:
     """Build a health-checkable ASGI service with the Gradio demo mounted at root."""
     try:
         import gradio as gr
@@ -76,8 +81,10 @@ def build_service() -> Any:
                 "version": __version__,
                 "evidence_status": "development_only",
                 "backend": "daily_selection",
-                "default_mode": "api_preferred",
-                "supported_modes": ["api_preferred", "api_only", "v2_only"],
+                "default_mode": fixed_analysis_mode or "api_preferred",
+                "supported_modes": [fixed_analysis_mode]
+                if fixed_analysis_mode
+                else ["api_preferred", "api_only", "v2_only"],
                 "model": MANAGED_MODEL_PATH,
                 "llm_provider": "google_gemini_developer_api",
                 "llm_model": GEMINI_MODEL,
@@ -137,7 +144,12 @@ def build_service() -> Any:
 
     return gr.mount_gradio_app(
         service,
-        build_app(output_root=output_root),
+        build_app(
+            output_root=output_root,
+            fixed_analysis_mode=fixed_analysis_mode,
+            presentation_title=presentation_title,
+            local_csv_dialogue=local_csv_dialogue,
+        ),
         path="/",
         footer_links=[],
         allowed_paths=[str(output_root)],
@@ -149,7 +161,7 @@ def build_service() -> Any:
     )
 
 
-def run_service() -> None:
+def run_service(**app_options) -> None:
     """Run one process; Gradio serializes the bounded analysis queue."""
     try:
         import uvicorn
@@ -164,7 +176,7 @@ def run_service() -> None:
         raise ValueError("PORT must be between 1 and 65535.")
     require_available_port(host, port)
     uvicorn.run(
-        build_service(),
+        build_service(**app_options),
         host=host,
         port=port,
         workers=1,

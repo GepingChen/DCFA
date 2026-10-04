@@ -1130,3 +1130,21 @@ showcase assets and deployment to GPChen01/dcfa-zerogpu.
   The failed injected attempt and successful v2 attempt are separate. This proves
   real v2 execution after simulation, not naturally observed server exhaustion.
   No new deployed-selector/browser-OAuth end-to-end run is claimed.
+
+## 2026-10-04 — Local reviewed 3.5 entry and bounded model comparison
+
+- User authorized mother-project improvements, a five-seed public/synthetic
+  measurement using existing quotas, and a local thin submission package.
+- Reuse existing CSV conversation and confirmed deterministic execution through
+  an optional local adapter. Space OAuth and existing daily modes retain scope;
+  the entry fixes `api_only`. Report finalization failures never trigger refits.
+- Keep the NumPy CDF formula: direct comparison with the published 9.0.0 method
+  agrees to floating-point precision. Mean predictions retain service tail handling.
+- Compare both models with the identified `cd48df9` statistical source export,
+  matching the deployed v2 backend. A driver outside the statistical package
+  measures execution without replacing the existing artifact verifier or its
+  source check. Failed initial attempts remain separate from completed pairs.
+- New entry/materials use Apache-2.0; parent/vendored code and data keep their
+  existing licenses. Contest eligibility is a later submission decision.
+- Details and measured evidence: `HACKATHON_IMPLEMENTATION_20261004.md`.
+  No deployment, new public repository, formal freeze or submission is authorized.

@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import os
+import time
 from copy import deepcopy
 from dataclasses import replace
 from enum import StrEnum
@@ -269,6 +270,7 @@ def execute_daily_dataset(
         attempt = {"backend": name, "directory": directory.name, "status": "running"}
         record["attempts"].append(attempt)
         write_record(root / "daily_execution.json", record)
+        attempt_started = time.perf_counter()
         kwargs = dict(compiled_kwargs, compilation=deepcopy(compiled_kwargs["compilation"]))
         try:
             validate_daily_request(
@@ -296,6 +298,8 @@ def execute_daily_dataset(
                 kwargs["result_scenario"],
                 kwargs["compilation"].trace,
             )
+        attempt["client_wall_seconds"] = time.perf_counter() - attempt_started
+        attempt["provider_server_seconds"] = None
         attempt.update(status=result.response.status, error=result.response.error)
         if "api_usage" in result.llm_trace:
             attempt["api_usage"] = result.llm_trace["api_usage"]

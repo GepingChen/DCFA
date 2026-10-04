@@ -1,0 +1,11 @@
+Agentic TabCF: Distributional Causal Analysis with TabPFN
+Copyright 2026 Geping Chen
+
+The new thin entry and submission materials are Apache-2.0.
+The bundled DCFA parent is MIT, Copyright 2026 Geping Chen.
+Vendored TabCF is MIT, Copyright 2026 TabCF authors.
+Runtime prompt/configuration files copied from the parent retain its MIT license.
+Cigarette data and accompanying documentation retain their separate source terms;
+see examples/cigarette/SOURCE.md and GPL-2.0.txt.
+TabPFN models and hosted services are not relicensed by this package.
+This local package is not a statement of contest eligibility or an accepted submission.

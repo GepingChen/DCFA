@@ -383,6 +383,15 @@ def _run_track_t_development_evaluation(args: argparse.Namespace) -> int:
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(prog="dcfa", description="DCFA deterministic local tools")
     subparsers = parser.add_subparsers(dest="command", required=True)
+    from dcfa.tabcf_iv.model_comparison import cli as comparison_cli
+
+    comparison = subparsers.add_parser(
+        "compare-tabpfn", help="Run the five-seed development v2 versus 3.5 comparison."
+    )
+    comparison.add_argument("--output-dir", type=Path, required=True)
+    comparison.add_argument("--resume", action="store_true")
+    comparison.add_argument("--source-ref", help="Git commit for both statistical runtimes.")
+    comparison.set_defaults(handler=comparison_cli)
     demo = subparsers.add_parser("tabcf-demo", help="Run the no-W development-only vertical slice.")
     demo.add_argument(
         "--scenario",

@@ -307,7 +307,7 @@ def build_zerogpu_app(*, build_revision: str) -> Any:
             if result.output_dir is not None and result.output_dir.is_dir():
                 shutil.rmtree(result.output_dir)
 
-    return build_app(
+    app = build_app(
         output_root=output_root,
         build_revision=build_revision,
         deployment_mode=deployment_mode,
@@ -317,3 +317,38 @@ def build_zerogpu_app(*, build_revision: str) -> Any:
         space_csv_handler=run_csv,
         space_csv_chat_handler=chat_csv,
     )
+
+    def analyze_v2(payload: dict, oauth_token: gr.OAuthToken):
+        from dcfa_website_demo.v2_remote import serve_v2
+
+        try:
+            return serve_v2(
+                payload,
+                oauth_token.token,
+                model_path=model_path,
+                output_root=output_root,
+                prediction_runner=gpu_predictions,
+            )
+        except DCFAError as exc:
+            return {"status": "blocked", "code": exc.code.value}, None
+        except Exception:
+            return {"status": "blocked", "code": "V2_EXECUTION_FAILED"}, None
+
+    register_v2_api(app, analyze_v2)
+    return app
+
+
+def register_v2_api(app, handler):
+    """Expose the separately authenticated, whole-analysis API."""
+    with app:
+        remote_input = gr.JSON(visible=False)
+        remote_status = gr.JSON(visible=False)
+        remote_archive = gr.File(visible=False)
+        remote_button = gr.Button(visible=False)
+        remote_button.click(
+            handler,
+            inputs=remote_input,
+            outputs=(remote_status, remote_archive),
+            api_name="analyze_v2",
+            concurrency_limit=1,
+        )

@@ -116,12 +116,14 @@ class TabPFNClientDistributionModel:
         self.backend._validate_prediction_size(matrix)
         try:
             output = self.estimator.predict(matrix, output_type="full")
+        except DCFAError:
+            raise
         except Exception as exc:
             raise BackendError(
                 ErrorCode.BACKEND_PREDICT_FAILED,
                 "Managed TabPFN distribution prediction failed; no fallback was attempted.",
                 stage="managed_client.predict_distribution",
-                context={"exception_type": type(exc).__name__, "reason": str(exc)},
+                context={"exception_type": type(exc).__name__},
             ) from exc
         self.backend._record_observation(self.estimator, "full", matrix)
         if not isinstance(output, dict) or not {"borders", "logits"} <= set(output):
@@ -176,6 +178,8 @@ class TabPFNClientMeanModel:
         self.backend._validate_prediction_size(matrix)
         try:
             result = self.estimator.predict(matrix, output_type="mean")
+        except DCFAError:
+            raise
         except Exception as exc:
             raise BackendError(
                 ErrorCode.BACKEND_PREDICT_FAILED,
@@ -262,6 +266,8 @@ class TabPFNClientBackend:
         try:
             module = importlib.import_module("tabpfn_client")
             return module.TabPFNRegressor
+        except DCFAError:
+            raise
         except Exception as exc:
             raise BackendError(
                 ErrorCode.BACKEND_IMPORT_FAILED,
@@ -280,6 +286,8 @@ class TabPFNClientBackend:
                 ignore_pretraining_limits=False,
                 thinking_mode=False,
             )
+        except DCFAError:
+            raise
         except Exception as exc:
             raise BackendError(
                 ErrorCode.BACKEND_LOAD_FAILED,
@@ -315,6 +323,8 @@ class TabPFNClientBackend:
         estimator = self._new_estimator()
         try:
             estimator.fit(matrix, values)
+        except DCFAError:
+            raise
         except Exception as exc:
             raise BackendError(
                 ErrorCode.BACKEND_FIT_FAILED,
@@ -348,6 +358,13 @@ class TabPFNClientBackend:
                     "expected": MANAGED_SERVICE_PACKAGE_VERSION,
                     "observed": observed_version or "missing",
                 },
+            )
+        billing_version = metadata.get("billing_model_version")
+        if billing_version is not None and billing_version != "v3.5":
+            raise BackendError(
+                ErrorCode.UNSUPPORTED_BACKEND_PROFILE,
+                "The managed service returned an unexpected model version.",
+                stage="managed_client.model_version",
             )
         config = metadata.get("tabpfn_config") or {}
         self.api_prediction_calls += 1

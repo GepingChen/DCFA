@@ -287,6 +287,7 @@ def test_space_compute_finalize_boundary_and_cleanup(tmp_path, monkeypatch, rout
     monkeypatch.setenv("GRADIO_TEMP_DIR", str(tmp_path / "public"))
     monkeypatch.setattr(zerogpu_module, "resolve_preloaded_model", lambda: tmp_path / "model")
     monkeypatch.setattr(zerogpu_module, "build_app", lambda **kwargs: kwargs)
+    monkeypatch.setattr(zerogpu_module, "register_v2_api", lambda *args: None)
     monkeypatch.setattr(
         app_module, "compile_website_question", lambda *a, **k: pytest.fail("No Gemini execution")
     )

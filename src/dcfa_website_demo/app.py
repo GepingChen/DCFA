@@ -598,6 +598,7 @@ def execute_portfolio_scenario(
     gemini_api_key_file: Path | None = None,
     gemini_client: Any | None = None,
     gemini_sdk_version: str | None = None,
+    analysis_mode: str | None = None,
 ) -> PortfolioDemoResult:
     """Execute one frozen guided scenario through managed TabPFN and the typed runtime."""
     if scenario not in SCENARIOS:
@@ -636,6 +637,7 @@ def execute_portfolio_scenario(
         interventions=interventions,
         seed=seed,
         output_root=output_root,
+        analysis_mode=analysis_mode,
         token_file=token_file,
         client_module=client_module,
         client_version=client_version,
@@ -661,12 +663,17 @@ def execute_csv_upload(
     gemini_api_key_file: Path | None = None,
     gemini_client: Any | None = None,
     gemini_sdk_version: str | None = None,
+    analysis_mode: str | None = None,
 ) -> PortfolioDemoResult:
     """Execute a confirmed, strictly bounded local Y/X/Z CSV through managed TabPFN."""
     seed = int(seed)
     if not MIN_DEMO_SEED <= seed <= MAX_DEMO_SEED:
         raise ValueError(f"Demo seed must be between {MIN_DEMO_SEED} and {MAX_DEMO_SEED}.")
-    boundary = CSVDataBoundary.MANAGED_PRIOR_LABS
+    boundary = (
+        CSVDataBoundary.DAILY_SELECTED_POLICY
+        if analysis_mode is not None
+        else CSVDataBoundary.MANAGED_PRIOR_LABS
+    )
     validated = read_authorized_csv_columns(
         csv_file,
         confirmed=bool(confirmed),
@@ -708,6 +715,7 @@ def execute_csv_upload(
         interventions=interventions,
         seed=seed,
         output_root=output_root,
+        analysis_mode=analysis_mode,
         token_file=token_file,
         client_module=client_module,
         client_version=client_version,
@@ -925,8 +933,37 @@ def _execute_managed_dataset(
     gemini_client: Any | None,
     gemini_sdk_version: str | None,
     compilation: GeminiWebsiteCompilation | None = None,
+    analysis_mode: str | None = None,
 ) -> PortfolioDemoResult:
     """Run one already-validated no-W dataset through the shared managed profile."""
+    if analysis_mode is not None:
+        from dcfa_website_demo.daily import execute_daily_dataset
+
+        llm_compilation = compilation or compile_website_question(
+            question,
+            api_key_file=gemini_api_key_file or gemini_api_key_file_from_environment(),
+            client=gemini_client,
+            sdk_version=gemini_sdk_version,
+        )
+        return execute_daily_dataset(
+            mode=analysis_mode,
+            compiled_kwargs=dict(
+                result_scenario=result_scenario,
+                output_scenario=output_scenario,
+                columns=columns,
+                manifest=manifest,
+                outcome=outcome,
+                treatment=treatment,
+                instrument=instrument,
+                interventions=interventions,
+                seed=seed,
+                output_root=output_root,
+                compilation=llm_compilation,
+            ),
+            managed_settings=dict(
+                token_file=token_file, client_module=client_module, client_version=client_version
+            ),
+        )
     credential = read_managed_token_file(token_file or managed_token_file_from_environment())
     client = client_module or load_managed_client_module()
     observed_client_version = client_version or importlib.metadata.version("tabpfn-client")
@@ -941,6 +978,9 @@ def _execute_managed_dataset(
             },
         )
 
+    from dcfa.tabcf_iv.managed_session import MANAGED_SESSION_LOCK
+
+    MANAGED_SESSION_LOCK.acquire()
     try:
         llm_compilation = compilation or compile_website_question(
             question,
@@ -974,30 +1014,24 @@ def _execute_managed_dataset(
             backend_factory=backend_factory,
         )
     finally:
-        client.reset()
+        try:
+            client.reset()
+        finally:
+            MANAGED_SESSION_LOCK.release()
 
 
-def _execute_compiled_dataset(
+def compiled_request(
     *,
-    result_scenario: str,
-    output_scenario: str,
-    columns: dict[str, np.ndarray],
-    manifest: DatasetManifest,
-    outcome: str,
-    treatment: str,
-    instrument: str,
-    interventions: tuple[float, ...],
-    seed: int,
-    output_root: Path,
-    compilation: GeminiWebsiteCompilation,
-    backend_parameters: tuple[tuple[str, str], ...],
-    backend_factory: Any,
-    prediction_runner: Any = None,
-) -> PortfolioDemoResult:
-    """Execute one compiled request through an injected deterministic backend."""
-    compilation.trace["backend_access_mode"] = dict(backend_parameters).get(
-        "access_mode", "unknown"
-    )
+    outcome,
+    treatment,
+    instrument,
+    compilation,
+    interventions,
+    manifest,
+    backend_parameters,
+    seed,
+):
+    """Resolve the already confirmed symbolic plan identically for both executors."""
     if (outcome, treatment, instrument) != (
         compilation.outcome,
         compilation.treatment,
@@ -1025,7 +1059,7 @@ def _execute_compiled_dataset(
             if compilation.comparison_x_label is None
             else label_values[compilation.comparison_x_label]
         )
-    request = CompilationRequest(
+    return CompilationRequest(
         dataset_hash=manifest.dataset_hash,
         outcome=outcome,
         treatment=treatment,
@@ -1044,12 +1078,55 @@ def _execute_compiled_dataset(
         backend_parameters=backend_parameters,
         seed=seed,
     )
+
+
+def _execute_compiled_dataset(
+    *,
+    result_scenario: str,
+    output_scenario: str,
+    columns: dict[str, np.ndarray],
+    manifest: DatasetManifest,
+    outcome: str,
+    treatment: str,
+    instrument: str,
+    interventions: tuple[float, ...],
+    seed: int,
+    output_root: Path,
+    compilation: GeminiWebsiteCompilation,
+    backend_parameters: tuple[tuple[str, str], ...],
+    backend_factory: Any,
+    prediction_runner: Any = None,
+    reserved_output_dir: Path | None = None,
+    preserve_failure: bool = False,
+) -> PortfolioDemoResult:
+    """Execute one compiled request through an injected deterministic backend."""
+    compilation.trace["backend_access_mode"] = dict(backend_parameters).get(
+        "access_mode", "unknown"
+    )
+    request = compiled_request(
+        outcome=outcome,
+        treatment=treatment,
+        instrument=instrument,
+        compilation=compilation,
+        interventions=interventions,
+        manifest=manifest,
+        backend_parameters=backend_parameters,
+        seed=seed,
+    )
     predictions_completed = False
+    if preserve_failure and prediction_runner is None:
+        from dcfa.tabcf_iv.pipeline import predict_backend
+
+        prediction_runner = predict_backend
     original_runner = prediction_runner
 
     def tracked_predictions(*args, **kwargs):
         nonlocal predictions_completed
-        result = original_runner(*args, **kwargs)
+        try:
+            result = original_runner(*args, **kwargs)
+        except DCFAError as exc:
+            exc.context["analysis_stage"] = args[1]
+            raise
         if args[1] == "stage2":
             predictions_completed = True
         return result
@@ -1057,7 +1134,9 @@ def _execute_compiled_dataset(
     if prediction_runner is not None:
         prediction_runner = tracked_predictions
     try:
-        output_dir = _reserve_output_directory(Path(output_root), output_scenario, seed)
+        output_dir = reserved_output_dir or _reserve_output_directory(
+            Path(output_root), output_scenario, seed
+        )
         engine = TabCFAnalysisEngine(
             backend_factory=backend_factory,
             **({"prediction_runner": prediction_runner} if prediction_runner else {}),
@@ -1094,18 +1173,19 @@ def _execute_compiled_dataset(
                         tool.last_run.bundle, tool.last_run.ledger, visitor_plot_path
                     )
     except Exception as exc:
-        if "output_dir" in locals():
+        if "output_dir" in locals() and not preserve_failure:
             shutil.rmtree(output_dir, ignore_errors=True)
         if predictions_completed:
             raise WebsiteFinalizationError(str(exc)) from exc
         raise
-    if not any(output_dir.iterdir()):
+    if not any(output_dir.iterdir()) and not preserve_failure:
         _remove_empty_reservation(output_dir)
     elif response.status == "completed":
         try:
             write_compilation_trace(output_dir, compilation.trace)
         except Exception as exc:
-            shutil.rmtree(output_dir, ignore_errors=True)
+            if not preserve_failure:
+                shutil.rmtree(output_dir, ignore_errors=True)
             raise WebsiteFinalizationError(str(exc)) from exc
     return PortfolioDemoResult(
         scenario=result_scenario,
@@ -1211,6 +1291,11 @@ def _error_stage_index(code: str | ErrorCode | None) -> int:
         ErrorCode.BACKEND_LOAD_FAILED,
         ErrorCode.BACKEND_FIT_FAILED,
         ErrorCode.BACKEND_PREDICT_FAILED,
+        ErrorCode.MANAGED_QUOTA_EXHAUSTED,
+        ErrorCode.MANAGED_RATE_LIMITED,
+        ErrorCode.MANAGED_SERVICE_FAILED,
+        ErrorCode.V2_UNAVAILABLE,
+        ErrorCode.V2_EXECUTION_FAILED,
     }:
         return 2
     return 3
@@ -1399,7 +1484,11 @@ def format_portfolio_result(
     return (
         _status_html(result),
         _state_graph_html(result.response, result.llm_trace),
-        _answer_markdown(result.response, result.llm_trace),
+        (
+            result.llm_trace.get("daily_summary", "")
+            + "\n\n"
+            + _answer_markdown(result.response, result.llm_trace)
+        ),
         (
             result.llm_trace["distribution_warnings"]
             if result.llm_trace.get("distribution_report")
@@ -1529,6 +1618,16 @@ def build_app(
             </header>
             """
         )
+        from dcfa_website_demo.daily import MODE_CHOICES, transfer_notice
+
+        analysis_mode = gr.Radio(
+            MODE_CHOICES,
+            value="api_preferred",
+            label="Analysis mode",
+            visible=not is_space,
+        )
+        mode_notice = gr.Markdown(transfer_notice("api_preferred"), visible=not is_space)
+        v2_status = gr.Markdown("Checking v2 endpoint availability…", visible=not is_space)
         with gr.Column(
             elem_classes=["demo-workspace", "demo-space"] if is_space else ["demo-workspace"],
             elem_id="analysis-input",
@@ -1629,7 +1728,10 @@ def build_app(
                                 "conversation text, three column names, optional role overrides, "
                                 "and temporary API credential to Google Gemini."
                                 if is_space
-                                else "I am authorized to use this data and approve both transfers."
+                                else (
+                                    "I authorize data use and the transfers "
+                                    "in the selected model policy."
+                                )
                             ),
                             interactive=csv_enabled,
                         )
@@ -1642,9 +1744,8 @@ def build_app(
                                 "persisted by DCFA. CSV rows remain in the runtime and are deleted "
                                 "after processing. Never upload sensitive data.</div>"
                                 if is_space
-                                else "<strong>Two separate transfers:</strong> the question text "
-                                "and three header names go to Google Gemini; selected Y/X/Z rows "
-                                "go to Prior Labs.</div>"
+                                else "<strong>Data boundary:</strong> Review the policy above. "
+                                "Never upload sensitive data.</div>"
                             )
                         )
                         csv_run_button = gr.Button(
@@ -1750,6 +1851,18 @@ def build_app(
             f"{attribution}</footer>"
         )
 
+        if not is_space:
+            from dcfa_website_demo.v2_remote import availability_notice
+
+            app.load(availability_notice, outputs=v2_status, api_name=False)
+            analysis_mode.change(
+                lambda mode: (transfer_notice(mode), False),
+                inputs=analysis_mode,
+                outputs=(mode_notice, csv_confirmed),
+                queue=False,
+                api_name=False,
+            )
+
         scenario.change(
             fn=scenario_question,
             inputs=scenario,
@@ -1763,24 +1876,29 @@ def build_app(
             selected_question: str,
             selected_rows: int,
             selected_seed: int,
+            selected_mode: str,
         ):
             yield portfolio_ui_updates(_running_outputs(), buttons_enabled=False)
+            archive_path = None
             try:
-                formatted = format_portfolio_result(
-                    execute_portfolio_scenario(
-                        selected_scenario,
-                        selected_rows,
-                        selected_seed,
-                        question=selected_question,
-                        output_root=output_root,
-                    )
+                result = execute_portfolio_scenario(
+                    selected_scenario,
+                    selected_rows,
+                    selected_seed,
+                    question=selected_question,
+                    output_root=output_root,
+                    analysis_mode=selected_mode,
                 )
+                from dcfa_website_demo.daily import archive_daily_result
+
+                formatted = format_portfolio_result(result)
+                archive_path = archive_daily_result(result)
             except DCFAError as exc:
                 _log_operator_error(exc)
                 formatted = _execution_error_outputs(exc)
             except (TypeError, ValueError) as exc:
                 formatted = _input_error_outputs(str(exc))
-            yield portfolio_ui_updates(formatted, buttons_enabled=True)
+            yield portfolio_ui_updates(formatted, buttons_enabled=True, archive_path=archive_path)
 
         result_outputs = (
             answer,
@@ -1827,7 +1945,7 @@ def build_app(
         else:
             run_button.click(
                 fn=handle_run,
-                inputs=(scenario, question, rows, seed),
+                inputs=(scenario, question, rows, seed, analysis_mode),
                 outputs=result_outputs,
                 scroll_to_output=True,
                 show_progress="hidden",
@@ -1843,29 +1961,34 @@ def build_app(
             selected_confirmation: bool,
             selected_question: str,
             selected_seed: int,
+            selected_mode: str,
         ):
             yield portfolio_ui_updates(_running_outputs(), buttons_enabled=False)
+            archive_path = None
             try:
                 if not selected_file:
                     raise ValueError("Choose a local CSV file before running the workflow.")
-                formatted = format_portfolio_result(
-                    execute_csv_upload(
-                        selected_file,
-                        selected_outcome,
-                        selected_treatment,
-                        selected_instrument,
-                        selected_confirmation,
-                        selected_seed,
-                        question=selected_question,
-                        output_root=output_root,
-                    )
+                result = execute_csv_upload(
+                    selected_file,
+                    selected_outcome,
+                    selected_treatment,
+                    selected_instrument,
+                    selected_confirmation,
+                    selected_seed,
+                    question=selected_question,
+                    output_root=output_root,
+                    analysis_mode=selected_mode,
                 )
+                from dcfa_website_demo.daily import archive_daily_result
+
+                formatted = format_portfolio_result(result)
+                archive_path = archive_daily_result(result)
             except DCFAError as exc:
                 _log_operator_error(exc)
                 formatted = _execution_error_outputs(exc)
             except (OSError, TypeError, ValueError) as exc:
                 formatted = _input_error_outputs(str(exc))
-            yield portfolio_ui_updates(formatted, buttons_enabled=True)
+            yield portfolio_ui_updates(formatted, buttons_enabled=True, archive_path=archive_path)
 
         csv_inputs = (
             (
@@ -1919,7 +2042,7 @@ def build_app(
         elif not is_space:
             csv_run_button.click(
                 fn=handle_csv_run,
-                inputs=csv_inputs,
+                inputs=(*csv_inputs, analysis_mode),
                 outputs=result_outputs,
                 scroll_to_output=True,
                 show_progress="hidden",

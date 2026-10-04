@@ -1,6 +1,6 @@
 # DCFA codebase map
 
-Last verified: 2026-08-30
+Last updated: 2026-10-03
 
 This map describes checked-in executable behavior. The integrated plan remains
 the authority for intended research behavior; code and tests are the authority
@@ -82,6 +82,32 @@ The upstream `tabcf_core` remains unmodified. Inspected APIs include
 `ConditionalCDFEstimator.fit_full`, `compute_interventional_cdf`, and the
 separate quantile inversion utilities. DCFA wraps their statistical contract;
 it does not invent baseline-covariate support or rewrite their core.
+
+## Interactive daily execution
+
+`dcfa_website_demo/daily.py` owns the three-mode coordinator. Only the local UI
+opts into quota fallback by default; fixed managed smoke, research, locked
+profiles and existing Space browser workflows keep their explicit backend.
+`app.py::compiled_request` resolves the confirmed plan once per identical
+attempt input. Each attempt creates a fresh engine/backend/cache and directory.
+No partial control ranks or fitted models cross the switch.
+
+`tabcf_iv/managed_session.py` scopes the official client's singleton credentials
+and response hook under one lock. It preserves structured status and uses fresh
+server quota fields, not exception-text matching. The managed adapter propagates
+typed failures and excludes raw provider exception bodies from audit context.
+
+`dcfa_website_demo/v2_remote.py` provides bounded request encoding, HF identity
+verification, single-submission job waiting, safe artifact retrieval, request/model
+verification and cleanup. `zerogpu.py` registers `/analyze_v2` using the existing
+local v2 backend and GPU runner. It is prepared in source, not deployed. The
+local CUDA option also reuses the existing exact checkpoint profile.
+
+Daily records and `analysis_report.md` are ordinary presentation/audit additions.
+Existing numerical/evidence identities and artifact verification remain in force.
+Use `tests/integration/test_daily_analysis.py` and `test_v2_remote.py` for targeted
+switching/transport checks; their fake estimators do not establish real GPU support.
+The complete pytest suite is required for changes to the shared error/auth boundary.
 
 ## Hillstrom policy data flow
 

@@ -26,6 +26,7 @@ STANDARD_DEMO_SEED = 20260813
 class CSVDataBoundary(StrEnum):
     """Explicit destination and consent semantics for uploaded rows."""
 
+    DAILY_SELECTED_POLICY = "daily_selected_policy"
     MANAGED_PRIOR_LABS = "managed_prior_labs"
     HF_ZEROGPU_LOCAL = "hf_zerogpu_local"
 
@@ -89,6 +90,8 @@ def require_csv_authorization(
     destination = (
         "Prior Labs transmission"
         if data_boundary is CSVDataBoundary.MANAGED_PRIOR_LABS
+        else "the selected model policy and data recipients"
+        if data_boundary is CSVDataBoundary.DAILY_SELECTED_POLICY
         else "Hugging Face processing"
     )
     raise ValueError(f"Confirm authorization and {destination} before running uploaded data.")
@@ -195,6 +198,13 @@ def assign_csv_roles(
         license_note = (
             "User confirmed authorization to send the selected Y/X/Z rows to Prior Labs; "
             "source and license were not independently verified."
+        )
+    elif validated.data_boundary is CSVDataBoundary.DAILY_SELECTED_POLICY:
+        source = "user_authorized_daily_csv_upload"
+        license_note = (
+            "User confirmed the selected daily model policy and its stated data recipients; "
+            "see daily_execution.json for the policy and actual attempts. "
+            "Source and license were not independently verified."
         )
     else:
         source = "user_authorized_hf_zerogpu_csv_upload"

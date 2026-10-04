@@ -790,7 +790,7 @@ def test_default_app_config_omits_machine_audit_payload_and_shows_build() -> Non
     tab_group = next(c for c in app.config["components"] if c["type"] == "tabs")
     assert tab_group["props"]["selected"] == "csv"
     assert "Do not enter private or sensitive information" in config
-    assert "I am authorized to use this data and approve both transfers" in config
+    assert "I authorize data use and the transfers in the selected model policy" in config
     assert "Scope and limitations" not in config
     assert "Follow the workflow and review" not in config
     assert "demo-input-column" not in config
@@ -822,7 +822,11 @@ def test_default_app_config_omits_machine_audit_payload_and_shows_build() -> Non
         assert dependency["show_progress"] == "hidden"
         assert dependency["scroll_to_output"] is True
         assert run_button_ids.issubset(dependency["outputs"])
-    assert all(app.fns[index + 1].types_generator for index in range(2))
+    assert all(
+        f.types_generator
+        for f in app.fns.values()
+        if f.fn.__name__ in {"handle_run", "handle_csv_run"}
+    )
 
 
 def test_running_state_has_four_honest_stages_without_fake_percentage() -> None:
@@ -842,13 +846,14 @@ def test_running_state_has_four_honest_stages_without_fake_percentage() -> None:
 def test_both_submit_handlers_disable_both_buttons_before_external_work() -> None:
     app = build_app(build_revision="deadbee")
     handlers = (
-        app.fns[1].fn(
+        next(f.fn for f in app.fns.values() if f.fn.__name__ == "handle_run")(
             "strong_iv",
             "How does the median outcome change from low to high treatment?",
             128,
             20260810,
+            "api_preferred",
         ),
-        app.fns[2].fn(
+        next(f.fn for f in app.fns.values() if f.fn.__name__ == "handle_csv_run")(
             None,
             "Y",
             "X",
@@ -856,6 +861,7 @@ def test_both_submit_handlers_disable_both_buttons_before_external_work() -> Non
             False,
             "Estimate the median outcome contrast from low to high treatment.",
             20260813,
+            "api_preferred",
         ),
     )
 
@@ -908,7 +914,7 @@ def test_health_endpoint_identifies_development_service_and_security_headers(
     assert response.status_code == 200
     assert response.json()["status"] == "ok"
     assert response.json()["evidence_status"] == "development_only"
-    assert response.json()["backend"] == "tabpfn_client_managed"
+    assert response.json()["backend"] == "daily_selection"
     assert response.json()["model"] == "v3.5_default"
     assert response.json()["llm_model"] == "gemini-3.6-flash"
     assert response.headers["cache-control"] == "no-store"

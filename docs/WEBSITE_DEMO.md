@@ -76,8 +76,9 @@ container-image digest and cannot enter locked Track T evidence.
 `tabpfn-client==0.6.1`, selecting `v3.5_default` explicitly. The managed profile
 uses one estimator, disables Thinking, retains 256 training / 400 prediction
 row caps, and records the service-resolved model path and package version.
-The existing service-version check now expects `9.0.0`. A version mismatch or
-quota error stops the affected run without a different backend or model.
+The existing service-version check expects `9.0.0`. Version mismatches stop.
+Daily mode can switch only after confirmed token exhaustion as described below;
+the existing fixed managed smoke and research entrypoints never switch models.
 There is no subscription, credit purchase, or paid-provider switch in this path;
 account billing and free entitlement are controlled by Prior Labs. Keep the
 account on its free plan for free-only operation.
@@ -99,6 +100,110 @@ client README's daily-only reset applies to both. See
 `estimate_cost` queries. These are table-compute tokens, not Gemini text tokens;
 Gemini has its own quota. Existing saved reports and cached runtime follow-ups
 do not refit; launching a new analysis does.
+
+## Daily analysis modes
+
+The local UI defaults to `api_preferred`: 3.5 API first, with one complete v2
+rerun only after server-confirmed quota exhaustion. `api_only` stops on exhaustion;
+`v2_only` executes v2 without reading a Prior Labs key or querying its account.
+Existing Python entrypoints remain fixed managed unless `analysis_mode` is passed;
+the two local UI commands explicitly pass the selected daily mode. The public
+Space's existing browser flow remains fixed v2.
+
+The page displays recipients and resets CSV authorization when mode changes.
+Gemini still receives only the existing allowed text/headers. API-first mode
+may additionally transmit the same Y/X/Z data and confirmed plan to the configured
+HF Space. It sends neither the Gemini key nor the Prior Labs key there. The HF
+credential is sent to Hugging Face for authentication; it must not be entered in
+chat or committed. The fallback does not recompile the question or request another
+confirmation. The request, interventions and seed stay the same; the model changes,
+so results may differ. No statistical equivalence is asserted.
+
+Client 0.6.1 flattens HTTP failures into generic exceptions. The scoped HTTP
+adapter intercepts response status before that happens. It never searches error
+text for `quota`. It recognizes exhaustion from the current authenticated
+`daily_tokens_used/daily_token_limit` or
+`monthly_tokens_used/monthly_token_limit` fields: either before execution, or
+from a fresh usage response after HTTP 429. Missing/malformed usage, ordinary
+429, 401/403, network/service failures, invalid data, version mismatches and
+statistical/support failures never cause a model switch. A remaining balance
+smaller than a request's cost is **not** inferred to be exhaustion from a quote.
+Unrecognized provider error structures stop conservatively. No real exhausted
+account response has been observed in this validation.
+
+Run locally:
+
+```bash
+.venv/bin/dcfa-ui
+# Equivalent: .venv/bin/dcfa-website-demo
+```
+
+| Setting | Default / purpose |
+|---|---|
+| `DCFA_V2_EXECUTOR` | `zerogpu`; explicitly set `local_cuda` for an existing CUDA runtime |
+| `DCFA_V2_SPACE` | `GPChen01/dcfa-zerogpu`; HF Space ID, not an arbitrary HTTP destination |
+| `DCFA_HF_TOKEN_FILE` | Optional repository-external mode-600 HF credential file; otherwise use the existing HF login cache |
+| `DCFA_V2_MODEL_PATH` | Required only for `local_cuda`; exact existing v2 checkpoint |
+
+There is no automatic change of v2 execution location, no CPU/sklearn substitute,
+and no use of the provider's v2 API. This checkout's Mac environment has no
+Torch/CUDA. A credential or endpoint availability check is not proof of GPU
+allocation, sufficient HF quota or successful analysis.
+
+### Remote v2 endpoint and deployment boundary
+
+The new Gradio `/analyze_v2` endpoint accepts bounded data, its existing manifest
+and the confirmed compiled plan. It validates HF identity using the supplied
+`gr.OAuthToken`, rechecks the v2 development profile and input boundaries, and
+runs both stages through the existing ZeroGPU prediction runner. Browser OAuth
+requirements remain unchanged. The client uses Gradio's `token` and
+`oauth_token` parameters; the latter explicitly passes the credential to the
+endpoint for identity verification. The pinned website environment includes
+Gradio 6.22.0 / gradio-client 2.6.0 and HF Hub 1.27.0.
+
+The client submits once, records and polls the same queued job, retrieves an
+origin-checked ZIP without forwarding credentials through redirects, safely
+extracts it, and runs the existing artifact verifier plus confirmed-request and
+model checks. Ambiguous timeouts or download failures never resubmit or refit.
+Temporary server work is cleaned on success and failure; exported downloads use
+the existing Gradio cache expiry. This remains an authorized non-sensitive-data
+workflow, not a private-data hosting service.
+
+**Not deployed by this change:** the live Space currently exposes no analysis
+endpoint. Enabling this path requires separate authorization to update its
+pinned DCFA installation to this change and rebuild the Space. No new Space
+Secret is required when callers use their existing HF tokens. After deployment,
+validate authentication, actual GPU execution, retrieval and the same-source
+artifact verifier with a small synthetic request. Do not call mock transport
+or fake-estimator tests a real v2 run.
+
+### Reports, records and validation evidence
+
+Each daily run has its own directory with `daily_execution.json` and separate
+`attempt-1-api` / `attempt-2-v2` directories (or a single v2 attempt).
+`attempt.json` preserves a safe error code/stage and quota evidence. Completed
+attempts retain the original statistical bundle, report and evidence. The added
+`analysis_report.md` and downloadable `analysis_artifacts.zip` include the chosen
+mode, actual model and any switch, without rewriting the statistical report's
+existing identities. Remote progress is recorded in `remote_job.json`.
+Ordinary cached follow-ups retain their original specification/backend and never
+consult current quota or refit. Historical results are not rewritten.
+
+On 2026-10-03, the new daily coordinator completed two real 128-row synthetic
+3.5 runs, each consuming 30,000 tokens and passing artifact verification at
+execution. The second run validated the final SDK credential-cleanup fix and
+produced the downloadable ZIP. Its account usage changed from 30,000 to 60,000
+daily tokens and from 100,000 to 130,000 monthly tokens; limits remained
+5,000,000 / 20,000,000. Both used a deterministic confirmed plan without a Gemini
+request. This is execution evidence, not statistical validation. The earlier
+run remains preserved with its earlier source identity.
+
+Quota-before-run and Stage 1/Stage 2 exhaustion are injected test conditions.
+Fake v2 estimators and mocked remote transport establish switching, request
+preservation, authentication handling and artifact mechanics only. Neither
+injected-quota-then-real-v2 nor actual-server-exhaustion-then-v2 has been verified;
+both require the real v2 execution boundary, with the latter additionally requiring
+a naturally occurring confirmed exhaustion. Never drain the account for a test.
 
 ## What is ready
 

@@ -1046,3 +1046,29 @@ showcase assets and deployment to GPChen01/dcfa-zerogpu.
   across three predictions. Account response and dimension-only quotes inform
   the bounded quota estimate documented in WEBSITE_DEMO.md; they do not establish
   statistical quality or account-independent free entitlement.
+
+
+## 2026-10-03 — Explicit daily quota fallback with complete independent v2 attempts
+
+- User authorized three daily modes and implementation/verification/ordinary
+  commit/push, but explicitly excluded deployment. Local UI defaults to API-first;
+  research, locked evaluation, fixed managed entrypoints and history do not migrate.
+- Only fresh authenticated server counters confirming exhausted daily/monthly
+  quota allow a switch. A 429 by itself, a quote or a provider error string does
+  not. Unknown structures remain an explicit conservative failure boundary.
+- Preserve the confirmed data and estimand. A switch constructs a new backend,
+  engine and cache, starts at Stage 1 and retains the failed attempt separately.
+  At most one API-to-v2 switch is allowed; v2 failure terminates the analysis.
+- Reuse the existing CUDA/checkpoint and ZeroGPU runner. Prepare an authenticated
+  whole-analysis Gradio endpoint and client rather than sending intermediate fits
+  between providers. Keep browser HF OAuth intact and credentials out of payloads,
+  logs and artifacts. The scoped SDK lock prevents concurrent calls from sharing
+  credentials or hooks; no new freeze, hash, snapshot baseline or approval gate.
+- User chose to prepare remote support without deployment. The live Space is
+  running but has no analysis endpoint; this Mac lacks CUDA. These facts prevent
+  claiming a real v2 fallback today. Separate deployment authorization and a real
+  synthetic GPU run are the next external steps.
+- Two real 128-row daily 3.5 runs each consumed 30,000 tokens and verified their
+  artifacts; the second covers the final SDK credential-cleanup fix.
+  Injected quota failures and fake-v2/transport tests remain mechanics evidence;
+  there was no naturally exhausted service response and no real v2 execution.

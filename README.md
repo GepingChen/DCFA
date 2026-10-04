@@ -119,12 +119,23 @@ sensitive, confidential, personally identifiable, or otherwise unshareable data.
 
 ### Local setup
 
-The default local analysis UI (`dcfa-ui`, also available as `dcfa-website-demo`)
-uses the managed **TabPFN-3.5 API** with your account quota, one estimator and
-Thinking disabled. Install `requirements-website-demo.lock` and supply the
-external credentials as shown below. The explicit `dcfa-dev-ui` and `tabcf-demo`
-commands remain credential-free sklearn mechanics demonstrations. The deployed
-ZeroGPU path continues to use its separately configured local v2 backend.
+The default local analysis UI (`dcfa-ui`, alias `dcfa-website-demo`) offers three
+explicit daily modes: **3.5 API first with quota-only v2 fallback** (default),
+**3.5 API only**, and **v2 only**. The managed profile still uses one estimator,
+Thinking off and `v3.5_default`. Review the selected data recipients before
+confirming: rows go to Prior Labs for 3.5, and to the configured Hugging Face
+Space for remote v2. A confirmed quota failure starts a completely fresh v2 run;
+ordinary rate limits, authentication failures and other errors never change models.
+
+Install `requirements-website-demo.lock`, provide the external credentials below,
+and run `.venv/bin/dcfa-ui`. The default v2 target is
+`GPChen01/dcfa-zerogpu`; its **new remote analysis endpoint is implemented here
+but has not been deployed**. Until that deployment is separately authorized,
+this Mac can run 3.5 but cannot complete an automatic remote v2 fallback.
+The page reports that availability before execution. See
+[daily modes and v2 configuration](docs/WEBSITE_DEMO.md#daily-analysis-modes).
+`dcfa-dev-ui` and `tabcf-demo` remain explicit sklearn mechanics demonstrations;
+research entrypoints and previously saved results do not automatically migrate.
 
 
 For everyday core development, you can reuse an existing compatible Conda

@@ -202,12 +202,45 @@ daily tokens and from 100,000 to 130,000 monthly tokens; limits remained
 request. This is execution evidence, not statistical validation. The earlier
 run remains preserved with its earlier source identity.
 
-Quota-before-run and Stage 1/Stage 2 exhaustion are injected test conditions.
-Fake v2 estimators and mocked remote transport establish switching, request
-preservation, authentication handling and artifact mechanics only. Neither
-injected-quota-then-real-v2 nor actual-server-exhaustion-then-v2 has been verified;
-both require the real v2 execution boundary, with the latter additionally requiring
-a naturally occurring confirmed exhaustion. Never drain the account for a test.
+Quota-before-run and Stage 1/Stage 2 exhaustion remain injected test conditions.
+Fake estimator/transport tests establish switching and error-handling mechanics,
+not model quality. The subsequent deployment validation below adds real GPU
+evidence; actual server quota exhaustion has not been observed. Never drain the
+account for a test.
+
+### Authorized deployment validation (2026-10-03, local date)
+
+- Source `2bc2c9d9e43fcc3ee49dcc32fd4c9db5236c87e9` was deployed to
+  `GPChen01/dcfa-zerogpu` in Space commit
+  `6c981377d67254a417be755365f3e96c791526b0`. Runtime reached `RUNNING`;
+  the live DOM displayed Build `2bc2c9d`, the default policy and updated CSV
+  consent, with no Analysis mode selector. `/analyze_v2` is exposed; anonymous
+  invocation was rejected as login-required before computation.
+- Full available pytest: **252 passed**. `ruff check src tests`,
+  `ruff format --check src tests` and `git diff --check` passed. A broader
+  repository-root Ruff invocation also scanned unrelated vendored code/notebooks
+  and reported their pre-existing style issues; these files were not changed.
+- A real 128-row primary call through `execute_space_dataset` completed locally
+  with the same Space API/temporary-secret path, without GPU invocation. Actual
+  model: `v3.5_default`; artifact verification passed. Usage changed from
+  60,000 to 90,000 daily and 130,000 to 160,000 monthly tokens (30,000 consumed).
+  Limits remained 5,000,000 daily / 20,000,000 monthly.
+- An injected typed quota error then triggered a **real authenticated remote v2
+  run** on the deployed ZeroGPU endpoint using the same 128-row synthetic data
+  and seed 20260813. Both stages completed; the returned CUDA v2 checkpoint
+  identity, unchanged request, numerical bundle and artifacts verified locally.
+  The download includes separate failed API/successful v2 attempts, correct
+  actual-model/fallback text, evidence and development/residual-dependence warnings.
+  Its Gradio job ID was `ca99856884704029b1f1621688da6bbb`.
+- The primary and fallback ZIPs contain 17 and 20 files respectively and passed
+  credential scans. Local evidence is under the ignored directory
+  `artifacts/local/space-daily-deployment-20261003/` (`real-primary/`,
+  `injected-quota-real-v2/`, `deployment.json`, `online-default.jpg`).
+- This establishes injected-quota-to-real-v2 transport/execution, not a naturally
+  exhausted-account event or statistical equivalence. Browser OAuth required a
+  fresh sign-in in this session, so a complete signed-in browser CSV/primary run
+  was not repeated. The deployed UI and authentication boundary were checked;
+  primary computation was measured through the identical code locally.
 
 ## What is ready
 

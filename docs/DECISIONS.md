@@ -1090,3 +1090,12 @@ showcase assets and deployment to GPChen01/dcfa-zerogpu.
 - Space downloads include failed-attempt records and the daily report before
   temporary runtime cleanup, including blocked daily runs. Static saved reports
   keep their original v2 identity and do not invoke a provider.
+
+- Deployment verification: source `2bc2c9d` is running in Space commit
+  `6c981377d67254a417be755365f3e96c791526b0`; live UI has no mode selector and
+  names the default recipients. 252 tests passed. A real primary API execution
+  through the shared Space code consumed 30,000 tokens locally. Injected quota
+  followed by real authenticated remote CUDA v2 completed and verified its ZIP;
+  anonymous requests were rejected. This supersedes the earlier undeployed-v2
+  limitation, but does not establish naturally occurring exhaustion. A fresh
+  browser OAuth login is still needed for a signed-in browser end-to-end replay.

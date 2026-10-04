@@ -45,14 +45,15 @@ def v2_destination() -> str:
     return "Hugging Face Space " + os.environ.get("DCFA_V2_SPACE", "GPChen01/dcfa-zerogpu")
 
 
-def transfer_notice(mode: str) -> str:
+def transfer_notice(mode: str, *, v2_location: str | None = None) -> str:
     selected = AnalysisMode(mode)
+    destination = v2_location or v2_destination()
     destinations = {
         AnalysisMode.API_ONLY: "Selected Y/X/Z rows go to Prior Labs.",
-        AnalysisMode.V2_ONLY: (f"Y/X/Z rows and the confirmed plan go to {v2_destination()}."),
+        AnalysisMode.V2_ONLY: (f"Y/X/Z rows and the confirmed plan go to {destination}."),
         AnalysisMode.API_PREFERRED: (
             "Selected Y/X/Z rows go to Prior Labs. Only after confirmed API quota exhaustion, "
-            f"the same rows and confirmed plan go to {v2_destination()} for a complete v2 rerun. "
+            f"the same rows and confirmed plan go to {destination} for a complete v2 rerun. "
             "Results may differ. No further confirmation is requested for that switch."
         ),
     }
@@ -182,7 +183,7 @@ def execute_v2_attempt(kwargs: dict, directory: Path, settings: dict):
 
 def execution_summary(record: dict) -> str:
     labels = dict((value, label) for label, value in MODE_CHOICES)
-    lines = [f"Analysis mode: {labels[record['mode']]}. "]
+    lines = [f"Analysis policy: {labels[record['mode']]}. "]
     if record.get("actual_model"):
         lines.append(f"Actual model: **{record['actual_model']}** (development_only).")
     if record.get("fallback_completed"):
@@ -234,7 +235,13 @@ def validate_daily_request(kwargs: dict, parameters: tuple):
 
 
 def execute_daily_dataset(
-    *, mode: str, compiled_kwargs: dict, managed_settings: dict, api_executor=None, v2_executor=None
+    *,
+    mode: str,
+    compiled_kwargs: dict,
+    managed_settings: dict,
+    api_executor=None,
+    v2_executor=None,
+    v2_location: str | None = None,
 ):
     """At most two independent complete attempts; never resume across models."""
     from dcfa_website_demo.app import _reserve_output_directory
@@ -249,7 +256,7 @@ def execute_daily_dataset(
     )
     record = {
         "mode": selected.value,
-        "v2_destination": v2_destination(),
+        "v2_destination": v2_location or v2_destination(),
         "attempts": [],
         "fallback_attempted": False,
         "fallback_completed": False,

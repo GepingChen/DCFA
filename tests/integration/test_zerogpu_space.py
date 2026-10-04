@@ -288,6 +288,17 @@ def test_space_compute_finalize_boundary_and_cleanup(tmp_path, monkeypatch, rout
     monkeypatch.setattr(zerogpu_module, "resolve_preloaded_model", lambda: tmp_path / "model")
     monkeypatch.setattr(zerogpu_module, "build_app", lambda **kwargs: kwargs)
     monkeypatch.setattr(zerogpu_module, "register_v2_api", lambda *args: None)
+
+    # This existing test isolates GPU/CPU finalization; daily routing is tested separately.
+    def fixed_v2(kwargs, *, model_path, prediction_runner):
+        return app_module._execute_compiled_dataset(
+            **kwargs,
+            prediction_runner=prediction_runner,
+            backend_parameters=app_module.LOCAL_TABPFN_V2_BACKEND_PARAMETERS,
+            backend_factory=lambda spec: FakeLocalTabPFNBackend(seed=spec.seed),
+        )
+
+    monkeypatch.setattr(zerogpu_module, "execute_space_dataset", fixed_v2)
     monkeypatch.setattr(
         app_module, "compile_website_question", lambda *a, **k: pytest.fail("No Gemini execution")
     )

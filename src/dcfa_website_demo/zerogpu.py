@@ -1,4 +1,4 @@
-"""Native Hugging Face ZeroGPU entrypoint for local TabPFN v2 execution."""
+"""Authenticated API-first daily analysis with in-process ZeroGPU v2 backup."""
 
 from __future__ import annotations
 
@@ -18,16 +18,19 @@ from huggingface_hub import hf_hub_download
 
 from dcfa.artifact_validation import verify_run_directory
 from dcfa.canonical import file_sha256
-from dcfa.errors import DCFAError
+from dcfa.errors import DCFAError, ErrorCode
 from dcfa.tabcf_iv.local_tabpfn import (
+    LOCAL_TABPFN_V2_BACKEND_PARAMETERS,
     LOCAL_TABPFN_V2_MODEL_FILENAME,
     LOCAL_TABPFN_V2_MODEL_HASH,
     LOCAL_TABPFN_V2_MODEL_REPO,
     LOCAL_TABPFN_V2_MODEL_REVISION,
+    make_local_tabpfn_v2_backend,
 )
 from dcfa_website_demo.app import (
     DEMO_CSS,
     WebsiteFinalizationError,
+    _execute_compiled_dataset,
     _execution_error_outputs,
     _input_error_outputs,
     _log_operator_error,
@@ -102,7 +105,7 @@ def _request_gemini_key(space_secret: str | None, temporary_key: str | None) -> 
 
 
 @contextmanager
-def _temporary_gemini_file(secret: str) -> Iterator[Path]:
+def _temporary_secret_file(secret: str) -> Iterator[Path]:
     secret_parent = Path(os.environ.get("DCFA_SECRET_ROOT", str(DEFAULT_SECRET_ROOT)))
     secret_parent.mkdir(parents=True, exist_ok=True)
     secret_parent.chmod(0o700)
@@ -112,10 +115,53 @@ def _temporary_gemini_file(secret: str) -> Iterator[Path]:
     ) as temporary:
         root = Path(temporary)
         root.chmod(0o700)
-        path = root / "gemini_api_key"
+        path = root / "api_key"
         path.write_text(secret, encoding="utf-8")
         path.chmod(0o600)
         yield path
+
+
+# Keep the existing Gemini call-site name while sharing the secret lifecycle.
+_temporary_gemini_file = _temporary_secret_file
+
+
+def execute_space_api(kwargs: dict, directory: Path, settings: dict):
+    from dcfa_website_demo.daily import execute_api_attempt
+
+    secret = os.environ.get("DCFA_TABPFN_API_KEY", "").strip()
+    if not secret or any(character.isspace() for character in secret):
+        raise DCFAError(
+            ErrorCode.DATA_ACCESS_BLOCKED,
+            "The Space owner must configure the TabPFN API credential.",
+            stage="daily.api.credentials",
+        )
+    with _temporary_secret_file(secret) as token_file:
+        return execute_api_attempt(kwargs, directory, dict(settings, token_file=token_file))
+
+
+def execute_space_dataset(kwargs: dict, *, model_path: Path, prediction_runner):
+    from dcfa_website_demo.daily import execute_daily_dataset
+
+    def v2_executor(compiled_kwargs, directory, settings):
+        return _execute_compiled_dataset(
+            **compiled_kwargs,
+            reserved_output_dir=directory,
+            preserve_failure=True,
+            prediction_runner=prediction_runner,
+            backend_parameters=LOCAL_TABPFN_V2_BACKEND_PARAMETERS,
+            backend_factory=lambda spec: make_local_tabpfn_v2_backend(spec, model_path=model_path),
+        )
+
+    return execute_daily_dataset(
+        mode="api_preferred",
+        compiled_kwargs=kwargs,
+        managed_settings={},
+        api_executor=execute_space_api,
+        v2_executor=v2_executor,
+        v2_location="Hugging Face Space "
+        + os.environ.get("SPACE_ID", "GPChen01/dcfa-zerogpu")
+        + " (in-process ZeroGPU)",
+    )
 
 
 def _require_login(profile: gr.OAuthProfile | None) -> None:
@@ -129,7 +175,7 @@ def _scan_for_secret(root: Path, secret: str | None) -> None:
     encoded = secret.encode("utf-8")
     for path in root.rglob("*"):
         if path.is_file() and encoded in path.read_bytes():
-            raise RuntimeError("A Gemini credential reached the run artifact.")
+            raise RuntimeError("A service credential reached the run artifact.")
 
 
 def _archive_run(root: Path) -> Path:
@@ -169,16 +215,23 @@ def _public_plot_copy(path: Path | None) -> str | None:
 def _verified_projection(result: Any, secret: str | None) -> tuple[Any, ...]:
     archive: Path | None = None
     public_plot: str | None = None
+    root = result.output_dir
+    if root is not None and "daily_execution" in result.llm_trace:
+        root = root.parent
     try:
         formatted = format_portfolio_result(result)
         if result.response.status == "completed" and result.output_dir is not None:
             verification = verify_run_directory(result.output_dir)
             if verification.get("status") != "valid":
                 raise RuntimeError("The result did not pass independent artifact verification.")
-            _scan_for_secret(result.output_dir, secret)
             public_plot = _public_plot_copy(result.plot_path)
-            archive = _archive_run(result.output_dir)
             formatted = (*formatted[:4], public_plot)
+        if root is not None:
+            _scan_for_secret(root, secret)
+            _scan_for_secret(root, os.environ.get("DCFA_TABPFN_API_KEY"))
+            # Include the failed API attempt and safe blocked-run records in the download.
+            if result.response.status == "completed" or "daily_execution" in result.llm_trace:
+                archive = _archive_run(root)
         return portfolio_ui_updates(
             formatted,
             buttons_enabled=True,
@@ -191,8 +244,8 @@ def _verified_projection(result: Any, secret: str | None) -> tuple[Any, ...]:
             archive.unlink(missing_ok=True)
         raise
     finally:
-        if result.output_dir is not None and result.output_dir.is_dir():
-            shutil.rmtree(result.output_dir)
+        if root is not None and root.is_dir():
+            shutil.rmtree(root)
 
 
 def _safe_unlink_upload(path: str | None) -> None:
@@ -229,6 +282,11 @@ def build_zerogpu_app(*, build_revision: str) -> Any:
 
         return predict_backend(backend, stage, features, target, prediction_features, y_grid)
 
+    def daily_executor(kwargs):
+        return execute_space_dataset(
+            kwargs, model_path=model_path, prediction_runner=gpu_predictions
+        )
+
     def run_scenario(
         scenario: str,
         question: str,
@@ -246,6 +304,7 @@ def build_zerogpu_app(*, build_revision: str) -> Any:
                     question=question,
                     prediction_runner=gpu_predictions,
                     model_path=model_path,
+                    dataset_executor=daily_executor,
                     output_root=output_root,
                 )
             else:
@@ -257,6 +316,7 @@ def build_zerogpu_app(*, build_revision: str) -> Any:
                         question=question,
                         prediction_runner=gpu_predictions,
                         model_path=model_path,
+                        dataset_executor=daily_executor,
                         output_root=output_root,
                         gemini_api_key_file=secret_file,
                     )
@@ -288,6 +348,7 @@ def build_zerogpu_app(*, build_revision: str) -> Any:
             seed,
             prediction_runner=gpu_predictions,
             model_path=model_path,
+            dataset_executor=daily_executor,
             output_root=output_root,
         )
         try:

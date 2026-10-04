@@ -313,7 +313,7 @@ def prepare_turn(
             session.validated = read_authorized_csv_columns(
                 path,
                 confirmed=authorized,
-                data_boundary=CSVDataBoundary.HF_ZEROGPU_LOCAL,
+                data_boundary=CSVDataBoundary.DAILY_SELECTED_POLICY,
             )
         session.upload_path = path
         session.overrides = overrides.copy()

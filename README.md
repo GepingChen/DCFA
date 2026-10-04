@@ -86,7 +86,7 @@ Choose the path that matches what you want to inspect:
 
 | Path | What happens | Providers and data boundary |
 |---|---|---|
-| **[Live ZeroGPU demo](https://huggingface.co/spaces/GPChen01/dcfa-zerogpu)** | Opens a saved real cigarette report immediately; also runs authenticated presets or a bounded Y/X/Z CSV with local TabPFN v2 | Viewing the saved example needs no login, API key or GPU; live CSV uses Gemini; development-only |
+| **[Live ZeroGPU demo](https://huggingface.co/spaces/GPChen01/dcfa-zerogpu)** | Opens a saved real cigarette report immediately; also runs authenticated presets or a bounded Y/X/Z CSV with 3.5 API and quota-only v2 backup | Viewing the saved example needs no login, API key or GPU; live CSV uses Gemini; development-only |
 | **[Prepared demo](https://gepingchen.github.io/projects/dcfa/)** | Replays one hash-bound, independently verified synthetic result | Static GitHub Pages; no provider call at view time |
 | **[Colab workflow](https://colab.research.google.com/github/GepingChen/DCFA/blob/main/notebooks/DCFA_Custom_Analysis_Colab.ipynb)** | Runs one bounded custom CSV analysis in your own ephemeral runtime | Your question goes to Google; only separately authorized Y/X/Z rows and prediction grids go to Prior Labs |
 | **Local operator demo** | Runs the guided Gradio workflow and preserves full audit artifacts | Uses your repository-external Gemini and TabPFN Client credentials |
@@ -98,7 +98,7 @@ Use **Send message** to answer any missing-role or objective questions. The revi
 shows X/Y/Z column names, original one-based column positions, user-provided meanings
 (or “Not provided”), and the directed analysis objective. You can correct it through
 another message or the optional role overrides. Only **Confirm and generate report**
-starts local TabPFN; typing confirmation in chat never executes the analysis.
+starts the default API-first analysis; typing confirmation in chat never executes the analysis.
 
 The temporary Gemini key stays in the current page's password field between turns;
 it is cleared when generation starts, on reset, or after 15 idle minutes. Duplicate
@@ -119,21 +119,21 @@ sensitive, confidential, personally identifiable, or otherwise unshareable data.
 
 ### Local setup
 
-The default local analysis UI (`dcfa-ui`, alias `dcfa-website-demo`) offers three
-explicit daily modes: **3.5 API first with quota-only v2 fallback** (default),
-**3.5 API only**, and **v2 only**. The managed profile still uses one estimator,
-Thinking off and `v3.5_default`. Review the selected data recipients before
-confirming: rows go to Prior Labs for 3.5, and to the configured Hugging Face
-Space for remote v2. A confirmed quota failure starts a completely fresh v2 run;
-ordinary rate limits, authentication failures and other errors never change models.
+The local analysis UI (`dcfa-ui`, alias `dcfa-website-demo`) and live Space use
+**3.5 API first with quota-only v2 fallback** automatically. There is no model-mode
+selector. Results state whether 3.5 API or TabPFN v2 actually ran and whether a
+switch occurred. The managed profile uses one estimator, Thinking off and
+`v3.5_default`. Review the data recipients before confirming: rows go to Prior
+Labs for 3.5 and to Hugging Face for remote v2. On the Space, v2 runs in the same
+ZeroGPU runtime. Confirmed exhaustion starts a fresh v2 analysis; ordinary rate
+limits, authentication failures and other errors never change models.
 
 Install `requirements-website-demo.lock`, provide the external credentials below,
-and run `.venv/bin/dcfa-ui`. The default v2 target is
-`GPChen01/dcfa-zerogpu`; its **new remote analysis endpoint is implemented here
-but has not been deployed**. Until that deployment is separately authorized,
-this Mac can run 3.5 but cannot complete an automatic remote v2 fallback.
-The page reports that availability before execution. See
-[daily modes and v2 configuration](docs/WEBSITE_DEMO.md#daily-analysis-modes).
+and run `.venv/bin/dcfa-ui`. The default remote v2 target is
+`GPChen01/dcfa-zerogpu`. The page checks endpoint availability before execution.
+The Space owner supplies `DCFA_TABPFN_API_KEY` through Hugging Face Secrets;
+visitors do not enter a statistical model key or choose an analysis mode. See
+[daily policy and v2 configuration](docs/WEBSITE_DEMO.md#daily-analysis-policy).
 `dcfa-dev-ui` and `tabcf-demo` remain explicit sklearn mechanics demonstrations;
 research entrypoints and previously saved results do not automatically migrate.
 

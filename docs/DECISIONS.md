@@ -1072,3 +1072,21 @@ showcase assets and deployment to GPChen01/dcfa-zerogpu.
   artifacts; the second covers the final SDK credential-cleanup fix.
   Injected quota failures and fake-v2/transport tests remain mechanics evidence;
   there was no naturally exhausted service response and no real v2 execution.
+
+
+## 2026-10-03 — Automatic daily policy and authorized Space update
+
+- The user removed the mode-selection requirement and explicitly authorized
+  synchronizing the online service. Local and Space browser analysis now defaults
+  to API-first, with quota-confirmed complete v2 fallback and actual-model text.
+  Fixed programmatic modes, research and saved historical results remain intact.
+- The Space uses its existing GPU prediction runner directly after API exhaustion;
+  it never recursively submits to its own remote endpoint. The separately
+  authenticated `/analyze_v2` route stays fixed v2 for local clients.
+- The owner API key is configured as a Hugging Face Secret, materialized only in
+  a temporary blocked mode-600 file and excluded from artifacts. CSV consent now
+  explicitly includes Prior Labs transmission. OAuth and Gemini text-only
+  boundaries remain; no new hashes, freeze, baseline or approval layer is added.
+- Space downloads include failed-attempt records and the daily report before
+  temporary runtime cleanup, including blocked daily runs. Static saved reports
+  keep their original v2 identity and do not invoke a provider.

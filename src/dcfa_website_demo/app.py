@@ -770,6 +770,7 @@ def execute_local_portfolio_scenario(
     gemini_api_key_file: Path | None = None,
     gemini_client: Any | None = None,
     gemini_sdk_version: str | None = None,
+    dataset_executor: Any = None,
 ) -> PortfolioDemoResult:
     """Execute a synthetic scenario with the frozen local TabPFN v2 profile."""
     if scenario not in SCENARIOS:
@@ -803,7 +804,7 @@ def execute_local_portfolio_scenario(
             sdk_version=gemini_sdk_version,
         )
     )
-    return _execute_compiled_dataset(
+    kwargs = dict(
         result_scenario=scenario,
         output_scenario=scenario,
         columns=dataset.columns,
@@ -815,6 +816,11 @@ def execute_local_portfolio_scenario(
         seed=seed,
         output_root=output_root,
         compilation=compilation,
+    )
+    if dataset_executor is not None:
+        return dataset_executor(kwargs)
+    return _execute_compiled_dataset(
+        **kwargs,
         prediction_runner=prediction_runner,
         backend_parameters=LOCAL_TABPFN_V2_BACKEND_PARAMETERS,
         backend_factory=lambda specification: make_local_tabpfn_v2_backend(
@@ -877,6 +883,7 @@ def execute_prepared_local_csv(
     model_path: Path,
     prediction_runner: Any = None,
     output_root: Path = DEFAULT_OUTPUT_ROOT,
+    dataset_executor: Any = None,
 ) -> PortfolioDemoResult:
     """Execute an already reviewed CSV proposal without another provider request."""
     seed = int(seed)
@@ -893,7 +900,7 @@ def execute_prepared_local_csv(
         for value in np.quantile(dataset.columns[dataset.treatment], (0.1, 0.3, 0.5, 0.7, 0.9))
     )
     digest_suffix = dataset.manifest.dataset_hash.split(":", maxsplit=1)[1][:12]
-    return _execute_compiled_dataset(
+    kwargs = dict(
         result_scenario="csv_upload",
         output_scenario=f"csv-upload-{digest_suffix}",
         columns=dataset.columns,
@@ -905,6 +912,11 @@ def execute_prepared_local_csv(
         seed=seed,
         output_root=output_root,
         compilation=compilation,
+    )
+    if dataset_executor is not None:
+        return dataset_executor(kwargs)
+    return _execute_compiled_dataset(
+        **kwargs,
         prediction_runner=prediction_runner,
         backend_parameters=LOCAL_TABPFN_V2_BACKEND_PARAMETERS,
         backend_factory=lambda specification: make_local_tabpfn_v2_backend(
@@ -1599,7 +1611,7 @@ def build_app(
         environment_label = "ZeroGPU demo" if is_space else "Local demo"
         attribution = (
             '<p class="demo-attribution"><strong>Built with PriorLabs-TabPFN</strong> · '
-            "TabPFN v2</p>"
+            "TabPFN 3.5 API · v2 backup</p>"
             if is_space
             else ""
         )
@@ -1618,15 +1630,13 @@ def build_app(
             </header>
             """
         )
-        from dcfa_website_demo.daily import MODE_CHOICES, transfer_notice
+        from dcfa_website_demo.daily import transfer_notice
 
-        analysis_mode = gr.Radio(
-            MODE_CHOICES,
-            value="api_preferred",
-            label="Analysis mode",
-            visible=not is_space,
+        gr.Markdown(
+            transfer_notice(
+                "api_preferred", v2_location="this Hugging Face Space" if is_space else None
+            )
         )
-        mode_notice = gr.Markdown(transfer_notice("api_preferred"), visible=not is_space)
         v2_status = gr.Markdown("Checking v2 endpoint availability…", visible=not is_space)
         with gr.Column(
             elem_classes=["demo-workspace", "demo-space"] if is_space else ["demo-workspace"],
@@ -1726,11 +1736,14 @@ def build_app(
                             label=(
                                 "I am authorized to upload this data to Hugging Face and send only "
                                 "conversation text, three column names, optional role overrides, "
-                                "and temporary API credential to Google Gemini."
+                                "and temporary API credential to Google Gemini; I authorize "
+                                "sending Y/X/Z "
+                                "rows to Prior Labs, with a complete v2 rerun on this Space only "
+                                "after confirmed API quota exhaustion."
                                 if is_space
                                 else (
                                     "I authorize data use and the transfers "
-                                    "in the selected model policy."
+                                    "in the default model policy."
                                 )
                             ),
                             interactive=csv_enabled,
@@ -1741,7 +1754,8 @@ def build_app(
                                 "<strong>Data boundary:</strong> conversation, three header names, "
                                 "and optional role overrides go to Google Gemini; the temporary "
                                 "key passes through Hugging Face. It is not intentionally "
-                                "persisted by DCFA. CSV rows remain in the runtime and are deleted "
+                                "persisted by DCFA. Y/X/Z rows go to Prior Labs for 3.5; "
+                                "v2 fallback runs on this Space. Temporary rows are deleted "
                                 "after processing. Never upload sensitive data.</div>"
                                 if is_space
                                 else "<strong>Data boundary:</strong> Review the policy above. "
@@ -1855,13 +1869,6 @@ def build_app(
             from dcfa_website_demo.v2_remote import availability_notice
 
             app.load(availability_notice, outputs=v2_status, api_name=False)
-            analysis_mode.change(
-                lambda mode: (transfer_notice(mode), False),
-                inputs=analysis_mode,
-                outputs=(mode_notice, csv_confirmed),
-                queue=False,
-                api_name=False,
-            )
 
         scenario.change(
             fn=scenario_question,
@@ -1876,7 +1883,6 @@ def build_app(
             selected_question: str,
             selected_rows: int,
             selected_seed: int,
-            selected_mode: str,
         ):
             yield portfolio_ui_updates(_running_outputs(), buttons_enabled=False)
             archive_path = None
@@ -1887,7 +1893,7 @@ def build_app(
                     selected_seed,
                     question=selected_question,
                     output_root=output_root,
-                    analysis_mode=selected_mode,
+                    analysis_mode="api_preferred",
                 )
                 from dcfa_website_demo.daily import archive_daily_result
 
@@ -1945,7 +1951,7 @@ def build_app(
         else:
             run_button.click(
                 fn=handle_run,
-                inputs=(scenario, question, rows, seed, analysis_mode),
+                inputs=(scenario, question, rows, seed),
                 outputs=result_outputs,
                 scroll_to_output=True,
                 show_progress="hidden",
@@ -1961,7 +1967,6 @@ def build_app(
             selected_confirmation: bool,
             selected_question: str,
             selected_seed: int,
-            selected_mode: str,
         ):
             yield portfolio_ui_updates(_running_outputs(), buttons_enabled=False)
             archive_path = None
@@ -1977,7 +1982,7 @@ def build_app(
                     selected_seed,
                     question=selected_question,
                     output_root=output_root,
-                    analysis_mode=selected_mode,
+                    analysis_mode="api_preferred",
                 )
                 from dcfa_website_demo.daily import archive_daily_result
 
@@ -2042,7 +2047,7 @@ def build_app(
         elif not is_space:
             csv_run_button.click(
                 fn=handle_csv_run,
-                inputs=(*csv_inputs, analysis_mode),
+                inputs=csv_inputs,
                 outputs=result_outputs,
                 scroll_to_output=True,
                 show_progress="hidden",

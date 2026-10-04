@@ -5,7 +5,7 @@ DCFA now has four deliberately different presentation paths:
 1. the repeatable local Gradio service for operator review;
 2. a precomputed, independently verified static replay for GitHub Pages;
 3. a pinned notebook for custom analysis in a visitor's own Colab runtime.
-4. a development-only public ZeroGPU template using local TabPFN v2.
+4. a development-only public Space using 3.5 API with local ZeroGPU v2 backup.
 
 The static route and Colab entry are linked from the public portfolio. Static
 replay makes no provider call. The Colab implementation uses the visitor's accounts, secrets,
@@ -21,9 +21,9 @@ The report retains its run version, evidence appendix and interpretation warning
 it is an exploratory Track T real-data demonstration, not a new analysis.
 
 **Upload CSV** and **Run synthetic example** retain their live execution flows.
-The Space requires Hugging Face login before any GPU event and runs the three
-synthetic presets with a frozen typed
-median contrast, so those preset runs make no Gemini or Prior Labs request.
+The Space requires Hugging Face login before live computation. The three
+synthetic presets use a typed median contrast without Gemini; their statistics
+use 3.5 API first and local v2 only after confirmed quota exhaustion.
 It preloads and hash-checks `Prior-Labs/TabPFN-v2-reg` at revision
 `4972a65a1b30806315c6f92499959ffbfc69a673`, uses one CUDA estimator, and
 prominently displays the required `Built with PriorLabs-TabPFN` attribution.
@@ -38,8 +38,9 @@ in chat does not execute analysis. Changing the inputs invalidates the old card.
 The key remains in the password field for the current conversation, and is cleared
 on generation, reset, or fifteen minutes of inactivity. For each request DCFA
 materializes it in a mode-600 temporary file and removes that file afterward. It is
-excluded from conversation state, logs, traces, artifacts and ZIPs. CSV rows stay
-inside the Hugging Face runtime and are never sent to Prior Labs.
+excluded from conversation state, logs, traces, artifacts and ZIPs. Authorized
+Y/X/Z rows go from the Hugging Face runtime to Prior Labs for 3.5 API execution.
+After confirmed quota exhaustion, v2 restarts completely inside the Space.
 
 A visitor who prefers server-side secret storage can instead duplicate the Space
 and add `DCFA_GEMINI_API_KEY` as their own Space Secret; that mode hides the browser
@@ -101,23 +102,26 @@ client README's daily-only reset applies to both. See
 Gemini has its own quota. Existing saved reports and cached runtime follow-ups
 do not refit; launching a new analysis does.
 
-## Daily analysis modes
+## Daily analysis policy
 
-The local UI defaults to `api_preferred`: 3.5 API first, with one complete v2
-rerun only after server-confirmed quota exhaustion. `api_only` stops on exhaustion;
-`v2_only` executes v2 without reading a Prior Labs key or querying its account.
-Existing Python entrypoints remain fixed managed unless `analysis_mode` is passed;
-the two local UI commands explicitly pass the selected daily mode. The public
-Space's existing browser flow remains fixed v2.
+The local UI and live Space always use `api_preferred`: 3.5 API first, with one
+complete v2 rerun only after server-confirmed quota exhaustion. Users review the
+policy and data recipients, then confirm their analysis; no model selector or
+extra switch confirmation is shown. Results and downloads name the actual model.
+Programmatic `api_only` and `v2_only` modes remain available for fixed-model work;
+existing Python entrypoints remain fixed managed unless `analysis_mode` is passed.
+Research, locked evaluation and saved results do not automatically migrate.
 
-The page displays recipients and resets CSV authorization when mode changes.
-Gemini still receives only the existing allowed text/headers. API-first mode
-may additionally transmit the same Y/X/Z data and confirmed plan to the configured
-HF Space. It sends neither the Gemini key nor the Prior Labs key there. The HF
-credential is sent to Hugging Face for authentication; it must not be entered in
-chat or committed. The fallback does not recompile the question or request another
-confirmation. The request, interventions and seed stay the same; the model changes,
-so results may differ. No statistical equivalence is asserted.
+Gemini receives only the existing allowed text/headers. Local remote fallback
+sends the same Y/X/Z data and confirmed plan to the configured HF Space, without
+sending the Gemini or Prior Labs key. The HF credential authenticates that request.
+On the Space, uploaded rows are authorized for Prior Labs 3.5; fallback uses the
+existing local ZeroGPU v2 runner without another service submission. The owner
+configures `DCFA_TABPFN_API_KEY` as a Space Secret; it is materialized in a temporary
+mode-600 file under the blocked secret directory only for the API attempt and
+removed afterward. Missing credentials stop, rather than triggering fallback.
+The compilation, interventions and seed stay unchanged; results may differ by
+model. No statistical equivalence is asserted.
 
 Client 0.6.1 flattens HTTP failures into generic exceptions. The scoped HTTP
 adapter intercepts response status before that happens. It never searches error
@@ -169,13 +173,13 @@ Temporary server work is cleaned on success and failure; exported downloads use
 the existing Gradio cache expiry. This remains an authorized non-sensitive-data
 workflow, not a private-data hosting service.
 
-**Not deployed by this change:** the live Space currently exposes no analysis
-endpoint. Enabling this path requires separate authorization to update its
-pinned DCFA installation to this change and rebuild the Space. No new Space
-Secret is required when callers use their existing HF tokens. After deployment,
-validate authentication, actual GPU execution, retrieval and the same-source
-artifact verifier with a small synthetic request. Do not call mock transport
-or fake-estimator tests a real v2 run.
+The user authorized updating `GPChen01/dcfa-zerogpu` to this default and exposing
+`/analyze_v2`. The Space requirements pin a committed DCFA revision and include
+`tabpfn-client==0.6.1` alongside the existing v2/CUDA dependencies. Its browser flow
+uses the in-process v2 executor; `/analyze_v2` remains fixed v2 for authenticated
+remote callers. Neither route uses a provider v2 API or a CPU substitute.
+Deployment/runtime evidence is recorded separately below; mocked tests alone do
+not establish remote GPU execution or quota availability.
 
 ### Reports, records and validation evidence
 
@@ -183,8 +187,8 @@ Each daily run has its own directory with `daily_execution.json` and separate
 `attempt-1-api` / `attempt-2-v2` directories (or a single v2 attempt).
 `attempt.json` preserves a safe error code/stage and quota evidence. Completed
 attempts retain the original statistical bundle, report and evidence. The added
-`analysis_report.md` and downloadable `analysis_artifacts.zip` include the chosen
-mode, actual model and any switch, without rewriting the statistical report's
+`analysis_report.md` and downloadable `analysis_artifacts.zip` include the default
+policy, actual model and any switch, without rewriting the statistical report's
 existing identities. Remote progress is recorded in `remote_job.json`.
 Ordinary cached follow-ups retain their original specification/backend and never
 consult current quota or refit. Historical results are not rewritten.

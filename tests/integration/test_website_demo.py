@@ -790,7 +790,7 @@ def test_default_app_config_omits_machine_audit_payload_and_shows_build() -> Non
     tab_group = next(c for c in app.config["components"] if c["type"] == "tabs")
     assert tab_group["props"]["selected"] == "csv"
     assert "Do not enter private or sensitive information" in config
-    assert "I authorize data use and the transfers in the selected model policy" in config
+    assert "I authorize data use and the transfers in the default model policy" in config
     assert "Scope and limitations" not in config
     assert "Follow the workflow and review" not in config
     assert "demo-input-column" not in config
@@ -851,7 +851,6 @@ def test_both_submit_handlers_disable_both_buttons_before_external_work() -> Non
             "How does the median outcome change from low to high treatment?",
             128,
             20260810,
-            "api_preferred",
         ),
         next(f.fn for f in app.fns.values() if f.fn.__name__ == "handle_csv_run")(
             None,
@@ -861,7 +860,6 @@ def test_both_submit_handlers_disable_both_buttons_before_external_work() -> Non
             False,
             "Estimate the median outcome contrast from low to high treatment.",
             20260813,
-            "api_preferred",
         ),
     )
 
@@ -1032,3 +1030,12 @@ def test_readiness_fails_closed_without_gemini_profile(
     assert response.json()["managed_credential_ready"] is True
     assert response.json()["gemini_credential_ready"] is True
     assert response.json()["gemini_config_ready"] is False
+
+
+def test_daily_ui_has_policy_disclosure_but_no_model_selector():
+    config = build_app(build_revision="test").get_config_file()
+    labels = [component.get("props", {}).get("label") for component in config["components"]]
+    assert "Analysis mode" not in labels
+    serialized = json.dumps(config, default=str)
+    assert "Only after confirmed API quota exhaustion" in serialized
+    assert "Prior Labs" in serialized and "Hugging Face" in serialized

@@ -315,3 +315,79 @@ def test_guard_and_credentials_cleaned_after_exception():
     from tabpfn_client.options import get_opts
 
     assert get_opts().TABPFN_TOKEN is None
+
+
+@pytest.mark.parametrize("failure", [None, "before", "stage2"])
+def test_space_defaults_to_api_and_uses_in_process_gpu_fallback(confirmed, monkeypatch, failure):
+    import dcfa_website_demo.zerogpu as space
+
+    calls = []
+    monkeypatch.setattr(space, "execute_space_api", executor("api", calls, failure))
+    monkeypatch.setattr(
+        space, "make_local_tabpfn_v2_backend", lambda spec, **kw: FakeV2(seed=spec.seed)
+    )
+    monkeypatch.setenv("SPACE_ID", "test/space")
+
+    def gpu(backend, stage, *args):
+        calls.append(("v2", stage, backend))
+        return predict_backend(backend, stage, *args)
+
+    result = space.execute_space_dataset(
+        confirmed, model_path=confirmed["output_root"] / "unused", prediction_runner=gpu
+    )
+    assert result.response.status == "completed", result.response.error
+    record = result.llm_trace["daily_execution"]
+    assert record["mode"] == "api_preferred"
+    assert record["v2_destination"] == "Hugging Face Space test/space (in-process ZeroGPU)"
+    assert [(n, s) for n, s, _ in calls if n == "v2"] == (
+        [("v2", "stage1"), ("v2", "stage2")] if failure else []
+    )
+    assert record["actual_model"] == ("TabPFN v2" if failure else "TabPFN v3.5_default")
+    monkeypatch.setenv("GRADIO_TEMP_DIR", str(confirmed["output_root"] / "public"))
+    output = space._verified_projection(result, None)
+    import zipfile
+    from pathlib import Path
+
+    with zipfile.ZipFile(output[5]["value"]) as archive:
+        names = archive.namelist()
+        assert any(name.endswith("daily_execution.json") for name in names)
+        assert any(name.endswith("attempt-1-api/attempt.json") for name in names)
+        assert any(name.endswith("analysis_report.md") for name in names)
+    assert record["actual_model"] in output[0]["value"]
+    assert not result.output_dir.parent.exists()
+    assert Path(output[5]["value"]).is_file()
+
+
+def test_space_primary_missing_key_stops_without_using_gpu(confirmed, monkeypatch):
+    import dcfa_website_demo.zerogpu as space
+
+    monkeypatch.delenv("DCFA_TABPFN_API_KEY", raising=False)
+    result = space.execute_space_dataset(
+        confirmed,
+        model_path=confirmed["output_root"] / "unused",
+        prediction_runner=lambda *a: pytest.fail("Must not bypass a missing credential"),
+    )
+    assert result.response.error["code"] == ErrorCode.DATA_ACCESS_BLOCKED
+    assert len(result.llm_trace["daily_execution"]["attempts"]) == 1
+
+
+def test_space_primary_secret_file_is_scoped_and_not_exported(tmp_path, monkeypatch):
+    import dcfa_website_demo.daily as daily
+    import dcfa_website_demo.zerogpu as space
+
+    secret = "synthetic_test_credential"
+    monkeypatch.setenv("DCFA_TABPFN_API_KEY", secret)
+    monkeypatch.setenv("DCFA_SECRET_ROOT", str(tmp_path / "secrets"))
+    paths = []
+
+    def fake(kwargs, directory, settings):
+        path = settings["token_file"]
+        paths.append(path)
+        assert path.read_text() == secret
+        assert path.stat().st_mode & 0o777 == 0o600
+        raise RuntimeError("synthetic failure")
+
+    monkeypatch.setattr(daily, "execute_api_attempt", fake)
+    with pytest.raises(RuntimeError, match="synthetic failure"):
+        space.execute_space_api({}, tmp_path, {})
+    assert not paths[0].exists()

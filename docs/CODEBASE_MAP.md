@@ -85,9 +85,9 @@ it does not invent baseline-covariate support or rewrite their core.
 
 ## Interactive daily execution
 
-`dcfa_website_demo/daily.py` owns the three-mode coordinator. Only the local UI
-opts into quota fallback by default; fixed managed smoke, research, locked
-profiles and existing Space browser workflows keep their explicit backend.
+`dcfa_website_demo/daily.py` owns the daily coordinator. The local UI and Space
+use API-first automatically with no mode selector; fixed managed smoke, research
+and locked profiles keep their explicit backend. Programmatic fixed modes remain.
 `app.py::compiled_request` resolves the confirmed plan once per identical
 attempt input. Each attempt creates a fresh engine/backend/cache and directory.
 No partial control ranks or fitted models cross the switch.
@@ -100,8 +100,11 @@ typed failures and excludes raw provider exception bodies from audit context.
 `dcfa_website_demo/v2_remote.py` provides bounded request encoding, HF identity
 verification, single-submission job waiting, safe artifact retrieval, request/model
 verification and cleanup. `zerogpu.py` registers `/analyze_v2` using the existing
-local v2 backend and GPU runner. It is prepared in source, not deployed. The
-local CUDA option also reuses the existing exact checkpoint profile.
+local v2 backend and GPU runner. `execute_space_dataset` uses the same daily
+coordinator with an in-process ZeroGPU fallback; `execute_space_api` scopes the
+owner Space Secret to a temporary key file. Prepared CSV/preset entrypoints accept
+a dataset executor, preserving the confirmed request without another Gemini call.
+The local CUDA option also reuses the existing exact checkpoint profile.
 
 Daily records and `analysis_report.md` are ordinary presentation/audit additions.
 Existing numerical/evidence identities and artifact verification remain in force.

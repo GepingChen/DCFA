@@ -1099,3 +1099,34 @@ showcase assets and deployment to GPChen01/dcfa-zerogpu.
   anonymous requests were rejected. This supersedes the earlier undeployed-v2
   limitation, but does not establish naturally occurring exhaustion. A fresh
   browser OAuth login is still needed for a signed-in browser end-to-end replay.
+
+## 2026-10-03 — Restore explicit daily browser mode selection
+
+- The current request supersedes the earlier browser choice removal. Restore
+  `api_preferred` (default), `api_only`, and `v2_only` in the shared local/Space UI.
+  The selector updates recipient disclosure and clears CSV consent. Space plan
+  revisions include the reviewed policy; running controls are disabled. Cached
+  completed reports preserve their original backend and never refit on selection.
+- Pass the selected mode through local CSV/example and Space CSV/preset handlers.
+  `execute_space_dataset` accepts `analysis_mode`, defaulting to `api_preferred`;
+  fixed v2 never reads the owner Prior Labs key. Reuse the existing independent
+  attempts, typed quota errors, CUDA runner and authenticated remote endpoint.
+  No statistical core, shared error classifier, frozen profile or release gate
+  was changed, and no new identity or approval layer was introduced.
+- Scope is local source, verification, ordinary commit and non-force push only.
+  The selector is not deployed. Existing online API-first behavior and its fixed
+  `/analyze_v2` endpoint were not modified or republished.
+- Validation: 154 affected tests plus three additional Space callback dispatch
+  cases passed. Tests cover mode/consent/revision/locking/cached behavior and the
+  existing quota/restart/error matrix. Installed-client async and streamed failures
+  remain safe failures with no fallback or provider-body leakage. Local browser
+  checks at 1280px and 390px verified all choices, changing recipients and cleared
+  consent; the narrow page had no horizontal overflow.
+- Two 128-row synthetic executions are saved in the ignored local directory
+  `artifacts/local/daily-mode-verification-v1/`: real 3.5 completed with valid
+  artifacts and ZIP (daily tokens 90,000 -> 120,000; monthly 160,000 -> 190,000),
+  then injected typed quota exhaustion triggered a real authenticated remote
+  CUDA v2 analysis with valid artifacts and ZIP. Both remain development-only.
+  The failed injected attempt and successful v2 attempt are separate. This proves
+  real v2 execution after simulation, not naturally observed server exhaustion.
+  No new deployed-selector/browser-OAuth end-to-end run is claimed.

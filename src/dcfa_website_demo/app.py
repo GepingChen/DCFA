@@ -1630,9 +1630,15 @@ def build_app(
             </header>
             """
         )
-        from dcfa_website_demo.daily import transfer_notice
+        from dcfa_website_demo.daily import MODE_CHOICES, transfer_notice
 
-        gr.Markdown(
+        analysis_mode = gr.Radio(
+            choices=MODE_CHOICES,
+            value="api_preferred",
+            label="Analysis mode",
+            elem_id="analysis-mode",
+        )
+        policy_notice = gr.Markdown(
             transfer_notice(
                 "api_preferred", v2_location="this Hugging Face Space" if is_space else None
             )
@@ -1737,13 +1743,11 @@ def build_app(
                                 "I am authorized to upload this data to Hugging Face and send only "
                                 "conversation text, three column names, optional role overrides, "
                                 "and temporary API credential to Google Gemini; I authorize "
-                                "sending Y/X/Z "
-                                "rows to Prior Labs, with a complete v2 rerun on this Space only "
-                                "after confirmed API quota exhaustion."
+                                "the statistical data transfers in the selected model policy."
                                 if is_space
                                 else (
                                     "I authorize data use and the transfers "
-                                    "in the default model policy."
+                                    "in the selected model policy."
                                 )
                             ),
                             interactive=csv_enabled,
@@ -1754,8 +1758,8 @@ def build_app(
                                 "<strong>Data boundary:</strong> conversation, three header names, "
                                 "and optional role overrides go to Google Gemini; the temporary "
                                 "key passes through Hugging Face. It is not intentionally "
-                                "persisted by DCFA. Y/X/Z rows go to Prior Labs for 3.5; "
-                                "v2 fallback runs on this Space. Temporary rows are deleted "
+                                "persisted by DCFA. Review the selected model policy above "
+                                "for statistical data recipients. Temporary rows are deleted "
                                 "after processing. Never upload sensitive data.</div>"
                                 if is_space
                                 else "<strong>Data boundary:</strong> Review the policy above. "
@@ -1870,6 +1874,17 @@ def build_app(
 
             app.load(availability_notice, outputs=v2_status, api_name=False)
 
+            def change_analysis_mode(selected_mode):
+                return transfer_notice(selected_mode), gr.update(value=False)
+
+            analysis_mode.input(
+                change_analysis_mode,
+                inputs=analysis_mode,
+                outputs=(policy_notice, csv_confirmed),
+                queue=False,
+                api_name=False,
+            )
+
         scenario.change(
             fn=scenario_question,
             inputs=scenario,
@@ -1883,8 +1898,12 @@ def build_app(
             selected_question: str,
             selected_rows: int,
             selected_seed: int,
+            selected_mode: str,
         ):
-            yield portfolio_ui_updates(_running_outputs(), buttons_enabled=False)
+            yield (
+                *portfolio_ui_updates(_running_outputs(), buttons_enabled=False),
+                gr.update(interactive=False),
+            )
             archive_path = None
             try:
                 result = execute_portfolio_scenario(
@@ -1893,7 +1912,7 @@ def build_app(
                     selected_seed,
                     question=selected_question,
                     output_root=output_root,
-                    analysis_mode="api_preferred",
+                    analysis_mode=selected_mode,
                 )
                 from dcfa_website_demo.daily import archive_daily_result
 
@@ -1904,7 +1923,10 @@ def build_app(
                 formatted = _execution_error_outputs(exc)
             except (TypeError, ValueError) as exc:
                 formatted = _input_error_outputs(str(exc))
-            yield portfolio_ui_updates(formatted, buttons_enabled=True, archive_path=archive_path)
+            yield (
+                *portfolio_ui_updates(formatted, buttons_enabled=True, archive_path=archive_path),
+                gr.update(interactive=True),
+            )
 
         result_outputs = (
             answer,
@@ -1916,14 +1938,18 @@ def build_app(
             csv_api_key,
             run_button,
             csv_run_button,
+            analysis_mode,
         )
         if is_space:
 
             def show_running() -> tuple[Any, ...]:
-                return portfolio_ui_updates(
-                    _running_outputs(),
-                    buttons_enabled=False,
-                    clear_api_key=False,
+                return (
+                    *portfolio_ui_updates(
+                        _running_outputs(),
+                        buttons_enabled=False,
+                        clear_api_key=False,
+                    ),
+                    gr.update(interactive=False),
                 )
 
             authorized = run_button.click(
@@ -1941,7 +1967,7 @@ def build_app(
                 api_name=False,
             ).success(
                 fn=space_scenario_handler,
-                inputs=(scenario, question, rows, seed),
+                inputs=(scenario, question, rows, seed, analysis_mode),
                 outputs=result_outputs,
                 scroll_to_output=True,
                 show_progress="hidden",
@@ -1951,7 +1977,7 @@ def build_app(
         else:
             run_button.click(
                 fn=handle_run,
-                inputs=(scenario, question, rows, seed),
+                inputs=(scenario, question, rows, seed, analysis_mode),
                 outputs=result_outputs,
                 scroll_to_output=True,
                 show_progress="hidden",
@@ -1967,8 +1993,12 @@ def build_app(
             selected_confirmation: bool,
             selected_question: str,
             selected_seed: int,
+            selected_mode: str,
         ):
-            yield portfolio_ui_updates(_running_outputs(), buttons_enabled=False)
+            yield (
+                *portfolio_ui_updates(_running_outputs(), buttons_enabled=False),
+                gr.update(interactive=False),
+            )
             archive_path = None
             try:
                 if not selected_file:
@@ -1982,7 +2012,7 @@ def build_app(
                     selected_seed,
                     question=selected_question,
                     output_root=output_root,
-                    analysis_mode="api_preferred",
+                    analysis_mode=selected_mode,
                 )
                 from dcfa_website_demo.daily import archive_daily_result
 
@@ -1993,7 +2023,10 @@ def build_app(
                 formatted = _execution_error_outputs(exc)
             except (OSError, TypeError, ValueError) as exc:
                 formatted = _input_error_outputs(str(exc))
-            yield portfolio_ui_updates(formatted, buttons_enabled=True, archive_path=archive_path)
+            yield (
+                *portfolio_ui_updates(formatted, buttons_enabled=True, archive_path=archive_path),
+                gr.update(interactive=True),
+            )
 
         csv_inputs = (
             (
@@ -2005,6 +2038,7 @@ def build_app(
                 csv_confirmed,
                 csv_question,
                 csv_seed,
+                analysis_mode,
             )
             if is_space
             else (
@@ -2015,6 +2049,7 @@ def build_app(
                 csv_confirmed,
                 csv_question,
                 csv_seed,
+                analysis_mode,
             )
         )
         if is_space and csv_enabled:
@@ -2043,6 +2078,8 @@ def build_app(
                 ),
                 result_outputs=result_outputs,
                 temporary_key_enabled=temporary_key_enabled,
+                analysis_mode=analysis_mode,
+                policy_notice=policy_notice,
             )
         elif not is_space:
             csv_run_button.click(

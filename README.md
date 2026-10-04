@@ -119,11 +119,14 @@ sensitive, confidential, personally identifiable, or otherwise unshareable data.
 
 ### Local setup
 
-The local analysis UI (`dcfa-ui`, alias `dcfa-website-demo`) and live Space use
-**3.5 API first with quota-only v2 fallback** automatically. There is no model-mode
-selector. Results state whether 3.5 API or TabPFN v2 actually ran and whether a
-switch occurred. The managed profile uses one estimator, Thinking off and
-`v3.5_default`. Review the data recipients before confirming: rows go to Prior
+The local analysis UI (`dcfa-ui`, alias `dcfa-website-demo`) defaults to
+**3.5 API first with quota-only v2 fallback**. The **Analysis mode** selector also
+offers **3.5 API only** (stop on exhaustion) and **TabPFN v2 only** (direct CUDA v2).
+Changing mode updates the data recipients and clears the previous CSV consent;
+confirm the selected policy before running. The mode is disabled during execution,
+and an authorized fallback does not ask again. Results state the selected policy,
+the actual model and whether a switch occurred. The managed profile uses one
+estimator, Thinking off and `v3.5_default`. Review the data recipients before confirming: rows go to Prior
 Labs for 3.5 and to Hugging Face for remote v2. On the Space, v2 runs in the same
 ZeroGPU runtime. Confirmed exhaustion starts a fresh v2 analysis; ordinary rate
 limits, authentication failures and other errors never change models.
@@ -132,7 +135,9 @@ Install `requirements-website-demo.lock`, provide the external credentials below
 and run `.venv/bin/dcfa-ui`. The default remote v2 target is
 `GPChen01/dcfa-zerogpu`. The page checks endpoint availability before execution.
 The Space owner supplies `DCFA_TABPFN_API_KEY` through Hugging Face Secrets;
-visitors do not enter a statistical model key or choose an analysis mode. See
+visitors do not enter a statistical model key. The Space source uses the same
+selector and its in-process GPU runner, but this selector update has not been
+deployed; the existing live Space still uses API-first automatically. See
 [daily policy and v2 configuration](docs/WEBSITE_DEMO.md#daily-analysis-policy).
 `dcfa-dev-ui` and `tabcf-demo` remain explicit sklearn mechanics demonstrations;
 research entrypoints and previously saved results do not automatically migrate.

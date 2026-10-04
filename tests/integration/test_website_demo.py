@@ -790,7 +790,7 @@ def test_default_app_config_omits_machine_audit_payload_and_shows_build() -> Non
     tab_group = next(c for c in app.config["components"] if c["type"] == "tabs")
     assert tab_group["props"]["selected"] == "csv"
     assert "Do not enter private or sensitive information" in config
-    assert "I authorize data use and the transfers in the default model policy" in config
+    assert "I authorize data use and the transfers in the selected model policy" in config
     assert "Scope and limitations" not in config
     assert "Follow the workflow and review" not in config
     assert "demo-input-column" not in config
@@ -851,6 +851,7 @@ def test_both_submit_handlers_disable_both_buttons_before_external_work() -> Non
             "How does the median outcome change from low to high treatment?",
             128,
             20260810,
+            "api_preferred",
         ),
         next(f.fn for f in app.fns.values() if f.fn.__name__ == "handle_csv_run")(
             None,
@@ -860,6 +861,7 @@ def test_both_submit_handlers_disable_both_buttons_before_external_work() -> Non
             False,
             "Estimate the median outcome contrast from low to high treatment.",
             20260813,
+            "api_preferred",
         ),
     )
 
@@ -1032,10 +1034,55 @@ def test_readiness_fails_closed_without_gemini_profile(
     assert response.json()["gemini_config_ready"] is False
 
 
-def test_daily_ui_has_policy_disclosure_but_no_model_selector():
+def test_daily_ui_has_three_modes_and_policy_disclosure():
     config = build_app(build_revision="test").get_config_file()
     labels = [component.get("props", {}).get("label") for component in config["components"]]
-    assert "Analysis mode" not in labels
+    assert labels.count("Analysis mode") == 1
+    mode = next(
+        c for c in config["components"] if c.get("props", {}).get("label") == "Analysis mode"
+    )
+    assert mode["props"]["value"] == "api_preferred"
+    assert [value for label, value in mode["props"]["choices"]] == [
+        "api_preferred",
+        "api_only",
+        "v2_only",
+    ]
     serialized = json.dumps(config, default=str)
     assert "Only after confirmed API quota exhaustion" in serialized
     assert "Prior Labs" in serialized and "Hugging Face" in serialized
+
+
+@pytest.mark.parametrize("mode", ["api_preferred", "api_only", "v2_only"])
+@pytest.mark.parametrize("route", ["csv", "example"])
+def test_selected_mode_reaches_local_executor_and_locks_control(monkeypatch, mode, route):
+    import dcfa_website_demo.app as module
+
+    observed = []
+
+    def stop(*args, **kwargs):
+        observed.append(kwargs["analysis_mode"])
+        raise DCFAError(ErrorCode.V2_UNAVAILABLE, "Test stop", stage="test")
+
+    monkeypatch.setattr(module, "execute_portfolio_scenario", stop)
+    monkeypatch.setattr(module, "execute_csv_upload", stop)
+    app = build_app(build_revision="test")
+    handlers = {f.fn.__name__: f.fn for f in app.fns.values() if f.fn is not None}
+    policy, consent = handlers["change_analysis_mode"](mode)
+    assert consent["value"] is False
+    if mode == "v2_only":
+        assert "Prior Labs" not in policy
+    elif mode == "api_only":
+        assert "Y/X/Z rows go to Prior Labs" in policy
+        assert "confirmed plan go to" not in policy
+    args = (
+        ("input.csv", "Y", "X", "Z", True, "Median", 123, mode)
+        if route == "csv"
+        else ("strong_iv", "Median", 128, 123, mode)
+    )
+    generator = handlers["handle_csv_run" if route == "csv" else "handle_run"](*args)
+    first = next(generator)
+    assert first[-1]["interactive"] is False
+    assert observed == []
+    last = next(generator)
+    assert observed == [mode]
+    assert last[-1]["interactive"] is True

@@ -104,12 +104,24 @@ do not refit; launching a new analysis does.
 
 ## Daily analysis policy
 
-The local UI and live Space always use `api_preferred`: 3.5 API first, with one
-complete v2 rerun only after server-confirmed quota exhaustion. Users review the
-policy and data recipients, then confirm their analysis; no model selector or
-extra switch confirmation is shown. Results and downloads name the actual model.
-Programmatic `api_only` and `v2_only` modes remain available for fixed-model work;
-existing Python entrypoints remain fixed managed unless `analysis_mode` is passed.
+The local UI offers **Analysis mode** with three choices:
+
+| Mode | Execution and statistical data recipients |
+|---|---|
+| `api_preferred` (default) | Prior Labs 3.5 first; only confirmed quota exhaustion permits a complete v2 rerun at the configured GPU destination |
+| `api_only` | Prior Labs 3.5 only; exhaustion stops the analysis |
+| `v2_only` | Direct v2 at the configured GPU destination; no Prior Labs key read or API request |
+
+The policy notice updates with the selection and changing modes clears previous
+CSV consent. Users authorize the selected recipients before executing; an allowed
+fallback needs no additional confirmation. The selector is disabled while running.
+A Space conversation records its reviewed mode with the existing plan revision;
+changing it invalidates old confirmation. Completed cached reports keep their
+original mode/model even if the selector later changes. Reset for a new analysis.
+Results and downloads name the selected policy, actual model and switch reason.
+Existing Python entrypoints remain fixed managed unless `analysis_mode` is passed.
+The shared Space source includes the selector, but this change is **not deployed**;
+the running Space retains its previously deployed automatic API-first UI.
 Research, locked evaluation and saved results do not automatically migrate.
 
 Gemini receives only the existing allowed text/headers. Local remote fallback
@@ -187,7 +199,7 @@ Each daily run has its own directory with `daily_execution.json` and separate
 `attempt-1-api` / `attempt-2-v2` directories (or a single v2 attempt).
 `attempt.json` preserves a safe error code/stage and quota evidence. Completed
 attempts retain the original statistical bundle, report and evidence. The added
-`analysis_report.md` and downloadable `analysis_artifacts.zip` include the default
+`analysis_report.md` and downloadable `analysis_artifacts.zip` include the selected
 policy, actual model and any switch, without rewriting the statistical report's
 existing identities. Remote progress is recorded in `remote_job.json`.
 Ordinary cached follow-ups retain their original specification/backend and never
@@ -241,6 +253,29 @@ account for a test.
   fresh sign-in in this session, so a complete signed-in browser CSV/primary run
   was not repeated. The deployed UI and authentication boundary were checked;
   primary computation was measured through the identical code locally.
+
+### Explicit selector acceptance (2026-10-03, local source only)
+
+The restored selector passed 154 affected tests and three additional Space
+callback dispatch cases. Local browser checks covered 1280px and 390px layouts,
+all three choices, recipient updates and clearing previous consent. The Space
+callback and OAuth boundaries were tested locally; the new selector has not been
+deployed or replayed in an authenticated live Space browser session.
+
+The ignored `artifacts/local/daily-mode-verification-v1/` directory contains:
+
+- `api/verification.json`: real 128-row 3.5 execution, valid artifacts and ZIP,
+  30,000 measured tokens (daily 90,000 -> 120,000; monthly 160,000 -> 190,000).
+- `injected-quota-real-v2/verification.json`: injected typed quota error followed
+  by real authenticated `GPChen01/dcfa-zerogpu` CUDA v2 execution, valid artifacts
+  and ZIP containing both attempts. The injected error is explicitly labeled;
+  no real quota exhaustion was induced or observed.
+- Desktop/narrow screenshots of the local selector and recipient disclosure.
+
+These are execution checks on synthetic data, not evidence of statistical
+quality or equivalence between models. Results retain their evidence IDs,
+support status, empirical warnings and `development_only` designation.
+
 
 ## What is ready
 

@@ -88,6 +88,7 @@ class CSVConversation:
     touched: float = field(default_factory=time.monotonic)
     request_count: int = 0
     revision: int = 0
+    analysis_mode: str = "api_preferred"
     upload_path: str | None = None
     overrides: dict[str, str | None] = field(default_factory=dict)
     owner: str | None = None

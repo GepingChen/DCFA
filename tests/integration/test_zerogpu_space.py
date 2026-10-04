@@ -290,7 +290,7 @@ def test_space_compute_finalize_boundary_and_cleanup(tmp_path, monkeypatch, rout
     monkeypatch.setattr(zerogpu_module, "register_v2_api", lambda *args: None)
 
     # This existing test isolates GPU/CPU finalization; daily routing is tested separately.
-    def fixed_v2(kwargs, *, model_path, prediction_runner):
+    def fixed_v2(kwargs, *, model_path, prediction_runner, analysis_mode):
         return app_module._execute_compiled_dataset(
             **kwargs,
             prediction_runner=prediction_runner,
@@ -438,3 +438,43 @@ def test_partial_public_output_is_removed_on_io_failure(tmp_path, monkeypatch, o
         with pytest.raises(OSError, match="disk full"):
             zerogpu_module._public_plot_copy(source)
     assert not list((tmp_path / "public").iterdir())
+
+
+@pytest.mark.parametrize("mode", ["api_preferred", "api_only", "v2_only"])
+def test_space_browser_callbacks_forward_selected_mode(tmp_path, monkeypatch, mode):
+    from types import SimpleNamespace
+
+    observed = []
+    monkeypatch.delenv("DCFA_GEMINI_API_KEY", raising=False)
+    monkeypatch.setattr(zerogpu_module, "resolve_preloaded_model", lambda: tmp_path / "unused")
+    monkeypatch.setattr(zerogpu_module, "build_app", lambda **kw: kw)
+    monkeypatch.setattr(zerogpu_module, "register_v2_api", lambda *args: None)
+    monkeypatch.setattr(zerogpu_module.spaces, "GPU", lambda **kw: lambda fn: fn)
+
+    def dataset(kwargs, *, model_path, prediction_runner, analysis_mode):
+        observed.append(analysis_mode)
+        return SimpleNamespace(output_dir=None)
+
+    def confirmed(*args, dataset_executor, **kw):
+        return dataset_executor({})
+
+    monkeypatch.setattr(zerogpu_module, "execute_space_dataset", dataset)
+    monkeypatch.setattr(zerogpu_module, "execute_local_portfolio_scenario", confirmed)
+    monkeypatch.setattr(zerogpu_module, "execute_prepared_local_csv", confirmed)
+    monkeypatch.setattr(
+        zerogpu_module,
+        "_verified_projection",
+        lambda *a: tuple(gr.update(value="Result") for _ in range(9)),
+    )
+    app_handlers = zerogpu_module.build_zerogpu_app(build_revision="test")
+    preset = app_handlers["space_scenario_handler"]("strong_iv", "", 128, 123, object(), mode)
+    assert preset[-1]["interactive"] is True
+    compilation = app_module._frozen_preset_compilation(DEFAULT_CSV_QUESTION)
+    compilation.trace["confirmed_roles"] = {
+        role: {"column": column, "column_position": index, "definition": "Test column"}
+        for index, (role, column) in enumerate(
+            (("outcome", "Y"), ("treatment", "X"), ("instrument", "Z")), start=1
+        )
+    }
+    app_handlers["space_csv_handler"](None, compilation, 123, object(), mode)
+    assert observed == [mode, mode]

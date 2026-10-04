@@ -139,7 +139,9 @@ def execute_space_api(kwargs: dict, directory: Path, settings: dict):
         return execute_api_attempt(kwargs, directory, dict(settings, token_file=token_file))
 
 
-def execute_space_dataset(kwargs: dict, *, model_path: Path, prediction_runner):
+def execute_space_dataset(
+    kwargs: dict, *, model_path: Path, prediction_runner, analysis_mode: str = "api_preferred"
+):
     from dcfa_website_demo.daily import execute_daily_dataset
 
     def v2_executor(compiled_kwargs, directory, settings):
@@ -153,7 +155,7 @@ def execute_space_dataset(kwargs: dict, *, model_path: Path, prediction_runner):
         )
 
     return execute_daily_dataset(
-        mode="api_preferred",
+        mode=analysis_mode,
         compiled_kwargs=kwargs,
         managed_settings={},
         api_executor=execute_space_api,
@@ -282,9 +284,12 @@ def build_zerogpu_app(*, build_revision: str) -> Any:
 
         return predict_backend(backend, stage, features, target, prediction_features, y_grid)
 
-    def daily_executor(kwargs):
+    def daily_executor(kwargs, analysis_mode):
         return execute_space_dataset(
-            kwargs, model_path=model_path, prediction_runner=gpu_predictions
+            kwargs,
+            model_path=model_path,
+            prediction_runner=gpu_predictions,
+            analysis_mode=analysis_mode,
         )
 
     def run_scenario(
@@ -293,6 +298,7 @@ def build_zerogpu_app(*, build_revision: str) -> Any:
         rows: int,
         seed: int,
         profile: gr.OAuthProfile | None,
+        analysis_mode: str = "api_preferred",
     ) -> tuple[Any, ...]:
         _require_login(profile)
         try:
@@ -304,7 +310,7 @@ def build_zerogpu_app(*, build_revision: str) -> Any:
                     question=question,
                     prediction_runner=gpu_predictions,
                     model_path=model_path,
-                    dataset_executor=daily_executor,
+                    dataset_executor=lambda kwargs: daily_executor(kwargs, analysis_mode),
                     output_root=output_root,
                 )
             else:
@@ -316,16 +322,22 @@ def build_zerogpu_app(*, build_revision: str) -> Any:
                         question=question,
                         prediction_runner=gpu_predictions,
                         model_path=model_path,
-                        dataset_executor=daily_executor,
+                        dataset_executor=lambda kwargs: daily_executor(kwargs, analysis_mode),
                         output_root=output_root,
                         gemini_api_key_file=secret_file,
                     )
-            return _verified_projection(result, secret)
+            return (*_verified_projection(result, secret), gr.update(interactive=True))
         except DCFAError as exc:
             _log_operator_error(exc)
-            return portfolio_ui_updates(_execution_error_outputs(exc), buttons_enabled=True)
+            return (
+                *portfolio_ui_updates(_execution_error_outputs(exc), buttons_enabled=True),
+                gr.update(interactive=True),
+            )
         except (OSError, RuntimeError, TypeError, ValueError) as exc:
-            return portfolio_ui_updates(_input_error_outputs(str(exc)), buttons_enabled=True)
+            return (
+                *portfolio_ui_updates(_input_error_outputs(str(exc)), buttons_enabled=True),
+                gr.update(interactive=True),
+            )
 
     def chat_csv(history, columns, overrides, temporary_key, on_request):
         from dcfa_website_demo.dialogue import compile_csv_turn
@@ -340,7 +352,13 @@ def build_zerogpu_app(*, build_revision: str) -> Any:
                 on_request=on_request,
             )
 
-    def run_csv(validated, compilation, seed, profile: gr.OAuthProfile | None):
+    def run_csv(
+        validated,
+        compilation,
+        seed,
+        profile: gr.OAuthProfile | None,
+        analysis_mode: str = "api_preferred",
+    ):
         _require_login(profile)
         result = execute_prepared_local_csv(
             validated,
@@ -348,7 +366,7 @@ def build_zerogpu_app(*, build_revision: str) -> Any:
             seed,
             prediction_runner=gpu_predictions,
             model_path=model_path,
-            dataset_executor=daily_executor,
+            dataset_executor=lambda kwargs: daily_executor(kwargs, analysis_mode),
             output_root=output_root,
         )
         try:

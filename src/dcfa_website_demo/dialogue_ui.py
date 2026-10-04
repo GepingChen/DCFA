@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import html
 import time
 from typing import Any
 
@@ -20,6 +21,8 @@ def bind_csv_dialogue(
     components: tuple[Any, ...],
     result_outputs: tuple[Any, ...],
     temporary_key_enabled: bool,
+    analysis_mode: Any,
+    policy_notice: Any,
 ) -> None:
     (
         upload,
@@ -41,13 +44,35 @@ def bind_csv_dialogue(
     app.load(fn=lambda: CSVConversation(), outputs=state, api_name=False)
     timer = gr.Timer(15)
     revision = gr.Number(value=0, visible=False, precision=0)
-    controls = (upload, outcome, treatment, instrument, consent, message, seed, send, reset)
+    controls = (
+        upload,
+        outcome,
+        treatment,
+        instrument,
+        consent,
+        message,
+        seed,
+        send,
+        reset,
+        analysis_mode,
+    )
     outputs = (state, chat, plan, notice, confirm, key, *controls, revision)
 
-    def projection(session, text="", *, clear_key=False, clear_message=False, clear_file=False):
+    def projection(
+        session,
+        text="",
+        *,
+        clear_key=False,
+        clear_message=False,
+        clear_file=False,
+        clear_consent=False,
+    ):
         interactive = not session.busy and session.status != "completed"
         updates = [gr.update(interactive=interactive) for _ in controls]
-        updates[-1] = gr.update(interactive=not session.busy)
+        updates[8] = gr.update(interactive=not session.busy)
+        updates[9] = gr.update(interactive=not session.busy)
+        if clear_consent:
+            updates[4] = gr.update(value=False, interactive=interactive)
         updates[7] = gr.update(
             interactive=interactive,
             variant="secondary" if session.status == "ready" else "primary",
@@ -59,10 +84,16 @@ def bind_csv_dialogue(
             updates[5] = gr.update(value="", interactive=interactive or bool(session.cached_answer))
         if clear_file:
             updates[0] = gr.update(value=None, interactive=interactive)
+        from dcfa_website_demo.daily import MODE_CHOICES
+
+        policy_label = dict((value, label) for label, value in MODE_CHOICES)[session.analysis_mode]
+        card = session.plan_html
+        if card:
+            card += "<p><strong>Analysis policy:</strong> " + html.escape(policy_label) + "</p>"
         return (
             session,
             gr.update(value=session.history, visible=bool(session.history)),
-            session.plan_html,
+            card,
             text,
             gr.update(
                 interactive=session.status == "ready" and not session.busy,
@@ -83,7 +114,18 @@ def bind_csv_dialogue(
             raise ValueError("The signed-in account changed. Reset this conversation.")
         session.owner = owner
 
-    def talk(session, path, credential, y, x, z, approved, text, profile: gr.OAuthProfile | None):
+    def talk(
+        session,
+        path,
+        credential,
+        y,
+        x,
+        z,
+        approved,
+        text,
+        profile: gr.OAuthProfile | None,
+        selected_mode="api_preferred",
+    ):
         session = session or CSVConversation()
         try:
             check_owner(session, profile)
@@ -105,6 +147,9 @@ def bind_csv_dialogue(
                 return projection(session, clear_message=True, clear_key=True)
             if chat_handler is None:
                 raise ValueError("The Space dialogue provider is unavailable.")
+            from dcfa_website_demo.daily import AnalysisMode
+
+            session.analysis_mode = AnalysisMode(selected_mode).value
             prepare_turn(
                 session,
                 path,
@@ -133,6 +178,7 @@ def bind_csv_dialogue(
         selected_seed,
         reviewed_revision,
         profile: gr.OAuthProfile | None,
+        selected_mode="api_preferred",
     ):
         session = session or CSVConversation()
         claimed = False
@@ -148,6 +194,8 @@ def bind_csv_dialogue(
                 raise ValueError("Inputs changed. Send a message to prepare the updated plan.")
             if reviewed_revision != session.revision:
                 raise ValueError("The plan changed. Review the current card before confirming.")
+            if selected_mode != session.analysis_mode:
+                raise ValueError("The model policy changed. Review and authorize it again.")
             session.claim(ready=True)
             claimed = True
             from dcfa_website_demo.app import _running_outputs, portfolio_ui_updates
@@ -157,7 +205,13 @@ def bind_csv_dialogue(
                 *projection(session, "Generating report…", clear_key=True),
                 *portfolio_ui_updates(_running_outputs(), buttons_enabled=False)[:6],
             )
-            result = execute_handler(session.validated, session.compilation, selected_seed, profile)
+            result = execute_handler(
+                session.validated,
+                session.compilation,
+                selected_seed,
+                profile,
+                analysis_mode=session.analysis_mode,
+            )
             if session.compilation.distribution is not None and result[0].get("value"):
                 session.cached_answer = result[0]["value"] + "\n\n" + (result[3].get("value") or "")
             session.status = "completed"
@@ -210,7 +264,7 @@ def bind_csv_dialogue(
             return projection(session, "Wait for the current request to finish.")
         cleanup_session(session)
         return projection(
-            CSVConversation(revision=session.revision + 1),
+            CSVConversation(revision=session.revision + 1, analysis_mode=session.analysis_mode),
             clear_key=True,
             clear_message=True,
             clear_file=True,
@@ -223,7 +277,9 @@ def bind_csv_dialogue(
         changed_file = path != session.upload_path
         if changed_file:
             cleanup_session(session)
-            session = CSVConversation(upload_path=path, revision=session.revision + 1)
+            session = CSVConversation(
+                upload_path=path, revision=session.revision + 1, analysis_mode=session.analysis_mode
+            )
         else:
             session.revision += 1
             session.compilation = None
@@ -240,7 +296,10 @@ def bind_csv_dialogue(
             return tuple(gr.skip() for _ in outputs)
         cleanup_session(session)
         return projection(
-            CSVConversation(revision=session.revision + 1 if session else 0),
+            CSVConversation(
+                revision=session.revision + 1 if session else 0,
+                analysis_mode=session.analysis_mode if session else "api_preferred",
+            ),
             "Conversation expired after 15 idle minutes.",
             clear_key=True,
             clear_message=True,
@@ -249,7 +308,17 @@ def bind_csv_dialogue(
 
     event_args = dict(
         fn=talk,
-        inputs=(state, upload, key, outcome, treatment, instrument, consent, message),
+        inputs=(
+            state,
+            upload,
+            key,
+            outcome,
+            treatment,
+            instrument,
+            consent,
+            message,
+            analysis_mode,
+        ),
         outputs=outputs,
         api_name=False,
         trigger_mode="once",
@@ -274,7 +343,17 @@ def bind_csv_dialogue(
         ).success(**event_args)
     confirm.click(
         fn=generate,
-        inputs=(state, upload, outcome, treatment, instrument, consent, seed, revision),
+        inputs=(
+            state,
+            upload,
+            outcome,
+            treatment,
+            instrument,
+            consent,
+            seed,
+            revision,
+            analysis_mode,
+        ),
         outputs=(*outputs, *result_outputs[:6]),
         api_name=False,
         trigger_mode="once",
@@ -326,6 +405,34 @@ def bind_csv_dialogue(
             api_name=False,
             concurrency_id="csv-dialogue",
         )
+
+    def change_dialogue_mode(session, selected_mode):
+        from dcfa_website_demo.daily import AnalysisMode, transfer_notice
+
+        session = session or CSVConversation()
+        if session.busy:
+            return (*[gr.skip() for _ in outputs], gr.skip())
+        selected_mode = AnalysisMode(selected_mode).value
+        # A completed report keeps its original policy and cached numerical identity.
+        if session.status != "completed":
+            session.analysis_mode = selected_mode
+            session.revision += 1
+        return (
+            *projection(
+                session,
+                "Review the selected policy and authorize data use again.",
+                clear_consent=True,
+            ),
+            transfer_notice(selected_mode, v2_location="this Hugging Face Space"),
+        )
+
+    analysis_mode.input(
+        change_dialogue_mode,
+        inputs=(state, analysis_mode),
+        outputs=(*outputs, policy_notice),
+        api_name=False,
+        concurrency_id="csv-dialogue",
+    )
     # Keep expiry reporting separate from gr.State TTL so the page also clears its password field.
     timer.tick(fn=expire, inputs=state, outputs=outputs, api_name=False, queue=False)
 

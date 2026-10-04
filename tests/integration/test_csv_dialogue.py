@@ -312,7 +312,9 @@ def test_button_only_executes_once_and_clears_key(fixture):
     executions = []
     h = handlers(
         lambda history, columns, overrides, key, count: f.transport(history, columns, overrides),
-        lambda *args: executions.append(args) or tuple(gr.update(value="report") for _ in range(9)),
+        lambda *args, **kwargs: (
+            executions.append((args, kwargs)) or tuple(gr.update(value="report") for _ in range(9))
+        ),
     )
     profile = SimpleNamespace(username="alice")
     result = h["talk"](
@@ -365,7 +367,7 @@ def test_gpu_allocation_failure_ends_progress_and_retains_plan(fixture):
     compilation = f.session.compilation
     attempts = []
 
-    def unavailable(*args):
+    def unavailable(*args, **kwargs):
         attempts.append(args)
         raise RuntimeError("You have exceeded your ZeroGPU quota.")
 
@@ -458,7 +460,7 @@ def test_finalize_failure_is_terminal_without_refit_or_gemini(fixture):
     f.session.overrides = {"outcome": "", "treatment": "", "instrument": ""}
     calls = []
 
-    def failed_finalize(*args):
+    def failed_finalize(*args, **kwargs):
         calls.append(True)
         raise WebsiteFinalizationError("injected archive failure")
 
@@ -473,3 +475,52 @@ def test_finalize_failure_is_terminal_without_refit_or_gemini(fixture):
     list(h["generate"](*args))
     assert calls == [True]
     assert len(f.client.interactions.calls) == 1
+
+
+def test_mode_change_revokes_consent_and_old_confirmation_preserves_cached_report(fixture):
+    f = fixture
+    f.client.interactions.output_text = json.dumps(f.ready)
+    turn(f)
+    f.session.overrides = {"outcome": "", "treatment": "", "instrument": ""}
+    calls = []
+
+    def execute(*args, **kwargs):
+        calls.append(kwargs["analysis_mode"])
+        return tuple(gr.update(value="TabPFN v2 cached report") for _ in range(9))
+
+    h = handlers(None, execute)
+    old_revision = f.session.revision
+    compilation = f.session.compilation
+    updated = h["change_dialogue_mode"](f.session, "v2_only")
+    assert updated[10]["value"] is False  # Data authorization checkbox.
+    assert "Prior Labs" not in updated[-1]
+    assert "TabPFN v2 only" in updated[2]
+    assert f.session.compilation is compilation
+    assert f.session.revision > old_revision
+    profile = SimpleNamespace(username="alice")
+    stale = list(
+        h["generate"](f.session, f.path, "", "", "", True, 123, old_revision, profile, "v2_only")
+    )
+    assert "plan changed" in stale[0][3] and not calls
+    unauthorized = list(
+        h["generate"](
+            f.session, f.path, "", "", "", False, 123, f.session.revision, profile, "v2_only"
+        )
+    )
+    assert "authorization" in unauthorized[0][3] and not calls
+    generator = h["generate"](
+        f.session, f.path, "", "", "", True, 123, f.session.revision, profile, "v2_only"
+    )
+    running = next(generator)
+    assert running[15]["interactive"] is False  # Mode selector.
+    h["change_dialogue_mode"](f.session, "api_only")
+    assert f.session.analysis_mode == "v2_only"
+    next(generator)
+    assert calls == ["v2_only"]
+    f.session.cached_answer = "Actual model: TabPFN v2"
+    h["change_dialogue_mode"](f.session, "api_preferred")
+    answer = h["talk"](
+        f.session, None, "", "", "", "", False, "Repeat result", profile, "api_preferred"
+    )
+    assert "TabPFN v2" in str(answer[1])
+    assert f.session.analysis_mode == "v2_only" and calls == ["v2_only"]

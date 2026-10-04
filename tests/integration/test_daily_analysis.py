@@ -391,3 +391,99 @@ def test_space_primary_secret_file_is_scoped_and_not_exported(tmp_path, monkeypa
     with pytest.raises(RuntimeError, match="synthetic failure"):
         space.execute_space_api({}, tmp_path, {})
     assert not paths[0].exists()
+
+
+@pytest.mark.parametrize("mode", ["api_only", "v2_only"])
+def test_space_fixed_mode_dispatch_without_other_backend(confirmed, monkeypatch, mode):
+    import dcfa_website_demo.zerogpu as space
+
+    calls = []
+    monkeypatch.setattr(space, "execute_space_api", executor("api", calls, "before"))
+    monkeypatch.setattr(
+        space, "make_local_tabpfn_v2_backend", lambda spec, **kw: FakeV2(seed=spec.seed)
+    )
+    monkeypatch.delenv("DCFA_TABPFN_API_KEY", raising=False)
+
+    def gpu(backend, stage, *args):
+        calls.append(("v2", stage, backend))
+        return predict_backend(backend, stage, *args)
+
+    result = space.execute_space_dataset(
+        confirmed,
+        model_path=confirmed["output_root"] / "unused",
+        prediction_runner=gpu,
+        analysis_mode=mode,
+    )
+    record = result.llm_trace["daily_execution"]
+    assert record["mode"] == mode and not record["fallback_attempted"]
+    assert len(record["attempts"]) == 1
+    assert {name for name, _, _ in calls} == ({"v2"} if mode == "v2_only" else {"api"})
+    assert result.response.status == ("completed" if mode == "v2_only" else "blocked")
+
+
+@pytest.mark.parametrize("failure", ["async", "streamed", "network"])
+def test_sdk_terminal_failures_are_safe_and_do_not_switch(confirmed, monkeypatch, caplog, failure):
+    from types import SimpleNamespace
+    from uuid import UUID
+
+    from pydantic import TypeAdapter
+    from tabpfn_client.api_models import FitStatus
+    from tabpfn_client.client import ServiceClient
+
+    private = "PRIVATE_SECRET_AND_REQUEST_ROWS"
+    calls = []
+
+    class FailingRegressor(FakeClientRegressor):
+        def predict(self, features, *, output_type):
+            calls.append(failure)
+            if failure == "network":
+                raise httpx.ConnectError(private)
+            if failure == "streamed":
+                return ServiceClient._validate_response(
+                    httpx.Response(200, json={"_streamed_error": True, "message": private}),
+                    "predict",
+                    TypeAdapter(dict),
+                )
+            return ServiceClient._wait_for_fit(UUID(int=1))
+
+    monkeypatch.setattr(
+        ServiceClient, "_resolve_async_settings", lambda: SimpleNamespace(poll_timeout_secs=1)
+    )
+    monkeypatch.setattr(
+        ServiceClient,
+        "_get_fit_status",
+        lambda **kw: SimpleNamespace(
+            status=FitStatus.FAILED,
+            error=private,
+            error_code="UNKNOWN_QUOTA_TEXT",
+        ),
+    )
+
+    def api(kwargs, directory, settings):
+        return _execute_compiled_dataset(
+            **kwargs,
+            reserved_output_dir=directory,
+            preserve_failure=True,
+            backend_parameters=MANAGED_BACKEND_PARAMETERS,
+            backend_factory=lambda spec: TabPFNClientBackend(
+                seed=spec.seed, regressor_class=FailingRegressor, client_version="0.6.1"
+            ),
+        )
+
+    result = execute_daily_dataset(
+        mode="api_preferred",
+        compiled_kwargs=confirmed,
+        managed_settings={},
+        api_executor=api,
+        v2_executor=lambda *a: pytest.fail("Unconfirmed failure switched models"),
+    )
+    assert calls == [failure]
+    assert result.response.status == "blocked"
+    assert result.response.error["code"] == ErrorCode.BACKEND_PREDICT_FAILED
+    assert (
+        private
+        not in json.dumps(result.llm_trace) + json.dumps(result.response.error) + caplog.text
+    )
+    for artifact in result.output_dir.rglob("*"):
+        if artifact.is_file():
+            assert private.encode() not in artifact.read_bytes()

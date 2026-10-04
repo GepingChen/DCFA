@@ -54,4 +54,6 @@ The thin entry and new submission prose are Apache-2.0. Parent and TabCF code ke
 MIT, and data/model licenses are separate; see `NOTICE`, `PARENT_MIT_LICENSE`,
 `TABCF_MIT_LICENSE`, and the example source/license files. `parent_commit.txt`
 identifies the bundled parent wheel; `parent_source.tar` contains its source.
+`tabcf_source.tar` and `tabcf_commit.txt` preserve the separately licensed TabCF
+submodule at the parent's recorded commit.
 Contest eligibility of this mixed-license package must be checked before submission.

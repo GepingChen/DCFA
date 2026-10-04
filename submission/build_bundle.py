@@ -55,7 +55,22 @@ def main():
         with (out / "requirements.lock").open("a") as stream:
             stream.write("\n--find-links ./wheels\ndcfa==0.1.0\nagentic-tabcf-entry==0.1.0\n")
         shutil.copy2(source / "LICENSE", out / "PARENT_MIT_LICENSE")
-        shutil.copy2(source / "third_party/TabCF/LICENSE", out / "TABCF_MIT_LICENSE")
+        # git archive omits submodule contents. Export the parent's recorded
+        # TabCF commit, not whatever happens to be checked out locally.
+        tabcf_commit = subprocess.check_output(
+            ["git", "ls-tree", commit, "third_party/TabCF"], cwd=root, text=True
+        ).split()[2]
+        tabcf_repository = root / "third_party/TabCF"
+        license_text = subprocess.check_output(
+            ["git", "show", f"{tabcf_commit}:LICENSE"], cwd=tabcf_repository
+        )
+        (out / "TABCF_MIT_LICENSE").write_bytes(license_text)
+        subprocess.run(
+            ["git", "archive", "--format=tar", "-o", str(out / "tabcf_source.tar"), tabcf_commit],
+            cwd=tabcf_repository,
+            check=True,
+        )
+        (out / "tabcf_commit.txt").write_text(tabcf_commit + "\n")
         shutil.copytree(source / "examples/cigarette_demand_small", out / "examples/cigarette")
         (out / "parent_commit.txt").write_text(commit + "\n")
         # Retain source alongside the wheels; no separate statistical implementation.

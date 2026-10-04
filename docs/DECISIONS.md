@@ -1148,3 +1148,9 @@ showcase assets and deployment to GPChen01/dcfa-zerogpu.
   existing licenses. Contest eligibility is a later submission decision.
 - Details and measured evidence: `HACKATHON_IMPLEMENTATION_20261004.md`.
   No deployment, new public repository, formal freeze or submission is authorized.
+
+- Packaging acceptance found that `git archive` omits submodules. Export the
+  TabCF source and MIT notice from the parent's recorded gitlink commit into
+  separate files; do not copy a potentially different working submodule checkout.
+  The first failed bundle is retained. A corrected bundle installed and ran from
+  a clean Python 3.11 environment, including a real verified 3.5 smoke.

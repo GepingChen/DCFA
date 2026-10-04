@@ -90,12 +90,53 @@ was unavailable. Screenshots and `browser-acceptance.json` are preserved under
 
 The original focused checks passed 25/25 after repairing the obsolete callback
 fake. The final full suite passed 273/273. A subsequently added measurement-write-failure
-regression check passed separately (one additional test). Subsequent local-dialogue/entry,
+regression check passed separately (one additional test). The affected local-dialogue/entry,
 daily-mode, Space, website and comparison checks passed 135/135, including the
-new recovery and fixed-policy cases. Final packaging and real-browser acceptance
-are recorded separately in the local delivery artifacts; a successful source test
-alone does not establish either of those outcomes.
+new recovery and fixed-policy cases. The relevant commands were `.venv/bin/python -m pytest -q`, focused pytest
+paths, and Ruff check/format check. The additional regression specifically proves
+that failure to save measurement output cannot trigger another fit.
 
 No new source hash, freeze, snapshot baseline or promotion gate was introduced.
 Existing independent verification remains strict. No new public repository,
 Space deployment, contest terms acceptance or contest submission was performed.
+
+
+## Clean installation and final local package
+
+A fresh Python 3.11.13 virtual environment installed the exported dependency lock
+and both local wheels. Import locations were checked under `site-packages`, outside
+the development checkout. The entry launched on port 7864, showed the requested
+title and API-only transfer policy, and `/readyz` reported ready. The original
+saved v2 asset loaded from the installed wheel and its 15-member ZIP was readable;
+its original source identity was preserved.
+
+An installed-package synthetic strong-IV execution (128 rows, seed 20261004,
+`api_only`) completed using `TabPFN v3.5_default`, with no fallback. Independent
+verification returned valid for run `run_3839e5fc33556a1358c751c1`, bundle
+`bundle_0fcda4cad62cc73afd1c3d1f`. Client attempt time was 22.909 seconds; daily
+usage increased 330,000→360,000 and monthly usage 400,000→430,000 computation
+tokens. Server time remains unavailable. This installed smoke is separate from
+the completed browser cigarette journey and five paired measurements.
+
+Acceptance files are under `artifacts/local/hackathon-implementation-v1/`, including
+`clean-installed-smoke/acceptance.json`. The accepted runtime wheel was built from
+`4fa8c1cd155f7741ba49ea142bad2b0cd1faa185`. The subsequent packaging correction
+and documentation do not change parent or entry runtime code; the final bundle
+records its actual build commit in `parent_commit.txt`.
+
+The first export failed because Git archives omit the TabCF submodule. The fixed
+builder exports its recorded gitlink source and license separately, with
+`tabcf_commit.txt`; it preserves parent MIT and new-entry Apache notices.
+The failed export directory is retained. Build with:
+
+```sh
+.venv/bin/python submission/build_bundle.py --output-dir <fresh-directory> --results-dir <curated-public-results>
+```
+
+Install from that exported directory with `python -m pip install -r requirements.lock`,
+then launch `agentic-tabcf`. A new CSV analysis uses provider quota; saved results
+are read-only replays. The final local ZIP contains the wheel pair, dependency lock,
+parent/TabCF sources, notices, public/synthetic inputs, five paired results, the real
+cigarette report, screenshots, clean-install evidence and the demonstration script.
+No video was recorded. Mixed-license contest eligibility still requires review
+before any separately authorized submission.

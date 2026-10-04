@@ -369,7 +369,8 @@ wall time; server time is null when unavailable. Logs and results are local outp
 
 `submission/build_bundle.py --output-dir <fresh-dir> --results-dir <public-results>`
 builds the current committed parent wheel plus a thin Apache entry, exports parent
-source, copies the two runtime configs, locks, notices and public example. Install
+source and the pinned TabCF submodule source/license, copies the two runtime
+configs, locks, notices and public example. Install
 from the exported directory with `pip install -r requirements.lock`, then run
 `agentic-tabcf`. Parent and data licenses remain independent.
 

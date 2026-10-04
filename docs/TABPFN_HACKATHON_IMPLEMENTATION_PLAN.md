@@ -2,13 +2,15 @@
 
 Implementation plan — 2026-10-03
 
-Status (2026-10-04): implementation authorized and underway. The 3.5 migration
+Status (2026-10-04): authorized local implementation and measurements complete. The 3.5 migration
 was already committed before this task. Local reviewed-dialogue entry, bounded
 comparison, measurements and package builder are implemented. Five paired real
 v2/3.5 seeds completed; details and limitations are in
 [the implementation record](HACKATHON_IMPLEMENTATION_20261004.md).
 The real cigarette browser journey and downloaded ZIP verification passed.
-Final clean-package acceptance is tracked separately.
+Clean Python 3.11 wheel installation, entry startup, saved-report readback and a
+real installed 3.5 execution passed. The local bundle includes results and source.
+Video recording and mixed-license contest eligibility remain outside this delivery.
 No new repository, deployment or contest submission is authorized.
 
 The original planning snapshot below is retained as history; it is not current

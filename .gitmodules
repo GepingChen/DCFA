@@ -1,4 +1,4 @@
 [submodule "third_party/TabCF"]
 	path = third_party/TabCF
-	url = https://github.com/GepingChen/TabCF.git
+	url = ../TabCF.git
 	branch = main

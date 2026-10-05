@@ -7,10 +7,56 @@ from tempfile import gettempdir
 
 import numpy as np
 
-from dcfa.canonical import is_sha256_digest
+from dcfa.canonical import is_sha256_digest, to_primitive
 from dcfa.constants import EstimatorBackend, EvidenceStatus
 from dcfa.evidence import EvidenceLedger, validate_bundle_evidence
 from dcfa.schemas import BackendManifest, ResultBundle
+
+TABPFN_BOUNDARIES = {
+    "local": (
+        "> **Development-only local TabPFN v2 output.** The model artifact identity "
+        "is recorded, but the ZeroGPU runtime is not release-locked. This run is not "
+        "eligible for locked Track T evaluation and must not support a release claim."
+    ),
+    "managed": (
+        "> **Development-only managed TabPFN output.** This run is service-version-"
+        "traceable but not checkpoint/image-hash reproducible, is not eligible for "
+        "locked Track T evaluation, and must not support a release claim."
+    ),
+    "development": (
+        "> **Development-only TabPFN output.** Use the recorded backend manifest to "
+        "identify the execution profile. This run is not eligible for locked Track T "
+        "evaluation and must not support a release claim."
+    ),
+}
+
+
+def report_boundary(bundle, backend_manifest=None) -> str:
+    """Describe the recorded execution profile without changing its evidence status."""
+    b = to_primitive(bundle)
+    backend = to_primitive(backend_manifest) if backend_manifest is not None else None
+    if b["evidence_status"] == EvidenceStatus.DEVELOPMENT_ONLY.value:
+        if b["estimator_backend"] == EstimatorBackend.SKLEARN_QUANTILE_FALLBACK.value:
+            boundary = (
+                "> **Development-only engineering output.** This run uses "
+                "a local scikit-learn quantile approximation. "
+                "It is not a TabCF estimate, is not eligible for locked Track T evaluation, "
+                "and must not support a headline causal claim."
+            )
+        elif backend_manifest is not None and is_sha256_digest(backend["model_artifact_hash"]):
+            boundary = TABPFN_BOUNDARIES["local"]
+        elif (
+            backend_manifest is not None
+            and backend["model_artifact_hash"] == "managed_service_checkpoint_not_locally_available"
+        ):
+            boundary = TABPFN_BOUNDARIES["managed"]
+        else:
+            boundary = TABPFN_BOUNDARIES["development"]
+    else:
+        boundary = (
+            "> Locked Track T result; release eligibility still requires the release validator."
+        )
+    return boundary
 
 
 def render_markdown_report(
@@ -18,48 +64,20 @@ def render_markdown_report(
     ledger: EvidenceLedger,
     *,
     backend_manifest: BackendManifest | None = None,
+    specification=None,
+    dataset_manifest=None,
 ) -> str:
     validate_bundle_evidence(bundle, ledger)
-    if bundle.evidence_status is EvidenceStatus.DEVELOPMENT_ONLY:
-        if bundle.estimator_backend is EstimatorBackend.SKLEARN_QUANTILE_FALLBACK:
-            boundary = (
-                "> **Development-only engineering output.** This run uses "
-                "a local scikit-learn quantile approximation. "
-                "It is not a TabCF estimate, is not eligible for locked Track T evaluation, "
-                "and must not support a headline causal claim."
-            )
-        elif backend_manifest is not None and is_sha256_digest(
-            backend_manifest.model_artifact_hash
-        ):
-            boundary = (
-                "> **Development-only local TabPFN v2 output.** The model artifact identity "
-                "is recorded, but the ZeroGPU runtime is not release-locked. This run is not "
-                "eligible for locked Track T evaluation and must not support a release claim."
-            )
-        elif (
-            backend_manifest is not None
-            and backend_manifest.model_artifact_hash
-            == "managed_service_checkpoint_not_locally_available"
-        ):
-            boundary = (
-                "> **Development-only managed TabPFN output.** This run is service-version-"
-                "traceable but not checkpoint/image-hash reproducible, is not eligible for "
-                "locked Track T evaluation, and must not support a release claim."
-            )
-        else:
-            boundary = (
-                "> **Development-only TabPFN output.** Use the recorded backend manifest to "
-                "identify the execution profile. This run is not eligible for locked Track T "
-                "evaluation and must not support a release claim."
-            )
-    else:
-        boundary = (
-            "> Locked Track T result; release eligibility still requires the release validator."
-        )
+    boundary = report_boundary(bundle, backend_manifest)
     if bundle.distribution is not None:
         from dcfa.distribution_reporting import distribution_report
 
-        return distribution_report(bundle, boundary=boundary)
+        return distribution_report(
+            bundle,
+            boundary=boundary,
+            specification=specification,
+            dataset_manifest=dataset_manifest,
+        )
     lines = [
         "# Agentic TabCF report",
         "",

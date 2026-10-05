@@ -334,8 +334,11 @@ artifacts.
 - `tabcf_iv/distribution.py`: CPU-only original-unit projection from existing CDF,
   quantile and CDF-threshold predictions. No estimator or support/grid changes.
 - `distribution_reporting.py`: rounded visitor tables, visible interpretation
-  limits at the end in small text, a two-panel CDF/CDF-derived-PDF plot and
-  `distribution_results.json`; `artifact_validation.py` verifies the projection.
+  limits grouped by recognized text at the end, confirmed role/sample context,
+  summary evidence references and stored support/diagnostics. CDF/CDF-derived-PDF
+  panels are stacked at full range. Complete grid evidence remains in
+  `distribution_results.json`; `artifact_validation.py` checks compact human
+  projections plus complete machine evidence and retains the legacy report path.
 - `dialogue_ui.py`: completed numeric reports support cached chat follow-ups without
   another provider request; model objects and credentials never enter session state.
 - Focused verification: `.venv/bin/python -m pytest
@@ -349,7 +352,14 @@ artifacts.
 The Space defaults to a static Example report tab; the local app retains its
 upload-first UI. The example has no provider, GPU or conversation event handlers.
 Its original report and PNG match the saved ZIP; the CSV matches the checked-in
-cigarette example. Missing files show an unavailable message without computation.
+cigarette example. `display_report.md`, `display_summary.png` and `display_report.zip`
+are explicitly labeled presentation derivatives; the readable ZIP includes unchanged
+original members under `original/run-0001/`. The original download remains available.
+Regenerate only these display assets with
+`.venv/bin/python -m dcfa_website_demo.prepared_report` (no model calls or fitting).
+The historical run remains verifiable using its recorded source revision; the current
+verifier's existing source-tree check is unchanged. Missing files show an unavailable
+message without computation.
 
 Targeted verification: `.venv/bin/python -m pytest tests/integration/test_prepared_report.py tests/integration/test_zerogpu_space.py tests/integration/test_website_demo.py`.
 

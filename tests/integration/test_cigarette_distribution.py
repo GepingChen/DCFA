@@ -250,11 +250,21 @@ def test_composite_fake_tabpfn_two_fits_cache_and_artifact(wide_fake_ranks, tmp_
     assert not any(word in body for word in ("gap", "narrows", "widens", "cross"))
     assert "Grid endpoint flags" not in body
     assert "Change (120 − 100)" in body
-    assert "| 25% | 38.8 | 31.9 | -6.9 |" in body
-    for index, query in enumerate(run.bundle.queries, 1):
-        assert query.evidence_id not in body
-        assert f"| [{index}] | `{query.query_id}` | {query.value_display}" in appendix
-        assert f"`{query.evidence_id}`" in appendix
+    assert "| 25% | 38.8 [1] | 31.9 [2] | -6.9 [3] |" in body
+    from dcfa.distribution_reporting import headline_queries
+
+    selected = headline_queries(run.bundle.distribution, run.bundle.queries)
+    assert len(selected) == (9 if threshold is None else 12)
+    for index, query in enumerate(selected, 1):
+        assert f"[{index}]" in body
+        assert f"| [{index}] | `{query['query_id']}` | {query['value_display']}" in appendix
+        assert f"`{query['evidence_id']}`" in appendix
+    assert "distribution_results.json" in appendix
+    assert "cdf:0:0" not in appendix
+    assert "**Sample:** 144 observations" in body
+    assert "Y = `log_packs_per_capita`" in body
+    assert body.index("**Question:**") < body.index("![")
+    assert "Empirical support and diagnostics" in appendix
     assert (tmp_path / "run/interventional_summary.png").stat().st_size > 1000
     assert any(w.code == "QUANTILE_GRID_ENDPOINT" for w in run.bundle.warnings)
 
@@ -289,12 +299,14 @@ def test_csv_composite_cpu_finalize(wide_fake_ranks, monkeypatch, tmp_path):
     assert "percentage points" in rendered[2]
     assert rendered[4] is not None
     assert "Not resolved on grid" in rendered[2]
-    assert "development_only" not in rendered[2]
+    assert "development_only" not in rendered[2].split("<details>")[0]
     assert "Warnings:" not in rendered[2]
     assert "Warnings and interpretation limits" in rendered[3]
     assert "<small " in rendered[3]
-    assert "Instrument exclusion and exogeneity remain assumptions" in rendered[3]
-    assert all(q.evidence_id not in rendered[2] for q in result.response.queries)
+    assert "Relevance, exclusion, instrument exogeneity" in rendered[3]
+    assert all(
+        q.evidence_id not in rendered[2].split("<details>")[0] for q in result.response.queries
+    )
 
     import zipfile
 
@@ -484,8 +496,6 @@ def test_default_prompt_and_optional_threshold_validation():
 
 
 def test_tiny_changes_do_not_generate_narrative():
-    from types import SimpleNamespace
-
     from dcfa.distribution_reporting import distribution_markdown
 
     d = replace(compilation().distribution, threshold=None)
@@ -493,7 +503,7 @@ def test_tiny_changes_do_not_generate_narrative():
     q = np.log([[60.0, 80.0, 100.0], [60.0, 80.0 - 1e-10, 100.0 - 2e-10]])
     f = [[0.0, 0.2, 0.8, 1.0], [0.0, 0.2 + 1e-15, 0.8 - 1e-15, 1.0]]
     result = derive_distribution(d, y, f, q, [[], []])
-    queries = [SimpleNamespace(query_id=m["key"], value_raw=m["value"]) for m in result["metrics"]]
+    queries = [{"query_id": m["key"], "value_raw": m["value"]} for m in result["metrics"]]
     report = distribution_markdown(result, queries)
     assert result["summary"] == "" and result["gap_change"] is None
     assert "-0.0" not in report

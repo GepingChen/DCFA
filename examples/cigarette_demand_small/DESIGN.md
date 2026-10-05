@@ -24,17 +24,28 @@ a population-weighted analysis, or an intervention on taxes.
 
 ## Default report
 
-1. Two-panel figure: estimated CDFs and CDF-derived approximate PDFs, with actual
-   prices, outcome units and a shared evaluated outcome range. A threshold marker
+1. Vertically stacked two-panel figure: estimated CDFs and CDF-derived approximate
+   PDFs, with actual prices, outcome units and a shared evaluated outcome range. A threshold marker
    and probability annotations appear only when explicitly requested.
 2. One compact table: 25th, 50th and 75th percentiles under each price, plus
    price 120 minus price 100 differences. No duplicate quantile-change plot.
 3. An optional table of the explicitly requested threshold probabilities.
-4. A collapsed technical appendix in the download: run/specification references,
-   evidence index and warning codes. Full diagnostics and support assessments
-   remain in `result_bundle.json`.
-5. All warnings and interpretation limits at the end in smaller readable text.
+4. Background before the figure: confirmed question, sample metadata, Y/X/Z,
+   comparison direction, units and model/display scales. Generic CSV reports use
+   only their own confirmed roles and dataset metadata.
+5. A collapsed technical appendix: run/specification references, summary evidence
+   references, stored support/diagnostic values and warning codes. Complete CDF/PDF
+   grid evidence remains in `distribution_results.json` and `evidence_records.jsonl`;
+   full diagnostics, support and raw warnings remain in `result_bundle.json`.
+6. All warnings and interpretation limits at the end in smaller readable text.
+   Known duplicate warnings are grouped by theme in the human projection only;
+   unknown or changed warning text and all triggered warnings remain visible.
    The browser, cached answer and download retain the applicable warnings.
+
+The saved example uses an explicitly labeled display-only derivative of its original
+run. Its original report, figure, ZIP and identity metadata remain unchanged and
+available separately. A readable ZIP includes the derivative and unchanged original
+run files. This is a presentation refresh, not a new scientific result.
 
 Do not generate automatic claims about narrowing/widening, larger upper-tail
 changes, CDF crossings or stochastic dominance. The 90th percentile and its

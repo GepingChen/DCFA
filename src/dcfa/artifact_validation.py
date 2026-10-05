@@ -1016,48 +1016,78 @@ def verify_run_directory(directory: Path) -> dict[str, Any]:
         )
 
     report_text = (root / "report.md").read_text(encoding="utf-8")
-    for query in estimates:
-        if (
-            str(query["evidence_id"]) not in report_text
-            or str(query["value_display"]) not in report_text
-        ):
+    from dcfa.distribution_reporting import (
+        COMPACT_REPORT_MARKER,
+        distribution_appendix,
+        distribution_context,
+        distribution_markdown,
+        distribution_warning_html,
+    )
+    from dcfa.reporting import report_boundary
+
+    if bundle.get("distribution") is not None and COMPACT_REPORT_MARKER in report_text:
+        # Grid evidence is already checked against the complete JSON/JSONL above.
+        # Validate every human projection, including warning meaning and stored diagnostics.
+        sections = (
+            distribution_context(
+                bundle["distribution"],
+                specification=specification,
+                dataset_manifest=dataset_manifest,
+            ),
+            distribution_markdown(bundle["distribution"], bundle["queries"]),
+            distribution_appendix(bundle),
+            distribution_warning_html(bundle, boundary=report_boundary(bundle, backend_manifest)),
+        )
+        if any(section not in report_text for section in sections):
             raise DCFAError(
                 ErrorCode.EVIDENCE_MISMATCH,
-                "Markdown report omitted an evidence ID or its validated display value.",
+                "Compact report differs from its validated context, evidence "
+                "or warning projection.",
                 stage="artifact.validation",
-                context={"query_id": query.get("query_id")},
             )
-        uncertainty_fields = (
-            ("interval_lower", "interval_upper")
-            if "interval_lower" in query and "interval_upper" in query
-            else (("standard_error",) if "standard_error" in query else ())
-        )
-        for field in uncertainty_fields:
-            if field in query and format(float(query[field]), ".6g") not in report_text:
+    else:
+        for query in estimates:
+            if (
+                str(query["evidence_id"]) not in report_text
+                or str(query["value_display"]) not in report_text
+            ):
                 raise DCFAError(
                     ErrorCode.EVIDENCE_MISMATCH,
-                    f"Markdown report omitted validated uncertainty field {field}.",
+                    "Markdown report omitted an evidence ID or its validated display value.",
                     stage="artifact.validation",
-                    context={"evidence_id": query.get("evidence_id")},
+                    context={"query_id": query.get("query_id")},
                 )
-    for warning in bundle.get("warnings", []):
-        if (
-            str(warning.get("code")) not in report_text
-            or str(warning.get("message")) not in report_text
-        ):
-            raise DCFAError(
-                ErrorCode.EVIDENCE_MISMATCH,
-                "Markdown report omitted a validated warning.",
-                stage="artifact.validation",
-                context={"warning_code": warning.get("code")},
+            uncertainty_fields = (
+                ("interval_lower", "interval_upper")
+                if "interval_lower" in query and "interval_upper" in query
+                else (("standard_error",) if "standard_error" in query else ())
             )
-    for assumption in bundle.get("assumptions", []):
-        if str(assumption) not in report_text:
-            raise DCFAError(
-                ErrorCode.EVIDENCE_MISMATCH,
-                "Markdown report omitted a validated assumption.",
-                stage="artifact.validation",
-            )
+            for field in uncertainty_fields:
+                if field in query and format(float(query[field]), ".6g") not in report_text:
+                    raise DCFAError(
+                        ErrorCode.EVIDENCE_MISMATCH,
+                        f"Markdown report omitted validated uncertainty field {field}.",
+                        stage="artifact.validation",
+                        context={"evidence_id": query.get("evidence_id")},
+                    )
+        for warning in bundle.get("warnings", []):
+            if (
+                str(warning.get("code")) not in report_text
+                or str(warning.get("message")) not in report_text
+            ):
+                raise DCFAError(
+                    ErrorCode.EVIDENCE_MISMATCH,
+                    "Markdown report omitted a validated warning.",
+                    stage="artifact.validation",
+                    context={"warning_code": warning.get("code")},
+                )
+        for assumption in bundle.get("assumptions", []):
+            if str(assumption) not in report_text:
+                raise DCFAError(
+                    ErrorCode.EVIDENCE_MISMATCH,
+                    "Markdown report omitted a validated assumption.",
+                    stage="artifact.validation",
+                )
     for allocation in bundle.get("action_allocations", []):
         if len(allocation) != 3 or any(
             value not in report_text

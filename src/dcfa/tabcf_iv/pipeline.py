@@ -737,9 +737,13 @@ class TabCFAnalysisEngine:
             _write_jsonl(artifact_paths["audit"], audit.events())
             _atomic_write(
                 artifact_paths["report"],
-                render_markdown_report(bundle, ledger, backend_manifest=backend_manifest).encode(
-                    "utf-8"
-                ),
+                render_markdown_report(
+                    bundle,
+                    ledger,
+                    backend_manifest=backend_manifest,
+                    specification=specification,
+                    dataset_manifest=dataset_manifest,
+                ).encode("utf-8"),
             )
             render_bundle_plot(bundle, ledger, artifact_paths["plot"])
             artifact_paths["report_manifest"] = output_dir / "report_manifest.json"

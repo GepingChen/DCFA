@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import html
 import importlib.metadata
+import json
 import logging
 import os
 import re
@@ -388,7 +389,7 @@ body,
 
 .demo-answer table {
   width: 100%;
-  min-width: 32rem;
+  min-width: 0;
   table-layout: auto;
   font-size: .9rem;
   line-height: 1.4;
@@ -398,15 +399,24 @@ body,
   padding: .45rem .7rem !important;
   height: auto !important;
   vertical-align: middle;
-  white-space: nowrap;
+  white-space: normal;
   word-break: normal;
-  overflow-wrap: normal;
+  overflow-wrap: anywhere;
   font-variant-numeric: tabular-nums;
 }
 
 .demo-answer code {
   overflow-wrap: anywhere;
   white-space: normal;
+}
+
+@media (max-width: 600px) {
+  .demo-answer table { font-size: .8rem; }
+  .demo-answer table th, .demo-answer table td { padding: .4rem .25rem !important; }
+}
+#example-plot img { object-fit: contain; }
+#example-plot, .demo-result-plot {
+  max-width: 760px; width: 100%; margin-inline: auto;
 }
 
 .demo-confirmation-plan { overflow-x: auto; }
@@ -1178,6 +1188,9 @@ def _execute_compiled_dataset(
             if response.queries and present_query(response.queries[0]).allow_numeric:
                 if tool.last_run.bundle.distribution is not None:
                     from dcfa.distribution_reporting import (
+                        archive_links_as_text,
+                        distribution_appendix,
+                        distribution_context,
                         distribution_markdown,
                         distribution_warning_html,
                         render_distribution_plot,
@@ -1186,11 +1199,26 @@ def _execute_compiled_dataset(
                     render_distribution_plot(
                         tool.last_run.bundle, tool.last_run.ledger, visitor_plot_path
                     )
-                    compilation.trace["distribution_report"] = distribution_markdown(
-                        tool.last_run.bundle.distribution, tool.last_run.bundle.queries
+                    compilation.trace["distribution_context"] = distribution_context(
+                        tool.last_run.bundle.distribution,
+                        specification=json.loads((output_dir / "specification.json").read_text()),
+                        dataset_manifest=manifest,
                     )
+                    compilation.trace["distribution_report"] = (
+                        distribution_markdown(
+                            tool.last_run.bundle.distribution, tool.last_run.bundle.queries
+                        )
+                        + "\n\n"
+                        + archive_links_as_text(distribution_appendix(tool.last_run.bundle))
+                    )
+                    from dcfa.reporting import report_boundary
+
                     compilation.trace["distribution_warnings"] = distribution_warning_html(
-                        tool.last_run.bundle
+                        tool.last_run.bundle,
+                        boundary=report_boundary(
+                            tool.last_run.bundle,
+                            json.loads((output_dir / "backend_manifest.json").read_text()),
+                        ),
                     )
                 else:
                     render_visitor_plot(
@@ -1516,7 +1544,18 @@ def format_portfolio_result(
         )
     presented = present_query(result.response.queries[0]) if result.response.queries else None
     return (
-        _status_html(result),
+        _status_html(result)
+        + (
+            '<div class="demo-answer">'
+            + "".join(
+                "<p>" + html.escape(line.replace("**", "").replace("`", "").lstrip("# ")) + "</p>"
+                for line in result.llm_trace.get("distribution_context", "").split("\n\n")
+                if line.strip()
+            )
+            + "</div>"
+            if result.llm_trace.get("distribution_context")
+            else ""
+        ),
         _state_graph_html(result.response, result.llm_trace),
         (
             result.llm_trace.get("daily_summary", "")
@@ -1900,6 +1939,7 @@ def build_app(
                 plot = gr.Image(
                     type="filepath",
                     label="Estimated outcome distributions and summaries",
+                    elem_classes="demo-result-plot",
                     show_label=False,
                     visible=False,
                 )

@@ -1,11 +1,55 @@
-# Agentic TabCF: Distributional Causal Analysis with TabPFN
+# Agentic TabCF: From a price question to a traceable analysis
 
-**TabPFN-3.5 powers both stages of a continuous-treatment distributional IV workflow.**
-Ask a question, review roles and units, confirm once, then inspect complete outcome
-CDFs, quantiles and threshold probabilities with evidence-linked warnings.
+**“If we raise the price, how would sales change?”** Agentic TabCF helps analysts
+with an appropriate research design turn that question into a plan they can
+review, statistical calculations, and a report they can inspect and share.
+
+Observed prices and sales can move together because of demand or other factors;
+that association alone does not tell us what changing the price would do. An
+average change can also hide differences between outcome distributions. Alongside
+mean questions, Agentic TabCF supports comparing lower, middle and upper points
+of the outcome distribution and the probability of exceeding a user-specified
+threshold. These comparisons describe distributions, not effects on particular
+people or groups.
+
+## Who it is for, and what goes in
+
+This development prototype is for analysts who already have a defensible
+instrumental-variable (IV) design: a source of variation that affects the treatment
+and meets the assumptions needed to separate its effect from confounding. The app
+does not discover or establish a valid instrument, and uploading a CSV alone does
+not make an analysis causal.
+
+Supply an authorized CSV, identify the outcome (Y), continuous treatment (X) and
+instrument (Z), and describe the comparison, units and any outcome threshold in
+plain language. The current upload accepts exactly three numeric columns and
+120–256 rows, with continuous outcome and treatment; it does not support additional
+adjustment variables (W). Do not remove variables that your research design needs
+just to fit this interface. Requested interventions must pass support checks.
+
+## What the user gets
+
+1. **A plan to check before running.** Review the column roles, units, treatment
+   values and comparison direction, then confirm with the dedicated button. This
+   lets you catch a wrong column or a log-versus-original-unit misunderstanding
+   before the calculation.
+2. **A report with inspectable results.** For a distribution request, compare
+   outcome curves, selected quantiles and, when requested, threshold probabilities.
+   Tables, plots and downloads retain evidence references and warnings so you can
+   trace a displayed result back to the calculation and see its limitations.
+3. **Clear limits and reusable results.** Support checks stop unsupported
+   comparisons instead of presenting them as answers. Ordinary follow-ups reuse
+   the completed report without fitting again; a different analysis requires reset.
+
+Gemini helps turn the conversation into a reviewable plan. **TabPFN-3.5 supplies
+the predictive models in both stages of the existing TabCF statistical method.**
+TabCF code computes the intervention comparisons; the report layer presents the
+validated results. Gemini does not calculate the causal numbers. See
+[Project description](PROJECT.md) for the division of work and statistical limits.
 
 This is a local, runnable entry package, not a submitted contest entry. All results
-remain `development_only`. See `PROJECT.md` for scope and limitations.
+remain `development_only`. The paths and commands below refer to an extracted
+submission bundle; saved results can be read without making provider calls.
 
 ## Run (Python 3.11)
 
@@ -27,9 +71,11 @@ Open <http://127.0.0.1:7860>. `PORT` selects another local port. The entry uses 
 Gemini receives conversation and column names; Prior Labs receives selected Y/X/Z
 rows. Use only authorized shareable inputs and review the transfer consent.
 
-## Examples
+## Examples and reproduction
 
-- Upload `examples/cigarette/cigarette_144.csv`. Set seed **20260920** in Advanced
+- The cigarette example is an exploratory comparison of **state–year per-capita
+  sales**, not individual smoking. Upload `examples/cigarette/cigarette_144.csv`.
+  Set seed **20260920** in Advanced
   settings. Paste the main prompt in `examples/cigarette/PROMPTS.md` and append its
   explicit probability-above-120 sentence. Review the exact 100→120 prices,
   natural-log storage, quartiles and direction before clicking Confirm.

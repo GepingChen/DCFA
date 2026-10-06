@@ -1,20 +1,54 @@
 # Two-to-three-minute demonstration script
 
-- **0:00–0:25 — Question.** Show the title and explain why two interventions can
-  change quantiles or threshold probabilities even when a mean summary is incomplete.
-- **0:25–0:55 — Review.** Upload the public cigarette CSV. Show missing-information
-  clarification, Y/X/Z, no W, log storage, original price units and the 100→120
-  comparison. Point out the explicit transfer consent and confirmation button.
-- **0:55–1:40 — Result.** Use the genuine 3.5 run, or label the saved report as a
-  replay. Show both CDFs, quartiles, price-120-minus-price-100 differences and the
-  illustrative probability of exceeding 120 packs per person per year.
-- **1:40–2:10 — Evidence.** Download the report. Show the model version, warnings
-  and independently verified bundle. Ask a follow-up and show cached behavior.
-- **2:10–2:35 — Boundaries.** Show a request with W refused before fitting. Explain
-  that diagnostics cannot establish IV validity and the aggregate example is not
-  an individual or policy-effectiveness claim.
-- **2:35–2:55 — Reproduce.** Show the wheel-based install, public/synthetic examples,
-  and the five-seed comparison including any regressions. State that API/GPU
-  timings describe their distinct execution environments.
+Use the existing genuine TabPFN-3.5 result as a clearly labeled **saved replay**
+for this short walkthrough. Prepare the review screen and result views before
+recording; do not make a new paid call just to capture the video. If showing a
+live execution separately, disclose any wait or fast-forward. The timings below
+are presentation time, not a claim about analysis speed.
 
-Do not imply a replay is a live call, or a mechanics smoke is statistical validation.
+- **0:00–0:25 — Start with the analyst's question.** “If we raise the price, how
+  would sales change? Prices and sales can move together for reasons other than
+  the price change itself. This tool is for analysts who already have an
+  appropriate instrumental-variable research design.” Show the question, then
+  introduce the cigarette example as an exploratory comparison of state–year
+  per-capita sales, not individual smoking.
+- **0:25–0:55 — Make the question checkable.** Show the public CSV and plan:
+  outcome Y, price X, instrument Z, no adjustment variables W, existing log
+  storage and prices of 100→120 CPI-deflated cents per pack. Show clarification
+  if information is missing. “Gemini helps prepare the plan. I check the columns,
+  units and comparison before confirming.” Point out the separate data-transfer
+  consent and dedicated confirmation button; Gemini receives the conversation
+  and column names, while Prior Labs receives the selected rows.
+- **0:55–1:35 — Read the saved result.** Keep the replay label visible. “An average
+  alone can miss how the distribution changes. Here we compare lower, middle and
+  upper positions, plus the probability of exceeding a threshold I specified.”
+  Show both outcome distribution curves (CDFs), the 25th/50th/75th percentiles and
+  price-120-minus-price-100 differences. Show the probability above 120 packs per
+  person per year only from the saved run that requested it. Explain that the
+  threshold is illustrative and the percentiles do not identify effects on
+  individuals or groups. Keep unresolved values and warnings visible.
+- **1:35–2:05 — Explain the work and trace a result.** “TabPFN-3.5 supplies the
+  predictive models in both stages. The existing TabCF method computes the
+  intervention comparisons; the report presents the checked results. Gemini does
+  not calculate the causal numbers.” Show the model version and follow one
+  displayed result to its evidence reference in the downloaded bundle. Show an
+  ordinary follow-up reusing the saved report without another fit.
+- **2:05–2:35 — Show the limits.** Show an existing refusal of a request with W,
+  or explain the restriction without claiming to have demonstrated it. “This is
+  not causal analysis for any CSV. Unsupported comparisons stop; diagnostics do
+  not prove the instrument is valid.” Note unresolved income, state/year effects
+  and within-state dependence in this example. Retain `development_only`; make
+  no individual-effect, significance or policy-benefit claim.
+- **2:35–2:55 — Close with what was built and how to inspect it.** “TabCF predates
+  this entry. Our hackathon work connects a reviewed question to TabPFN-3.5
+  computation and a traceable report.” Show the bundle's install instructions,
+  public/synthetic examples and five-seed comparison, including regressions or
+  missing pairs. API and GPU timing reflects different execution environments;
+  the comparison does not establish general superiority or user time savings.
+
+Recording checks: use only authorized shareable data, hide credentials, and do
+not portray a replay as a live call or a mechanics smoke as statistical validation.
+Do not invent a refusal clip or a numerical finding that the saved evidence lacks.
+The separate installation-free example report is follow-up work; add its entry
+in the README after the product introduction and before installation only when
+the file exists and its links have been checked.

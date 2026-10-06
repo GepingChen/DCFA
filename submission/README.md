@@ -50,6 +50,13 @@ validated results. Gemini does not calculate the causal numbers. See
 This is a local, runnable entry package, not a submitted contest entry. All results
 remain `development_only`. The paths and commands below refer to an extracted
 submission bundle; saved results can be read without making provider calls.
+For a short walkthrough, see the [Demo script](DEMO_SCRIPT.md).
+
+The v4 package updates these submission documents while retaining v3's runtime,
+source archives and saved results. `parent_commit.txt` identifies that retained
+runtime, not the newer prose; `PACKAGE_ACCEPTANCE.json` records the documentation
+revision and distinguishes this update from the historical runtime checks.
+Documentation inside the retained source archives is historical.
 
 ## Run (Python 3.11)
 

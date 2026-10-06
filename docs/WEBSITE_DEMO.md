@@ -36,6 +36,18 @@ configuration/secret files unchanged. `requirements.txt` beside these sources
 records the retained runtime pin. Check the Space build and live default tab,
 download, interactive tab and `/analyze_v2` API registration after upload.
 
+Presentation deployment verified on 2026-10-06: Space commit
+`84e9e84bd80f219150751379adad6871002b8e62` reached `RUNNING`; website commit
+`95ef77b7c2c935217863611f8c7132c8a561e39a` passed GitHub Pages deployment.
+Chrome checks covered desktop and 390px layouts, embedded report, native evidence
+disclosures, keyboard disclosure, project link and the existing CSV login/consent
+controls. All 27 prior API names remain registered, including `analyze_v2`;
+Gradio added one outer login-status callback. The Space HTML download and public
+static page match the source report bytes. No live model fit or authenticated
+provider execution was repeated. Local `file://` opening remains unverified
+because browser-tool policy blocks that protocol. Verification records and
+screenshots are under `artifacts/local/space-report-deployment-20261006/`.
+
 **Upload CSV** and **Run synthetic example** retain their live execution flows.
 The Space requires Hugging Face login before live computation. The three
 synthetic presets use a typed median contrast without Gemini; their statistics

@@ -23,6 +23,7 @@ for current behavior.
 | `src/dcfa/agent/` | Explicit compiler/state/runtime, identical-recorded-tool harness, and bounded Gemini live-smoke adapter |
 | `src/dcfa/app.py` | Public TabCF-only lazy Gradio shell |
 | `src/dcfa_website_demo/` | Visitor-safe presentation mappings/plot, single-turn Gemini compiler, Space-only multi-turn CSV dialogue, strict CSV ingress, native ZeroGPU wrapper, and health-checkable local ASGI wrapper; outside the statistical source hash |
+| `src/dcfa_website_demo/upload_cleanup.py` | Shared temporary-upload deletion for local and ZeroGPU CSV callbacks; standard-library-only import, preserving resolved-path containment within `GRADIO_TEMP_DIR` |
 | `src/dcfa_showcase/` | Offline freeze/export/verifier for the hash-bound public prepared replay; outside the statistical source hash |
 | `src/dcfa_colab/` | Secret-scoped notebook adapter, local CSV preflight, verified archive export, and notebook static validator; outside the statistical source hash |
 | `showcase/prepared_demo_v1/` | Committed public-safe prompt, synthetic CSV, visitor projection, plot, and verification manifest |

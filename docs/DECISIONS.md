@@ -1181,3 +1181,15 @@ showcase assets and deployment to GPChen01/dcfa-zerogpu.
   Full original runtime tests and independent example verification passed. No
   contest submission, model call or deployment was performed. See
   `HACKATHON_PUBLICATION_20261006.md` for the source-publication boundary and checks.
+
+## 2026-10-06 — Local CSV cleanup without ZeroGPU dependencies
+
+- A clean install of the published contest lock could start the service, but reset,
+  upload invalidation and completed-analysis cleanup imported the ZeroGPU module
+  and failed because the API-only lock intentionally does not include `spaces`.
+- Move the shared upload-deletion helper into a standard-library-only module.
+  Preserve resolved-path containment, missing-file handling and the existing
+  ZeroGPU helper import name. Do not install optional GPU packages for local cleanup.
+- Apply the same scoped fix to the parent and public contest source. Publish new
+  contest wheels at 0.1.1; retain 0.1.0 wheels and historical saved evidence.
+  This correction changes no statistical calculation or research protocol.

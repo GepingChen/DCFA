@@ -47,6 +47,10 @@ TabCF code computes the intervention comparisons; the report layer presents the
 validated results. Gemini does not calculate the causal numbers. See
 [Project description](PROJECT.md) for the division of work and statistical limits.
 
+For the actual submission sequence, read [the Chinese submission guide](SUBMISSION_GUIDE_ZH.md)
+in the extracted v6 ZIP, or [the repository guide](../docs/HACKATHON_SUBMISSION_GUIDE_ZH.md)
+in a source checkout. [FORM_TEXT.md](FORM_TEXT.md) contains copy-ready English entry text.
+
 This is a local, runnable entry package, not a submitted contest entry. All results
 remain `development_only`. The paths and commands below refer to an extracted
 submission bundle; saved results can be read without making provider calls.
@@ -69,14 +73,14 @@ To regenerate it from this extracted package, point the included standard-librar
 script at the ZIP you downloaded and choose an output path:
 
 ```bash
-python3 report_tools/generate_example_report.py --archive /path/to/agentic-tabcf-submission-v5.zip --output /path/to/rebuilt-report.html
+python3 report_tools/generate_example_report.py --archive /path/to/agentic-tabcf-submission-v6.zip --output /path/to/rebuilt-report.html
 ```
 
 In a repository checkout, `python3 submission/generate_example_report.py` defaults
 to the historical `artifacts/local/agentic-tabcf-submission-v3.zip`. Neither command
 modifies the input ZIP or invokes an estimator.
 
-The v5 package includes this report and current submission documents while retaining v3's runtime,
+The v6 package includes this report, submission guide and entry text while retaining v3's runtime,
 source archives and saved results. `parent_commit.txt` identifies that retained
 runtime, not the newer presentation; `PACKAGE_ACCEPTANCE.json` records the presentation
 revision and distinguishes this update from the historical runtime checks.

@@ -49,8 +49,21 @@ def main():
                 ],
                 check=True,
             )
-        for name in ("README.md", "PROJECT.md", "DEMO_SCRIPT.md", "LICENSE", "NOTICE"):
+        for name in (
+            "README.md",
+            "PROJECT.md",
+            "DEMO_SCRIPT.md",
+            "LICENSE",
+            "NOTICE",
+            "FORM_TEXT.md",
+        ):
             shutil.copy2(entry / name, out / name)
+        shutil.copy2(
+            source / "docs/HACKATHON_SUBMISSION_GUIDE_ZH.md", out / "SUBMISSION_GUIDE_ZH.md"
+        )
+        shutil.copy2(
+            source / "docs/HACKATHON_PREPARATION_20261006.md", out / "PREPARATION_RECORD.md"
+        )
         shutil.copytree(entry / "reports", out / "reports")
         (out / "report_tools").mkdir()
         shutil.copy2(entry / "generate_example_report.py", out / "report_tools")
@@ -75,6 +88,7 @@ def main():
         )
         (out / "tabcf_commit.txt").write_text(tabcf_commit + "\n")
         shutil.copytree(source / "examples/cigarette_demand_small", out / "examples/cigarette")
+        shutil.copy2(entry / "CIGARETTE_PROMPTS.md", out / "examples/cigarette/PROMPTS.md")
         (out / "parent_commit.txt").write_text(commit + "\n")
         # Retain source alongside the wheels; no separate statistical implementation.
         shutil.copy2(archive, out / "parent_source.tar")

@@ -1154,3 +1154,17 @@ showcase assets and deployment to GPChen01/dcfa-zerogpu.
   separate files; do not copy a potentially different working submodule checkout.
   The first failed bundle is retained. A corrected bundle installed and ran from
   a clean Python 3.11 environment, including a real verified 3.5 smoke.
+
+## 2026-10-06 — Contest tutorial and readable source preparation
+
+- User requested a complete submission tutorial and preparation work. Re-read
+  official terms and prepare copy-ready English text plus Chinese instructions.
+- Keep the historical accepted runtime/wheels/lock/results. Add a local readable
+  source export with an Apache entry and unchanged MIT parent source, instead of
+  relabeling the existing public MIT parent repository or duplicating estimators.
+- Correct the extracted entry's local credential instructions without changing
+  the parent Space example or its OAuth flow. Keep all previous ZIP versions.
+- Preparation does not authorize a new remote repository, terms acceptance,
+  contest submission or deployment. Organizer acceptance of separate MIT/data
+  licenses remains unconfirmed. See `HACKATHON_PREPARATION_20261006.md` for
+  scoped verification and the exact remaining external steps.

@@ -4,7 +4,7 @@
 download the HTML and double-click it, or open it with your browser's File menu.
 No installation, API key, service or internet connection is needed. This is a
 presentation of the saved v3 TabPFN-3.5 cigarette run, with expandable evidence;
-it is not a new analysis. The v5 submission ZIP includes this report and the current
+it is not a new analysis. The v6 submission ZIP includes this report and the current
 documentation. Earlier ZIPs remain unchanged.
 
 **“If we raise the price, how would sales change?”** Answering this requires more

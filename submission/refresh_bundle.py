@@ -18,6 +18,10 @@ PRESENTATION_FILES = {
     'DEMO_SCRIPT.md': 'submission/DEMO_SCRIPT.md',
     'reports/cigarette-tabpfn35.html': 'submission/reports/cigarette-tabpfn35.html',
     'report_tools/generate_example_report.py': 'submission/generate_example_report.py',
+    'FORM_TEXT.md': 'submission/FORM_TEXT.md',
+    'SUBMISSION_GUIDE_ZH.md': 'docs/HACKATHON_SUBMISSION_GUIDE_ZH.md',
+    'PREPARATION_RECORD.md': 'docs/HACKATHON_PREPARATION_20261006.md',
+    'examples/cigarette/PROMPTS.md': 'submission/CIGARETTE_PROMPTS.md',
 }
 
 
@@ -52,7 +56,7 @@ def refresh(base_zip: Path, output: Path) -> None:
             'scope': 'Current prose and offline report; original runtime and results retained byte-for-byte.',
             'verification': 'ZIP integrity, retained-member byte equality, and presentation-file equality checked by this script.',
             'runtime_validation': 'Original runtime acceptance records are historical; this script does not execute models or install dependencies.',
-            'browser_validation': 'Local file rendering and interaction were not verified: browser tool security policy blocks file URLs.',
+            'browser_validation': 'Not performed by this script; see PREPARATION_RECORD.md for the separate localhost browser check of the unchanged offline report.',
             'release_status': 'Development-only local upload package; no contest submission or deployment implied.',
         }
         replacements['PACKAGE_ACCEPTANCE.json'] = (json.dumps(acceptance, indent=2) + '\n').encode()

@@ -49,6 +49,6 @@ are presentation time, not a claim about analysis speed.
 Recording checks: use only authorized shareable data, hide credentials, and do
 not portray a replay as a live call or a mechanics smoke as statistical validation.
 Do not invent a refusal clip or a numerical finding that the saved evidence lacks.
-The separate installation-free example report is follow-up work; add its entry
-in the README after the product introduction and before installation only when
-the file exists and its links have been checked.
+For the saved-result segment, open [the offline example report](reports/cigarette-tabpfn35.html).
+It includes the genuine v3 TabPFN-3.5 cigarette results, readable figures and
+expandable evidence without requiring a live service or credentials.

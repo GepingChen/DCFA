@@ -12,7 +12,6 @@ from pathlib import Path
 import zipfile
 
 ROOT = Path(__file__).resolve().parent.parent
-PREFIX = 'agentic-tabcf-submission-v3/'
 RUN = 'results/cigarette-35/attempt-1-api/'
 COLORS = ('#176c8c', '#b74b28')
 
@@ -27,8 +26,12 @@ def pretty(value: object) -> str:
 
 def render(archive: Path) -> str:
     with zipfile.ZipFile(archive) as source:
+        candidates = [name for name in source.namelist() if name.endswith('/' + RUN + 'result_bundle.json')]
+        if len(candidates) != 1:
+            raise ValueError('Expected one saved cigarette-35/attempt-1-api run.')
+        prefix = candidates[0][:-len(RUN + 'result_bundle.json')]
         def read(name: str) -> str:
-            return source.read(PREFIX + name).decode('utf-8')
+            return source.read(prefix + name).decode('utf-8')
 
         bundle = json.loads(read(RUN + 'result_bundle.json'))
         projection = json.loads(read(RUN + 'distribution_results.json'))

@@ -51,6 +51,9 @@ def main():
             )
         for name in ("README.md", "PROJECT.md", "DEMO_SCRIPT.md", "LICENSE", "NOTICE"):
             shutil.copy2(entry / name, out / name)
+        shutil.copytree(entry / "reports", out / "reports")
+        (out / "report_tools").mkdir()
+        shutil.copy2(entry / "generate_example_report.py", out / "report_tools")
         shutil.copy2(source / "requirements-website-demo.lock", out / "requirements.lock")
         with (out / "requirements.lock").open("a") as stream:
             stream.write("\n--find-links ./wheels\ndcfa==0.1.0\nagentic-tabcf-entry==0.1.0\n")

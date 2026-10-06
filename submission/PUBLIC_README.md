@@ -95,4 +95,6 @@ Root [LICENSE](LICENSE) is Apache-2.0 for the entry and new materials. The
 unchanged DCFA parent and TabCF reference code retain MIT; data and model/service
 terms remain separate. Read [NOTICE](NOTICE), `PARENT_MIT_LICENSE`,
 `TABCF_MIT_LICENSE` and the example's `SOURCE.md` / `GPL-2.0.txt`.
-This export is preparation, not confirmation of contest eligibility or submission.
+See [LICENSING.md](LICENSING.md) for the component-by-component scope and third-party
+attribution. Publishing this repository is separate from accepting contest terms
+or submitting an official entry; organizer acceptance is not asserted here.

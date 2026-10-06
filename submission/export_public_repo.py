@@ -5,6 +5,8 @@ from __future__ import annotations
 
 import argparse
 import io
+import json
+import re
 import tarfile
 import zipfile
 from pathlib import Path, PurePosixPath
@@ -76,6 +78,46 @@ def export(archive: Path, output: Path) -> None:
         write_member(output, "requirements.lock", package.read(prefix + "requirements.lock"))
 
     write_member(output, "README.md", (ROOT / "submission/PUBLIC_README.md").read_bytes())
+    write_member(output, "NOTICE", (ROOT / "submission/PUBLIC_NOTICE").read_bytes())
+    write_member(output, "LICENSING.md", (ROOT / "submission/LICENSING.md").read_bytes())
+    write_member(
+        output,
+        "examples/cigarette/README.md",
+        (ROOT / "submission/PUBLIC_CIGARETTE_README.md").read_bytes(),
+    )
+    # Historical documentation uses paths outside the focused source export.
+    parent_ref = (output / "parent_commit.txt").read_text().strip()
+    tabcf_ref = (output / "tabcf_commit.txt").read_text().strip()
+    source_note = output / "examples/cigarette/SOURCE.md"
+    source_note.write_text(
+        source_note.read_text().replace(
+            "../../third_party/TabCF/", f"https://github.com/GepingChen/TabCF/blob/{tabcf_ref}/"
+        )
+    )
+    parent_readme = output / "vendor/dcfa/README.md"
+    parent_readme.write_text(
+        re.sub(
+            r"\]\(([^)]+)\)",
+            lambda match: (
+                match.group(0)
+                if "://" in match.group(1) or match.group(1).startswith("#")
+                else f"](https://github.com/GepingChen/DCFA/blob/{parent_ref}/{match.group(1)})"
+            ),
+            parent_readme.read_text(),
+        )
+    )
+    # Publish workflow facts rather than account-level budget history and
+    # duplicated provider request telemetry. Bound numerical artifacts stay exact.
+    acceptance_path = output / "results/browser-acceptance.json"
+    acceptance = json.loads(acceptance_path.read_text())
+    acceptance.pop("api_usage", None)
+    acceptance.pop("measurement", None)
+    acceptance["public_projection_note"] = (
+        "Account-level quota history and duplicated request telemetry were omitted. "
+        "Original acceptance is retained in the local v6 ZIP; "
+        "bound result/evidence files are unchanged."
+    )
+    acceptance_path.write_text(json.dumps(acceptance, indent=2) + "\n")
     project = (output / "PROJECT.md").read_text()
     project = project.replace(
         "The v6 submission ZIP includes this report and the current\n"
@@ -118,7 +160,8 @@ def export(archive: Path, output: Path) -> None:
             b"Root src/ and pyproject.toml are the Apache-2.0 thin entry. Runtime files\n"
             b"and configs were copied unchanged from the accepted entry wheel.\n"
             b"vendor/dcfa/ contains the installable MIT parent source from parent_source.tar\n"
-            b"at parent_commit.txt; its source and package assets were copied unchanged.\n"
+            b"at parent_commit.txt; Python source and package assets are unchanged.\n"
+            b"Historical documentation links were adapted to this focused export.\n"
             b"The original accepted wheels and dependency lock remain the default install\n"
             b"path. To rebuild locally: python -m pip wheel --no-deps ./vendor/dcfa .\n\n"
             b"TabCF's original separate source archive is retained in the local v6 ZIP.\n"
@@ -130,8 +173,9 @@ def export(archive: Path, output: Path) -> None:
             b"The offline HTML is a presentation derivative; neither export refits models.\n"
             b"The full comparison, historical source archives and installation logs remain\n"
             b"in the separate local ZIP rather than this focused source repository.\n\n"
-            b"This directory has not been published or submitted. Contest acceptance of\n"
-            b"the Apache entry with separate MIT dependencies has not been confirmed.\n"
+            b"Root Apache-2.0 applies to the entry/new documentation. MIT dependencies\n"
+            b"and source data terms are disclosed in LICENSING.md and NOTICE.\n"
+            b"Repository publication and official contest submission are separate.\n"
         ),
     )
     print(f"Prepared {output}: {sum(p.is_file() for p in output.rglob('*'))} files; not published.")

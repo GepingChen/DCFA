@@ -1,5 +1,10 @@
 # TabPFN-3.5 Hackathon 提交教程
 
+2026-10-06 更新：用户授权的前三步已完成，源码已推送至
+[公开参赛仓库](https://github.com/GepingChen/agentic-tabcf-hackathon)，提交 `e2710cf`，
+GitHub 识别许可证为 Apache-2.0。见 [发布记录](HACKATHON_PUBLICATION_20261006.md)。
+官网操作和正式提交由用户完成。下文保留此前的完整准备教程。
+
 核对日期：2026-10-06。这是提交准备教程，不是已提交凭证。
 
 ## 先看截止时间和真正要交的东西

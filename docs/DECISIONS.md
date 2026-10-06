@@ -1168,3 +1168,16 @@ showcase assets and deployment to GPChen01/dcfa-zerogpu.
   contest submission or deployment. Organizer acceptance of separate MIT/data
   licenses remains unconfirmed. See `HACKATHON_PREPARATION_20261006.md` for
   scoped verification and the exact remaining external steps.
+
+## 2026-10-06 — Authorized dedicated hackathon repository publication
+
+- The user subsequently authorized pushing the reviewed entry to their existing
+  `GepingChen/agentic-tabcf-hackathon` repository, while reserving official-site
+  login/terms, form entry and final submission for themselves.
+- Publish an Apache-2.0 entry with explicit retained MIT/data/provider terms,
+  original verified runtime and public example evidence. Do not relabel third-party
+  components or modify source/evidence identities to make licensing appear uniform.
+- Normal push to main succeeded at `e2710cf`; GitHub recognized Public/Apache-2.0.
+  Full original runtime tests and independent example verification passed. No
+  contest submission, model call or deployment was performed. See
+  `HACKATHON_PUBLICATION_20261006.md` for the source-publication boundary and checks.

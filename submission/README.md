@@ -52,6 +52,32 @@ remain `development_only`. The paths and commands below refer to an extracted
 submission bundle; saved results can be read without making provider calls.
 For a short walkthrough, see the [Demo script](DEMO_SCRIPT.md).
 
+## Read the example first — no installation
+
+Open [the English cigarette example report](reports/cigarette-tabpfn35.html).
+For local viewing, double-click `reports/cigarette-tabpfn35.html` inside this
+`submission/` directory, or use your browser's **File → Open File**. If viewing
+on a source-hosting site, download the HTML and open the downloaded file.
+The page is self-contained: no Python, API key, dependencies, server or internet
+connection is required. It includes the charts and expandable original evidence.
+
+This is a presentation derivative of the real TabPFN-3.5 run at
+`results/cigarette-35/attempt-1-api/` in the historical v3 ZIP, not a new fit or
+the older v2 prepared report. It retains exploratory point-estimate limitations.
+To regenerate it as a maintainer, run from the repository root:
+
+```bash
+python3 submission/generate_example_report.py
+```
+
+The generator uses only the Python standard library and reads
+`artifacts/local/agentic-tabcf-submission-v3.zip`; optional `--archive` and
+`--output` arguments select file locations. It never modifies the input ZIP.
+The report and these new links still need to be included in a **new submission
+ZIP in a later packaging task**. Existing v3/v4 ZIPs have not been updated by
+this report task, and the current bundle builder does not automatically include
+this page.
+
 The v4 package updates these submission documents while retaining v3's runtime,
 source archives and saved results. `parent_commit.txt` identifies that retained
 runtime, not the newer prose; `PACKAGE_ACCEPTANCE.json` records the documentation

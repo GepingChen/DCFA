@@ -10,6 +10,7 @@ for current behavior.
 
 | Path | Current role |
 |---|---|
+| `submission/generate_example_report.py` | Standard-library offline renderer of the historical v3 ZIP's `results/cigarette-35/attempt-1-api/`; `python3 submission/generate_example_report.py` writes `submission/reports/cigarette-tabpfn35.html` with inline SVG and original evidence, without refitting or changing the ZIP; separate from bundle packaging |
 | `docs/LOCAL_ENVIRONMENTS.md` | Shared Conda core-development commands using command-scoped `PYTHONPATH`, without a persistent project install |
 | `src/dcfa/schemas.py` | Immutable TabCF, policy, semi-synthetic, evidence, backend, and run contracts |
 | `src/dcfa/evidence.py` | Shared ledger validation and Track T/H release gates |

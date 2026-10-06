@@ -1,5 +1,12 @@
 # Project description
 
+**Start with the [offline English example report](reports/cigarette-tabpfn35.html):**
+download the HTML and double-click it, or open it with your browser's File menu.
+No installation, API key, service or internet connection is needed. This is a
+presentation of the saved v3 TabPFN-3.5 cigarette run, with expandable evidence;
+it is not a new analysis. The report and new documentation links await inclusion
+in a new submission ZIP; existing ZIPs remain unchanged.
+
 **“If we raise the price, how would sales change?”** Answering this requires more
 than predicting sales from observed prices. For example, demand can affect both
 price and sales, so their correlation need not measure the effect of a price

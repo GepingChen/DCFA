@@ -14,11 +14,27 @@ four paths is locked Track T evidence or a general causal-analysis service.
 
 ## Hugging Face ZeroGPU path
 
-The canonical Space is `GPChen01/dcfa-zerogpu`. Its default **Example report**
-tab displays a saved real cigarette analysis without login, an API key, a provider
-request or GPU allocation. The CSV and original report ZIP are downloadable.
-The report retains its run version, evidence appendix and interpretation warnings;
-it is an exploratory Track T real-data demonstration, not a new analysis.
+The canonical Space is `GPChen01/dcfa-zerogpu`. The presentation entry under
+`deployment/huggingface/` puts the **TabPFN-3.5 example report** first, embedding
+`https://gepingchen.github.io/agentic-tabcf/cigarette-tabpfn35.html` and offering the
+same standalone HTML as a download. It is the existing v3 cigarette run
+`run_72e0e4a81aac75e7a91f3dbd`, not a new fit. Reading it requires no login,
+API key, provider request or GPU allocation. It retains exploratory point-estimate
+limitations and the full original evidence.
+
+**Interactive analysis** contains the existing authenticated app, still pinned
+to runtime `2bc2c9d9e43fcc3ee49dcc32fd4c9db5236c87e9`. Its inner **Example report**
+tab remains the separate historical v2 run. The new presentation does not change
+statistical execution, credentials, OAuth, quota fallback or remote API controls.
+The static website and Space download use the same bytes as
+`submission/reports/cigarette-tabpfn35.html`; the website project page links to it.
+
+To deploy the presentation, upload `app.py`, `presentation.py` and `README.md`
+from `deployment/huggingface/`, plus that report under the filename
+`cigarette-tabpfn35.html`, to the existing Space. Keep its requirements and
+configuration/secret files unchanged. `requirements.txt` beside these sources
+records the retained runtime pin. Check the Space build and live default tab,
+download, interactive tab and `/analyze_v2` API registration after upload.
 
 **Upload CSV** and **Run synthetic example** retain their live execution flows.
 The Space requires Hugging Face login before live computation. The three

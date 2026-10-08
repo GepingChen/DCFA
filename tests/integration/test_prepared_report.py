@@ -37,15 +37,13 @@ def _space_app():
     )
 
 
-def test_saved_report_is_default_and_has_no_execution_events() -> None:
+def test_upload_is_first_and_saved_report_has_no_execution_events() -> None:
     saved = prepared_report.load_prepared_report()
     app = _space_app()
     components = app.config["components"]
     tabs = [c["props"]["label"] for c in components if c["type"] == "tabitem"]
-    assert tabs == ["Example report", "Upload CSV", "Run synthetic example"]
-    assert (
-        next(c for c in components if c["type"] == "tabs")["props"]["selected"] == "saved_example"
-    )
+    assert tabs == ["Analyze your data", "Example report"]
+    assert next(c for c in components if c["type"] == "tabs")["props"]["selected"] == "csv"
     config = json.dumps(app.config, default=str)
     assert saved.report in [c["props"].get("value") for c in components]
     assert saved.warnings in [c["props"].get("value") for c in components]

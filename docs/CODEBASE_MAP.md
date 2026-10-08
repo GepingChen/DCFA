@@ -276,7 +276,7 @@ next action, and never exposes state reasons or tool counts. Gradio generator
 events hide native percentage progress, disable both submit buttons during a
 run, and use a live result status; the initial answer/detail components remain
 hidden rather than displaying duplicate placeholders. Agentic TabCF uses a
-single-column workspace with Upload CSV selected by default
+single-column workspace with Analyze your data selected by default
 and Try an example as a secondary tab. Advanced settings hold role overrides and
 the seed. Empty conversation and result components stay hidden until needed;
 results appear below the input with compact responsive progress, the answer,
@@ -354,8 +354,10 @@ artifacts.
 
 `dcfa_website_demo.prepared_report` reads the curated public files in
 `src/dcfa_website_demo/assets/cigarette_v1/`, included as wheel package data.
-The Space defaults to a static Example report tab; the local app retains its
-upload-first UI. The example has no provider, GPU or conversation event handlers.
+The Space starts with Analyze your data selected by default, followed by the static
+Example report tab. Its synthetic-example tab and event bindings are removed;
+the local app retains Try an example as its second tab. The example has no provider,
+GPU or conversation event handlers.
 Its original report and PNG match the saved ZIP; the CSV matches the checked-in
 cigarette example. `display_report.md`, `display_summary.png` and `display_report.zip`
 are explicitly labeled presentation derivatives; the readable ZIP includes unchanged

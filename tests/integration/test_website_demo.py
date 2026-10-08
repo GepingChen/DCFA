@@ -786,7 +786,7 @@ def test_default_app_config_omits_machine_audit_payload_and_shows_build() -> Non
     assert app.config["title"] == "Agentic TabCF"
     assert "Try an example" in config
     tabs = [c for c in app.config["components"] if c["type"] == "tabitem"]
-    assert [c["props"]["label"] for c in tabs] == ["Upload CSV", "Try an example"]
+    assert [c["props"]["label"] for c in tabs] == ["Analyze your data", "Try an example"]
     tab_group = next(c for c in app.config["components"] if c["type"] == "tabs")
     assert tab_group["props"]["selected"] == "csv"
     assert "Do not enter private or sensitive information" in config

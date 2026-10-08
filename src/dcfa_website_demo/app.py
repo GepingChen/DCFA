@@ -1692,7 +1692,7 @@ def build_app(
             else ""
         )
         hero_copy = (
-            "Explore a complete example report, or upload your data to start an analysis."
+            "Upload your data to start an analysis, or explore a complete example report."
             if is_space
             else "Upload your data. Describe your question. Explore treatment effects."
         )
@@ -1733,13 +1733,8 @@ def build_app(
             with gr.Column(
                 elem_classes="demo-input",
             ):
-                with gr.Tabs(selected="saved_example" if is_space else "csv", elem_id="input-tabs"):
-                    if is_space:
-                        with gr.Tab("Example report", id="saved_example"):
-                            from dcfa_website_demo.prepared_report import render_prepared_report
-
-                            render_prepared_report()
-                    with gr.Tab("Upload CSV", id="csv"):
+                with gr.Tabs(selected="csv", elem_id="input-tabs"):
+                    with gr.Tab("Analyze your data", id="csv"):
                         if is_space:
                             gr.LoginButton(value="Sign in with Hugging Face", size="sm")
                         gr.Markdown(
@@ -1873,65 +1868,72 @@ def build_app(
                             csv_reset = gr.Button(
                                 "Reset conversation", variant="secondary", size="sm"
                             )
-                    with gr.Tab(
-                        "Run synthetic example" if is_space else "Try an example", id="example"
-                    ):
-                        if is_space:
+                    if is_space:
+                        with gr.Tab("Example report", id="saved_example"):
+                            from dcfa_website_demo.prepared_report import render_prepared_report
+
+                            render_prepared_report()
+                    else:
+                        with gr.Tab("Try an example", id="example"):
                             gr.Markdown(
-                                "Sign in on the **Upload CSV** tab before running a live example."
+                                "Explore a synthetic example with strong instruments, "
+                                "weak instruments, "
+                                "or limited support.",
+                                elem_classes="demo-section-copy",
                             )
-                        gr.Markdown(
-                            "Explore a synthetic example with strong instruments, "
-                            "weak instruments, "
-                            "or limited support.",
-                            elem_classes="demo-section-copy",
-                        )
-                        scenario = gr.Radio(
-                            choices=scenario_choices,
-                            value="strong_iv",
-                            label="Guided path",
-                        )
-                        question = gr.Textbox(
-                            value=scenario_question("strong_iv"),
-                            label="Example question",
-                            info=(
-                                "Ask for a mean or median summary/contrast at low, center, or "
-                                "high treatment. Gemini receives the question, not data rows."
-                            ),
-                            lines=3,
-                            interactive=gemini_enabled,
-                        )
-                        gr.HTML(
-                            '<div class="demo-transfer-note" role="note">'
-                            + (
-                                "<strong>Before you run:</strong> Your question text will be sent "
-                                "to Google Gemini. Do not enter private or sensitive information. "
-                                "Gemini receives no data rows or actual treatment values.</div>"
-                                if gemini_enabled
-                                else "<strong>Canonical Space:</strong> this preset uses a frozen "
-                                "typed median contrast and makes no Gemini request.</div>"
+                            scenario = gr.Radio(
+                                choices=scenario_choices,
+                                value="strong_iv",
+                                label="Guided path",
                             )
-                        )
-                        with gr.Accordion("Reproducibility controls", open=False):
-                            rows = gr.Slider(
-                                MIN_DEMO_ROWS,
-                                MAX_DEMO_ROWS,
-                                value=128,
-                                step=8,
-                                label="Synthetic rows",
+                            question = gr.Textbox(
+                                value=scenario_question("strong_iv"),
+                                label="Example question",
+                                info=(
+                                    "Ask for a mean or median summary/contrast at low, center, or "
+                                    "high treatment. Gemini receives the question, not data rows."
+                                ),
+                                lines=3,
+                                interactive=gemini_enabled,
                             )
-                            seed = gr.Number(
-                                value=20260810,
-                                precision=0,
-                                minimum=MIN_DEMO_SEED,
-                                maximum=MAX_DEMO_SEED,
-                                label="Seed",
+                            gr.HTML(
+                                '<div class="demo-transfer-note" role="note">'
+                                + (
+                                    "<strong>Before you run:</strong> Your question text "
+                                    "will be sent "
+                                    "to Google Gemini. Do not enter private or sensitive "
+                                    "information. "
+                                    "Gemini receives no data rows or actual treatment values.</div>"
+                                    if gemini_enabled
+                                    else "<strong>Canonical Space:</strong> this preset uses "
+                                    "a frozen "
+                                    "typed median contrast and makes no Gemini request.</div>"
+                                )
                             )
-                        run_button = gr.Button(
-                            "Run example",
-                            variant="primary",
-                            elem_id="run-demo-button",
-                        )
+                            with gr.Accordion("Reproducibility controls", open=False):
+                                rows = gr.Slider(
+                                    MIN_DEMO_ROWS,
+                                    MAX_DEMO_ROWS,
+                                    value=128,
+                                    step=8,
+                                    label="Synthetic rows",
+                                )
+                                seed = gr.Number(
+                                    value=20260810,
+                                    precision=0,
+                                    minimum=MIN_DEMO_SEED,
+                                    maximum=MAX_DEMO_SEED,
+                                    label="Seed",
+                                )
+                            run_button = gr.Button(
+                                "Run example",
+                                variant="primary",
+                                elem_id="run-demo-button",
+                            )
+
+                if is_space:
+                    # Preserve shared result updates without an example button or event binding.
+                    run_button = gr.Button(visible=False)
 
             with gr.Column(elem_classes="demo-results", elem_id="analysis-results"):
                 state_graph = gr.HTML("", visible=False)
@@ -1968,13 +1970,14 @@ def build_app(
                 api_name=False,
             )
 
-        scenario.change(
-            fn=scenario_question,
-            inputs=scenario,
-            outputs=question,
-            queue=False,
-            api_name=False,
-        )
+        if not is_space:
+            scenario.change(
+                fn=scenario_question,
+                inputs=scenario,
+                outputs=question,
+                queue=False,
+                api_name=False,
+            )
 
         def handle_run(
             selected_scenario: str,
@@ -2023,41 +2026,7 @@ def build_app(
             csv_run_button,
             analysis_mode,
         )
-        if is_space:
-
-            def show_running() -> tuple[Any, ...]:
-                return (
-                    *portfolio_ui_updates(
-                        _running_outputs(),
-                        buttons_enabled=False,
-                        clear_api_key=False,
-                    ),
-                    gr.update(interactive=False),
-                )
-
-            authorized = run_button.click(
-                fn=space_authorize_handler,
-                inputs=None,
-                outputs=None,
-                queue=False,
-                api_name=False,
-            )
-            authorized.success(
-                fn=show_running,
-                inputs=None,
-                outputs=result_outputs,
-                queue=False,
-                api_name=False,
-            ).success(
-                fn=space_scenario_handler,
-                inputs=(scenario, question, rows, seed, analysis_mode),
-                outputs=result_outputs,
-                scroll_to_output=True,
-                show_progress="hidden",
-                trigger_mode="once",
-                api_name=False,
-            )
-        else:
+        if not is_space:
             run_button.click(
                 fn=handle_run,
                 inputs=(scenario, question, rows, seed, analysis_mode),

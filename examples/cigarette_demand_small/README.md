@@ -30,7 +30,7 @@ terms, and [GPL-2.0.txt](GPL-2.0.txt) for the accompanying license text.
 ## Run and report
 
 1. Open the [Space](https://huggingface.co/spaces/GPChen01/dcfa-zerogpu), sign in,
-   choose **Upload CSV**, upload the file and authorize the transfer. Keep a
+   choose **Analyze your data**, upload the file and authorize the transfer. Keep a
    Gemini key in its password field; set seed `20260920`.
 2. Paste the short default prompt from [PROMPTS.md](PROMPTS.md). The optional
    threshold sentence is separate; it is not needed to complete the default plan.

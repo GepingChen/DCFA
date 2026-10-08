@@ -33,16 +33,18 @@ No Hugging Face login, API key, provider request or GPU allocation is needed to
 read it. Download its standalone HTML for offline reading, or
 [open the static report](https://gepingchen.github.io/agentic-tabcf/cigarette-tabpfn35.html).
 
-**Interactive analysis** contains the existing live app. Its inner **Example report**
-is a separate historical TabPFN v2 run. **Upload CSV** retains custom analysis,
-and **Run synthetic example** retains the live synthetic walkthrough. The report
-presentation update does not change the pinned statistical runtime or its controls.
+The current source's **Interactive analysis** starts with **Analyze your data**,
+followed by **Example report**, a separate historical TabPFN v2 run. The public
+synthetic-example tab has been removed; synthetic scenarios remain available for
+local development and tests. This source UI update requires a separately authorized
+Space deployment with an updated runtime pin; the checked-in deployment still
+pins the earlier runtime.
 
-Live computation in this canonical Space requires Hugging Face sign-in and runs three bounded
-synthetic continuous-treatment IV presets with TabPFN 3.5 API first. Only confirmed
+Live computation in this canonical Space requires Hugging Face sign-in and runs
+continuous-treatment IV analysis with TabPFN 3.5 API first. Only confirmed
 API quota exhaustion triggers a complete rerun on local TabPFN v2 through ZeroGPU.
 There is no model selector; results name the actual model and any switch.
-The typed preset questions need no Gemini call. Other failures stop without
+Other failures stop without
 changing models. No automatic purchase or upgrade is performed.
 
 Every displayed number is derived from one validated result bundle and evidence
@@ -52,7 +54,7 @@ evidence, production causal advice, or a general causal-method router.
 
 ## Run your own CSV
 
-1. Sign in with Hugging Face and open **Upload CSV**.
+1. Sign in with Hugging Face and open **Analyze your data**.
 2. Upload authorized, non-sensitive data with exactly three numeric columns and
    120–256 rows. Enter a temporary Gemini API key in the password field.
 3. Approve the disclosed transfers, describe the analysis, and click **Send message**.

@@ -1,6 +1,6 @@
 # Exact-price distribution prompt
 
-Upload `cigarette_144.csv` in the Space's **Upload CSV** conversation, sign in,
+Upload `cigarette_144.csv` in the Space's **Analyze your data** conversation, sign in,
 authorize the upload and set seed `20260920`. The default prompt is below the
 1000-character message limit.
 

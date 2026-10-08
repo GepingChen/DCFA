@@ -1,7 +1,7 @@
 # Local entry: exact-price distribution prompt
 
 Start the extracted entry using the README's external credential files. Open
-the local app's **Upload CSV** conversation, authorize the data transfer,
+the local app's **Analyze your data** conversation, authorize the data transfer,
 upload `cigarette_144.csv`, and set Advanced seed `20260920`. This local entry
 does not require Space sign-in or password-field credentials.
 

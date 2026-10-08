@@ -48,9 +48,12 @@ provider execution was repeated. Local `file://` opening remains unverified
 because browser-tool policy blocks that protocol. Verification records and
 screenshots are under `artifacts/local/space-report-deployment-20261006/`.
 
-**Upload CSV** and **Run synthetic example** retain their live execution flows.
-The Space requires Hugging Face login before live computation. The three
-synthetic presets use a typed median contrast without Gemini; their statistics
+The current source UI starts with **Analyze your data**, selected by default,
+followed by the historical **Example report**. The public synthetic-example tab
+and its execution events have been removed; local **Try an example** and the
+underlying synthetic scenarios remain available for development and tests.
+The deployed Space remains on the runtime pin above until a separately authorized
+update. The Space requires Hugging Face login before live computation. Statistics
 use 3.5 API first and local v2 only after confirmed quota exhaustion.
 It preloads and hash-checks `Prior-Labs/TabPFN-v2-reg` at revision
 `4972a65a1b30806315c6f92499959ffbfc69a673`, uses one CUDA estimator, and

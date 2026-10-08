@@ -212,7 +212,9 @@ def test_canonical_space_config_requires_login_and_enables_temporary_key(
         for dependency in config["dependencies"]
     )
     serialized = json.dumps(config, ensure_ascii=False, default=str)
-    assert "Example question" in serialized
+    assert "Example question" not in serialized
+    assert "Run synthetic example" not in serialized
+    assert all(event.fn is not scenario_handler for event in app.fns.values())
     key_components = [
         component
         for component in config["components"]

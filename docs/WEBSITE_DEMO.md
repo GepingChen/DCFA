@@ -48,6 +48,19 @@ provider execution was repeated. Local `file://` opening remains unverified
 because browser-tool policy blocks that protocol. Verification records and
 screenshots are under `artifacts/local/space-report-deployment-20261006/`.
 
+
+Tab navigation deployment verified on 2026-10-08: Space commit
+`e4558d213fdaa299b41f2955d55078eea7cc1a67` reached `RUNNING` on `zero-a10g`.
+The live interactive page shows **Analyze your data** first and selected by default,
+then **Example report**, with no public synthetic entry. The historical report still
+opens without login; login, upload and consent controls remain visible. All 28
+previously registered API names, including `analyze_v2`, are unchanged, and the
+standalone HTML download matches the checked-in report bytes. The 284-test suite
+and the updated presentation callback smoke passed. No provider call or model fit
+was performed. Runtime remains pinned to `2bc2c9d`; this was a presentation update.
+Verification records and the live screenshot are under
+`artifacts/local/space-tabs-deployment-20261008/`.
+
 The current source UI starts with **Analyze your data**, selected by default,
 followed by the historical **Example report**. The public synthetic-example tab
 and its execution events have been removed; local **Try an example** and the

@@ -18,7 +18,7 @@ os.environ.setdefault(
 )
 
 import spaces  # noqa: F401, E402  # ZeroGPU must initialize before Gradio/DCFA imports.
-from presentation import build_presentation
+from presentation import PRESENTATION_CSS, build_presentation
 
 from dcfa_website_demo.zerogpu import build_zerogpu_app, zerogpu_launch_kwargs
 
@@ -27,4 +27,6 @@ demo = build_presentation(live_demo, Path(__file__).resolve().with_name("cigaret
 
 
 if __name__ == "__main__":
-    demo.launch(**zerogpu_launch_kwargs())
+    launch_options = zerogpu_launch_kwargs()
+    launch_options["css"] += PRESENTATION_CSS
+    demo.launch(**launch_options)

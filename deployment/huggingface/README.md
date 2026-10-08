@@ -26,19 +26,28 @@ preload_from_hub:
 
 # Agentic TabCF
 
-The default **TabPFN-3.5 example report** tab presents the saved v3 cigarette run:
-`run_72e0e4a81aac75e7a91f3dbd`. It compares state–year per-capita sales under
-two price scenarios, with exploratory point estimates and full evidence.
-No Hugging Face login, API key, provider request or GPU allocation is needed to
-read it. Download its standalone HTML for offline reading, or
-[open the static report](https://gepingchen.github.io/agentic-tabcf/cigarette-tabpfn35.html).
+The default **Analyze your data** workspace keeps CSV upload, conversation,
+plan confirmation, report generation and shared result controls together.
+A single styled header and **Example reports** gallery replace the nested app.
+The original theme, upload controls, OAuth, consent, reset and authenticated
+callbacks remain in place. Data/model policy details are available inside the
+analysis workspace; the explicit transfer consent remains beside the upload flow.
 
-**Interactive analysis** starts with **Analyze your data**, followed by
-**Example report**, a separate historical TabPFN v2 run. The public synthetic-example
-entry is removed. The presentation shell reorders and renames the pinned runtime's
-tabs and hides its synthetic tab while retaining existing authenticated callbacks
-and shared result components. Local development retains the synthetic scenarios.
-The statistical runtime pin, dependencies and credentials are unchanged.
+**Example reports** groups two independent saved cigarette analyses:
+
+- **TabPFN 3.5** (selected first): saved v3 run
+  `run_72e0e4a81aac75e7a91f3dbd`, embedded standalone HTML and offline download.
+- **TabPFN v2 · Historical**: the separate historical ZeroGPU report with its
+  own figure, CSV, original report ZIP and technical appendix.
+
+Both use the same data and price question. Their numbers and artifacts remain
+separate; differences do not establish model superiority. Reading either report
+requires no login, API key, provider request or GPU allocation.
+[Open the static 3.5 report](https://gepingchen.github.io/agentic-tabcf/cigarette-tabpfn35.html).
+
+The public synthetic-example entry stays hidden while existing callbacks and
+shared result components are retained. Local development retains the synthetic
+scenarios. The statistical runtime pin, dependencies and credentials are unchanged.
 
 Live computation in this canonical Space requires Hugging Face sign-in and runs
 continuous-treatment IV analysis with TabPFN 3.5 API first. Only confirmed

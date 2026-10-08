@@ -1193,3 +1193,15 @@ showcase assets and deployment to GPChen01/dcfa-zerogpu.
 - Apply the same scoped fix to the parent and public contest source. Publish new
   contest wheels at 0.1.1; retain 0.1.0 wheels and historical saved evidence.
   This correction changes no statistical calculation or research protocol.
+
+## 2026-10-08 — One analysis workspace and two independent saved reports
+
+- The user authorized rearranging and updating the HF page while restoring its
+  original UI. Use one styled header, default Analyze your data and Example
+  reports containing TabPFN 3.5 and TabPFN v2 · Historical.
+- Reparent existing controls, shared results and historical report components;
+  keep IDs, state, callbacks, OAuth, explicit transfer consent and the runtime
+  pin. Move general policy text into an accordion inside analysis.
+- Keep each saved report's numbers, evidence and downloads separate. This UI
+  change does not require fitting models, changing credentials or refreshing
+  statistical artifacts. Retain the prior hidden synthetic entry and callbacks.

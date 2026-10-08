@@ -15,26 +15,35 @@ four paths is locked Track T evidence or a general causal-analysis service.
 ## Hugging Face ZeroGPU path
 
 The canonical Space is `GPChen01/dcfa-zerogpu`. The presentation entry under
-`deployment/huggingface/` puts the **TabPFN-3.5 example report** first, embedding
-`https://gepingchen.github.io/agentic-tabcf/cigarette-tabpfn35.html` and offering the
-same standalone HTML as a download. It is the existing v3 cigarette run
-`run_72e0e4a81aac75e7a91f3dbd`, not a new fit. Reading it requires no login,
-API key, provider request or GPU allocation. It retains exploratory point-estimate
-limitations and the full original evidence.
+`deployment/huggingface/` defaults to **Analyze your data**, grouping upload,
+conversation, confirmation and generated results in one workspace. It retains
+one original styled header and one primary navigation. **Example reports** holds
+**TabPFN 3.5** (default report) and **TabPFN v2 · Historical** as clearly labeled
+independent runs of the same cigarette data/question. Reading either is free of
+login, provider requests or GPU allocation; differences are not model-superiority
+evidence.
 
-**Interactive analysis** contains the existing authenticated app, still pinned
-to runtime `2bc2c9d9e43fcc3ee49dcc32fd4c9db5236c87e9`. Its inner **Example report**
-tab remains the separate historical v2 run. The new presentation does not change
-statistical execution, credentials, OAuth, quota fallback or remote API controls.
-The static website and Space download use the same bytes as
-`submission/reports/cigarette-tabpfn35.html`; the website project page links to it.
+The 3.5 tab embeds
+`https://gepingchen.github.io/agentic-tabcf/cigarette-tabpfn35.html` and offers the
+same standalone HTML as a download. It is the existing v3 cigarette run
+`run_72e0e4a81aac75e7a91f3dbd`, not a new fit. The historical v2 tab retains its
+own report, figure, CSV, ZIP and technical appendix. Original report bytes and
+numerical evidence are unchanged.
+
+The shell reparents the pinned runtime's existing components without replacing
+IDs, state, callbacks, OAuth, explicit transfer consent, reset, quota fallback or
+remote APIs. It retains runtime `2bc2c9d9e43fcc3ee49dcc32fd4c9db5236c87e9` and its
+original theme/CSS, with small navigation and report-frame styles added at launch.
+The general policy notice is inside a collapsed analysis-workspace accordion;
+the explicit transfer-consent checkbox and data-boundary note remain beside the
+upload controls.
 
 To deploy the presentation, upload `app.py`, `presentation.py` and `README.md`
 from `deployment/huggingface/`, plus that report under the filename
 `cigarette-tabpfn35.html`, to the existing Space. Keep its requirements and
 configuration/secret files unchanged. `requirements.txt` beside these sources
 records the retained runtime pin. Check the Space build and live default tab,
-download, interactive tab and `/analyze_v2` API registration after upload.
+downloads, both report versions and `/analyze_v2` API registration after upload.
 
 Presentation deployment verified on 2026-10-06: Space commit
 `84e9e84bd80f219150751379adad6871002b8e62` reached `RUNNING`; website commit
@@ -65,10 +74,11 @@ The current source UI starts with **Analyze your data**, selected by default,
 followed by the historical **Example report**. The public synthetic-example tab
 and its execution events have been removed; local **Try an example** and the
 underlying synthetic scenarios remain available for development and tests.
-The Space presentation shell applies the same visible tab order and labels to the
-runtime pinned above, hiding the legacy synthetic tab while retaining all existing
-callback registrations and shared result components. Its statistical runtime pin,
-dependencies and credential configuration remain unchanged. The Space requires
+The Space presentation instead groups both saved reports in a gallery and puts
+user analysis in a single primary workspace. It hides the legacy synthetic tab
+while retaining all existing callbacks and shared result components. Its
+statistical runtime pin, dependencies and credential configuration remain unchanged.
+The Space requires
 Hugging Face login before live computation. Statistics
 use 3.5 API first and local v2 only after confirmed quota exhaustion.
 It preloads and hash-checks `Prior-Labs/TabPFN-v2-reg` at revision

@@ -10,7 +10,7 @@ for current behavior.
 
 | Path | Current role |
 |---|---|
-| `deployment/huggingface/` | Space presentation shell: default saved TabPFN-3.5 report, standalone HTML download and the existing live app; preserves the deployed runtime pin and authenticated event handlers |
+| `deployment/huggingface/` | Space presentation: default analysis workspace and a two-version saved-report gallery; reparents existing controls and preserves the deployed runtime pin, theme and authenticated event handlers |
 | `submission/generate_example_report.py` | Standard-library offline renderer of the historical v3 ZIP's `results/cigarette-35/attempt-1-api/`; `python3 submission/generate_example_report.py` writes `submission/reports/cigarette-tabpfn35.html` with inline SVG and original evidence, without refitting or changing the ZIP; separate from bundle packaging |
 | `submission/refresh_bundle.py` | Presentation-only ZIP refresh: `python3 submission/refresh_bundle.py --base-zip <historical-zip> --output <new-zip>` preserves runtime, source archives and results, and includes current prose, offline report and generator; `build_bundle.py` also includes these report assets when building a new runtime package |
 | `submission/export_public_repo.py` | Local-only source preparation: `python3 submission/export_public_repo.py --archive <submission-zip> --output-dir <fresh-directory>` exports the accepted entry source/configs and installable MIT parent source alongside original wheels/lock, offline report and public cigarette evidence; includes explicit licensing, local example instructions, adapted historical links and an account-telemetry-free acceptance projection; it does not initialize Git, create a remote repository, publish, accept terms or submit |

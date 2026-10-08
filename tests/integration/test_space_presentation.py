@@ -16,9 +16,15 @@ def test_report_shell_keeps_existing_api_and_saved_report(tmp_path):
     report = tmp_path / "report.html"
     report.write_text("<h1>Saved report</h1>")
     with gr.Blocks() as live:
-        consent = gr.Checkbox(label="Consent required")
-        result = gr.Textbox()
-        button = gr.Button("Confirm and generate report")
+        with gr.Tabs(selected="saved_example", elem_id="input-tabs"):
+            with gr.Tab("Example report", id="saved_example"):
+                gr.Markdown("Saved historical report")
+            with gr.Tab("Upload CSV", id="csv"):
+                consent = gr.Checkbox(label="Consent required")
+                result = gr.Textbox()
+                button = gr.Button("Confirm and generate report")
+            with gr.Tab("Run synthetic example", id="example"):
+                gr.Button("Run example")
         button.click(
             lambda approved: "allowed" if approved else "blocked",
             consent,
@@ -30,6 +36,16 @@ def test_report_shell_keeps_existing_api_and_saved_report(tmp_path):
     shell = presentation.build_presentation(live, report)
     assert list(shell.fns.values()) == original_functions
     config = shell.get_config_file()
+    input_tabs = next(
+        block
+        for block in shell.blocks.values()
+        if isinstance(block, gr.Tabs) and block.elem_id == "input-tabs"
+    )
+    assert input_tabs.selected == "csv"
+    assert [tab.label for tab in input_tabs.children if tab.visible] == [
+        "Analyze your data",
+        "Example report",
+    ]
     assert any(
         c["type"] == "tabs" and c["props"]["selected"] == "report35" for c in config["components"]
     )

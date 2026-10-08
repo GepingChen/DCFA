@@ -52,8 +52,11 @@ The current source UI starts with **Analyze your data**, selected by default,
 followed by the historical **Example report**. The public synthetic-example tab
 and its execution events have been removed; local **Try an example** and the
 underlying synthetic scenarios remain available for development and tests.
-The deployed Space remains on the runtime pin above until a separately authorized
-update. The Space requires Hugging Face login before live computation. Statistics
+The Space presentation shell applies the same visible tab order and labels to the
+runtime pinned above, hiding the legacy synthetic tab while retaining all existing
+callback registrations and shared result components. Its statistical runtime pin,
+dependencies and credential configuration remain unchanged. The Space requires
+Hugging Face login before live computation. Statistics
 use 3.5 API first and local v2 only after confirmed quota exhaustion.
 It preloads and hash-checks `Prior-Labs/TabPFN-v2-reg` at revision
 `4972a65a1b30806315c6f92499959ffbfc69a673`, uses one CUDA estimator, and

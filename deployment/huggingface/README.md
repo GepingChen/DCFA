@@ -33,12 +33,12 @@ No Hugging Face login, API key, provider request or GPU allocation is needed to
 read it. Download its standalone HTML for offline reading, or
 [open the static report](https://gepingchen.github.io/agentic-tabcf/cigarette-tabpfn35.html).
 
-The current source's **Interactive analysis** starts with **Analyze your data**,
-followed by **Example report**, a separate historical TabPFN v2 run. The public
-synthetic-example tab has been removed; synthetic scenarios remain available for
-local development and tests. This source UI update requires a separately authorized
-Space deployment with an updated runtime pin; the checked-in deployment still
-pins the earlier runtime.
+**Interactive analysis** starts with **Analyze your data**, followed by
+**Example report**, a separate historical TabPFN v2 run. The public synthetic-example
+entry is removed. The presentation shell reorders and renames the pinned runtime's
+tabs and hides its synthetic tab while retaining existing authenticated callbacks
+and shared result components. Local development retains the synthetic scenarios.
+The statistical runtime pin, dependencies and credentials are unchanged.
 
 Live computation in this canonical Space requires Hugging Face sign-in and runs
 continuous-treatment IV analysis with TabPFN 3.5 API first. Only confirmed

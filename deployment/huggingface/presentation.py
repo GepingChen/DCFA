@@ -9,6 +9,18 @@ REPORT_URL = "https://gepingchen.github.io/agentic-tabcf/cigarette-tabpfn35.html
 
 def build_presentation(live_demo: gr.Blocks, report: Path) -> gr.Blocks:
     """Keep saved results separate from the existing authenticated live workflow."""
+    for block in live_demo.blocks.values():
+        if isinstance(block, gr.Tabs) and block.elem_id == "input-tabs":
+            tabs = {child.id: child for child in block.children if isinstance(child, gr.Tab)}
+            tabs["csv"].label = "Analyze your data"
+            block.selected = "csv"
+            block.children = [tabs["csv"], tabs["saved_example"]] + [
+                child for child in block.children if child.id not in {"csv", "saved_example"}
+            ]
+            if "example" in tabs:
+                # Hide the old runtime's public entry while preserving its shared callbacks.
+                tabs["example"].visible = False
+
     with gr.Blocks(
         title="Agentic TabCF",
         analytics_enabled=False,

@@ -70,6 +70,20 @@ was performed. Runtime remains pinned to `2bc2c9d`; this was a presentation upda
 Verification records and the live screenshot are under
 `artifacts/local/space-tabs-deployment-20261008/`.
 
+Unified workspace/gallery deployment verified on 2026-10-08: Space commit
+`89dee4aa87b059fc2fba59ab9137326c0ef86ca9` reached `RUNNING` on ZeroGPU.
+The default is **Analyze your data**; **Example reports** contains **TabPFN 3.5**
+and **TabPFN v2 · Historical**, with one app heading. All 28 prior API names,
+including `analyze_v2`, remain registered. The 3.5 HTML, historical v2 ZIP and
+sample CSV downloads match their original source bytes; requirements retain
+runtime `2bc2c9d`. The 284-test suite passed, along with a component/callback
+smoke against that pinned source. Live browser checks covered both reports,
+advanced settings, policy expansion and reset clearing the question. At 390px,
+analysis and both reports have 390px document scroll width; no console errors
+were recorded. No provider call or model fit was performed. Verification and
+desktop/mobile screenshots are under
+`artifacts/local/space-layout-deployment-20261008/`.
+
 The current source UI starts with **Analyze your data**, selected by default,
 followed by the historical **Example report**. The public synthetic-example tab
 and its execution events have been removed; local **Try an example** and the
